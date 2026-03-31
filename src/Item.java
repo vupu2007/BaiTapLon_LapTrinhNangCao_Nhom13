@@ -10,11 +10,29 @@ public abstract class Item implements Entity {
         this.description = description;
         this.startingPrice = startingPrice;
     }
-
+    
     @Override
     public String getId() {
         return itemId;
     }
 
+    
+    public String getItemId() {
+        return itemId;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public double getStartingPrice() {
+        return startingPrice;
+    }
+
+    
     public abstract void printInfo();
 }
