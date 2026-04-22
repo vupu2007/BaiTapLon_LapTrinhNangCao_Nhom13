@@ -1,6 +1,6 @@
 package com.auction.model;
 
-public class Bidder extends User{
+public class Bidder extends User {
     private double maxBid;
     private double increment;
     public Bidder(String id, String username, String password) {
