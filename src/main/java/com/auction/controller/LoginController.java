@@ -1,28 +1,45 @@
 package com.auction.controller;
 
+import com.auction.model.User;
+import com.auction.service.UserService;
+import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*;
 
 public class LoginController {
-    @FXML private TextField txtUsername;
-    @FXML private PasswordField txtPassword;
-    @FXML private Label lblMessage;
-    @FXML private Button btnLogin;
+
+    @FXML private TextField usernameField;
+    @FXML private PasswordField passwordField;
+    @FXML private Label errorLabel;
+    @FXML private Button loginButton;
+    @FXML private Hyperlink registerLink;
+
+    // thêm service
+    private UserService userService = new UserService();
 
     @FXML
-    public void handleLogin() {
-        String username = txtUsername.getText();
-        String password = txtPassword.getText();
+    public void handleLogin(ActionEvent event) {
+        String username = usernameField.getText();
+        String password = passwordField.getText();
 
-        if (username.equals("admin") && password.equals("123456")) {
-            lblMessage.setStyle("-fx-text-fill: green;");
-            lblMessage.setText("Đăng nhập thành công!");
+        // gọi service thay vì tự xử lý
+        User user = userService.login(username, password);
+
+        if (user != null) {
+            errorLabel.setStyle("-fx-text-fill: green;");
+            errorLabel.setText("Đăng nhập thành công!");
+
+            System.out.println("User đăng nhập: " + user.getUsername());
+
+            // TODO: chuyển sang màn hình chính
         } else {
-            lblMessage.setStyle("-fx-text-fill: red;");
-            lblMessage.setText("Sai tài khoản hoặc mật khẩu!");
+            errorLabel.setStyle("-fx-text-fill: red;");
+            errorLabel.setText("Sai tài khoản hoặc mật khẩu!");
         }
+    }
+
+    @FXML
+    public void goToRegister(ActionEvent event) {
+        System.out.println("Đang chuyển sang màn hình Đăng ký...");
     }
 }
