@@ -12,24 +12,22 @@ public class MainApp {
     public static class AppUI extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            // Đường dẫn đến file giao diện trong thư mục resources
-            URL fxmlLocation = getClass().getResource("/com.auction.view/LoginView.fxml");
+            // 1. Sửa lại đường dẫn dùng dấu gạch chéo /
+            // Giả sử file của bạn nằm ở: src/main/resources/view/LoginView.fxml
+            URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
 
             if (fxmlLocation == null) {
-                System.err.println("LỖI: Không tìm thấy file LoginView.fxml! Hãy kiểm tra lại thư mục resources.");
+                System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
+                System.err.println("Đường dẫn đang quét: src/main/resources/view/LoginView.fxml");
                 return;
             }
 
-            // Load giao diện
             Parent root = FXMLLoader.load(fxmlLocation);
             Scene scene = new Scene(root);
 
             primaryStage.setTitle("Hệ thống đấu giá trực tuyến - Nhóm 13");
             primaryStage.setScene(scene);
-
-            // Lệnh giúp cửa sổ tự động to toàn màn hình khi mở
             primaryStage.setMaximized(true);
-
             primaryStage.show();
         }
     }

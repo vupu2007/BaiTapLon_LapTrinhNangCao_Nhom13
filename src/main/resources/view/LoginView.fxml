@@ -32,7 +32,7 @@
         <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu..." />
     </VBox>
 
-    <Label fx:id="errorLabel" textFill="RED" />
+    <Label fx:id="errorLabel" textFill="#144680"/>
 
     <Button fx:id="loginButton" mnemonicParsing="false" onAction="#handleLogin" prefWidth="200.0" text="ĐĂNG NHẬP" style="-fx-background-color: #0078D7; -fx-text-fill: white; -fx-font-weight: bold;" />
 
