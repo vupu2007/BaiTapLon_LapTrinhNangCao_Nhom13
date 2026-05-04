@@ -20,7 +20,7 @@ public class UserService {
         if ("testuser".equals(username) && "123456".equals(password)) {
             // Giả sử đăng nhập xong thì mặc định là Bidder
             // Phải truyền đủ id, username, password vào constructor
-            User user = new Bidder("1", username, password);
+            User user = new Bidder("123","huyen","123456");
             return user;
         }
         return null;

@@ -1,7 +1,6 @@
 package com.auction.controller;
 
 import com.auction.model.UserStore;
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -14,27 +13,24 @@ import java.io.IOException;
 
 public class LoginController {
 
-    @FXML
-    private TextField usernameField;
-    @FXML
-    private PasswordField passwordField;
-    @FXML
-    private Label errorLabel;
+    // Đã đổi tên để khớp 100% với file FXML của bạn
+    @FXML private TextField usernameField;
+    @FXML private PasswordField passwordField;
+    @FXML private Label errorLabel; // Nếu FXML chưa có, bạn có thể xóa dòng này hoặc thêm vào FXML
 
     @FXML
     void handleLogin(ActionEvent event) {
         String user = usernameField.getText().trim();
         String pass = passwordField.getText();
 
-        if (user.isEmpty() || pass.isEmpty()) {
-            showError("Vui lòng nhập đầy đủ thông tin!");
-            return;
-        }
-
+        // Kiểm tra đăng nhập dùng UserStore (đã đăng ký trước đó)
         if (UserStore.users.containsKey(user) && UserStore.users.get(user).equals(pass)) {
-            switchScene(event, "/view/MainView.fxml", "Hệ thống Đấu giá");
+            System.out.println("Đăng nhập thành công!");
+            switchScene(event, "/view/MainAuctionView.fxml", "Hệ thống Đấu giá");
         } else {
-            showError("Sai tài khoản hoặc mật khẩu!");
+            // Hiển thị thông báo lỗi
+            Alert alert = new Alert(Alert.AlertType.ERROR, "Sai tài khoản hoặc mật khẩu!");
+            alert.show();
         }
     }
 
@@ -42,14 +38,14 @@ public class LoginController {
     void handleDemoBuyer(ActionEvent event) {
         usernameField.setText("buyer");
         passwordField.setText("123");
-        handleLogin(event);
+        handleLogin(event); // Bấm hộ người dùng luôn
     }
 
     @FXML
     void handleDemoSeller(ActionEvent event) {
         usernameField.setText("seller");
         passwordField.setText("123");
-        handleLogin(event);
+        handleLogin(event); // Bấm hộ người dùng luôn
     }
 
     @FXML
@@ -57,36 +53,26 @@ public class LoginController {
         switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
     }
 
-    private void showError(String message) {
-        if (errorLabel != null) {
-            errorLabel.setText(message);
-        }
-    }
-
-    /**
-     * Hàm switchScene tối ưu: Đảm bảo căn giữa tuyệt đối ở mọi lần chuyển
-     */
+    // Hàm dùng chung để chuyển trang KHÔNG NHẢY DISCO
     private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
-            // 1. Lấy Stage hiện tại
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // 2. Load nội dung mới (Root mới)
-            FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
-            Parent root = loader.load();
+            // Lưu lại kích thước hiện tại trước khi đổi
+            double width = stage.getWidth();
+            double height = stage.getHeight();
 
-            // 3. Thay đổi nội dung của Scene ĐANG CÓ thay vì tạo Scene mới
-            // Việc này giữ nguyên mọi trạng thái cửa sổ, không bao giờ bị nhảy
-            stage.getScene().setRoot(root);
+            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
+            Scene scene = new Scene(root);
+            stage.setScene(scene);
 
-            // 4. Cập nhật tiêu đề
+            // Áp lại kích thước cũ ngay lập tức
+            stage.setWidth(width);
+            stage.setHeight(height);
             stage.setTitle(title);
 
-            // 5. Ép JavaFX tính toán lại layout ngay lập tức để căn giữa
-            root.requestLayout();
-
         } catch (IOException e) {
-            System.err.println("Lỗi load file FXML: " + fxmlPath);
+            System.err.println("Không tìm thấy file: " + fxmlPath);
             e.printStackTrace();
         }
     }

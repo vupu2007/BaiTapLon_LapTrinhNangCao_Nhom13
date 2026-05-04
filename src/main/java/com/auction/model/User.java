@@ -1,5 +1,8 @@
 package com.auction.model;
 
+import java.sql.ResultSet;
+import java.sql.SQLException;
+
 public abstract class User implements Entity {
     protected String id;
     protected String username;
@@ -19,12 +22,13 @@ public abstract class User implements Entity {
     public String getPassword(){
         return password;
     }
-    public void setPassword(){
-        this.password = password;
+    public void setPassword(String password){
+        this.password = this.password;
     }
     public String getId(){
         return id;
     }
+
 //    public boolean login(String inputPassword){
 //        return this.password.equals(inputPassword);
 //
