@@ -12,8 +12,7 @@ public class MainApp {
     public static class AppUI extends Application {
         @Override
         public void start(Stage primaryStage) throws Exception {
-            // 1. Sửa lại đường dẫn dùng dấu gạch chéo /
-            // Giả sử file của bạn nằm ở: src/main/resources/view/LoginView.fxml
+            // Sửa lại đường dẫn dùng dấu gạch chéo /
             URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
 
             if (fxmlLocation == null) {
