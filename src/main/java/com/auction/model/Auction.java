@@ -6,24 +6,23 @@ import java.time.LocalDateTime;
 public class Auction implements Serializable {
     private static final long serialVersionUID = 1L;
 
-
+    // Trạng thái của phiên đấu giá
     public enum AuctionStatus {
-        PENDING,
-        ACTIVE,
-        ENDED,
-        CANCELLED
+        PENDING, // Chờ bắt đầu
+        ACTIVE,  // Đang diễn ra
+        ENDED,   // Đã kết thúc
+        CANCELLED // Bị hủy
     }
 
-    private int id;
-    private int itemId;
-    private int sellerId;
-    private double startingPrice;
-    private double currentPrice;
-    private Integer highestBidderId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
-    private AuctionStatus status;
-
+    private int id;                 // ID phiên đấu giá
+    private int itemId;             // ID của sản phẩm được đấu giá
+    private int sellerId;           // ID của người bán
+    private double startingPrice;   // Giá khởi điểm
+    private double currentPrice;    // Giá cao nhất hiện tại
+    private Integer highestBidderId;// ID người đang trả giá cao nhất
+    private LocalDateTime startTime; // Thời gian bắt đầu
+    private LocalDateTime endTime;   // Thời gian kết thúc
+    private AuctionStatus status;    // Trạng thái phiên đấu giá
 
     public Auction() {
     }
@@ -40,7 +39,6 @@ public class Auction implements Serializable {
         this.endTime = endTime;
         this.status = status;
     }
-
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -69,6 +67,7 @@ public class Auction implements Serializable {
     public AuctionStatus getStatus() { return status; }
     public void setStatus(AuctionStatus status) { this.status = status; }
 
+    // Kiểm tra xem phiên đấu giá còn hiệu lực không
     public boolean isActive() {
         return this.status == AuctionStatus.ACTIVE && LocalDateTime.now().isBefore(this.endTime);
     }
