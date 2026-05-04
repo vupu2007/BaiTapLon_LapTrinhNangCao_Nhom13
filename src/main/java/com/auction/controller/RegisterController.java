@@ -1,6 +1,6 @@
 package com.auction.controller;
 
-import com.auction.model.UserStore; // Nhớ import cái store ở bước 1
+import com.auction.model.UserStore;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -42,6 +42,10 @@ public class RegisterController {
             showAlert(AlertType.WARNING, "Lỗi", "Không được để trống thông tin!");
             return;
         }
+        if (UserStore.users.containsKey(username)) {
+            showAlert(AlertType.WARNING, "Lỗi", "Tên đăng nhập đã tồn tại!");
+            return;
+        }
         if (!password.equals(confirm)) {
             showAlert(AlertType.ERROR, "Lỗi", "Mật khẩu xác nhận không khớp!");
             return;
@@ -72,27 +76,22 @@ public class RegisterController {
     // Hàm dùng chung để chuyển cảnh không bị nhảy kích thước
     private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
-            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-
-            // Lấy kích thước thực tế hiện tại của cửa sổ (bao gồm cả viền)
-            double width = stage.getWidth();
-            double height = stage.getHeight();
-
             Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
 
-            // Ép Scene mới nhận luôn kích thước cũ
-            Scene scene = new Scene(root, width, height);
+            // Lấy Stage từ sự kiện
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            stage.setScene(scene);
+            // THAY ĐỔI QUAN TRỌNG: Chỉ thay root của Scene hiện tại
+            stage.getScene().setRoot(root);
+
             stage.setTitle(title);
-
-            // Đảm bảo Stage không bị co lại sau khi setScene
-            stage.setWidth(width);
-            stage.setHeight(height);
+            // Bạn không cần lưu width/height hay setWidth/Height nữa vì Stage không hề bị đổi Scene
         } catch (IOException e) {
+            System.err.println("Không tìm thấy file: " + fxmlPath);
             e.printStackTrace();
         }
     }
+
 
     private void showAlert(AlertType alertType, String title, String message) {
         Alert alert = new Alert(alertType);

@@ -10,12 +10,12 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<StackPane prefHeight="700.0" prefWidth="900.0" style="-fx-background-color: #f4f7f6;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.RegisterController">
+<StackPane prefHeight="700.0" prefWidth="564.0" style="-fx-background-color: #f4f7f6;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.RegisterController">
     <children>
         <VBox alignment="CENTER" maxWidth="450.0" spacing="20.0">
             <children>
 
-                <VBox alignment="CENTER" spacing="5.0">
+                <VBox alignment="CENTER" prefHeight="166.0" prefWidth="450.0" spacing="5.0">
                     <children>
                         <Button disable="true" mnemonicParsing="false" prefHeight="60.0" prefWidth="60.0" style="-fx-background-color: #129def; -fx-background-radius: 15; -fx-opacity: 1;" text="🔨" textFill="WHITE">
                             <font>
@@ -116,7 +116,7 @@
                         <Insets bottom="20.0" left="25.0" right="25.0" top="20.0" />
                     </padding>
                     <children>
-                        <Label text="Đăng nhập nhanh (Demo)" textFill="#64748b">
+                        <Label text="     Đăng nhập với :  " textFill="#64748b">
                             <font>
                                 <Font size="13.0" />
                             </font>

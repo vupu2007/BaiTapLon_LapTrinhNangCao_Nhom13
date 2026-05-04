@@ -14,6 +14,7 @@ import java.io.IOException;
 public class LoginController {
 
     // Đã đổi tên để khớp 100% với file FXML của bạn
+    @FXML private Button loginButton;
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private Label errorLabel; // Nếu FXML chưa có, bạn có thể xóa dòng này hoặc thêm vào FXML
@@ -53,27 +54,50 @@ public class LoginController {
         switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
     }
 
-    // Hàm dùng chung để chuyển trang KHÔNG NHẢY DISCO
+    // Hàm dùng chung để chuyển trang
     private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
+            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
+
+            // Lấy Stage hiện tại
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // Lưu lại kích thước hiện tại trước khi đổi
-            double width = stage.getWidth();
-            double height = stage.getHeight();
+            // THAY ĐỔI NÀY: Thay vì tạo Scene mới, ta lấy Scene hiện tại và đổi Root
+            stage.getScene().setRoot(root);
 
-            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
-            Scene scene = new Scene(root);
-            stage.setScene(scene);
-
-            // Áp lại kích thước cũ ngay lập tức
-            stage.setWidth(width);
-            stage.setHeight(height);
             stage.setTitle(title);
-
+            // Không cần setWidth/Height thủ công nữa vì Stage không bị đổi Scene nên không nhảy size
         } catch (IOException e) {
-            System.err.println("Không tìm thấy file: " + fxmlPath);
             e.printStackTrace();
         }
     }
+    @FXML
+    private void handleLogin() {
+        // Giả sử bạn đã kiểm tra tài khoản/mật khẩu thông qua UserService
+        boolean isAuthenticated = true; // Kết quả trả về từ logic đăng nhập
+
+        if (isAuthenticated) {
+            try {
+                // 1. Tải file FXML của màn hình chính
+                FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/auction/view/MainView.fxml"));
+                Parent root = loader.load();
+
+                // 2. Lấy Stage (cửa sổ) hiện tại từ một node bất kỳ trên giao diện (ví dụ: loginButton)
+                Stage stage = (Stage) loginButton.getScene().getWindow();
+
+                // 3. Thiết lập Scene mới với MainView
+                Scene scene = new Scene(root);
+                stage.setScene(scene);
+                stage.setTitle("Hệ thống đấu giá - Dashboard");
+                stage.show();
+
+            } catch (IOException e) {
+                e.printStackTrace();
+                System.err.println("Không thể tải màn hình chính!");
+            }
+        } else {
+            // Hiển thị thông báo lỗi nếu đăng nhập thất bại
+        }
+    }
+
 }
