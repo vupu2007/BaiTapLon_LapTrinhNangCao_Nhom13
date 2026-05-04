@@ -1,11 +1,13 @@
 package com.auction.controller;
 
-import com.auction.model.UserStore;
+import com.auction.model.User; // Import model User
+import com.auction.model.Admin; // Import model Admin
+import com.auction.service.UserService; // Import Service
+import com.auction.util.CurrentUser; // Class để lưu phiên đăng nhập
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.fxml.FXMLLoader;
 import javafx.stage.Stage;
@@ -13,22 +15,35 @@ import java.io.IOException;
 
 public class LoginController {
 
-    // Đã đổi tên để khớp 100% với file FXML của bạn
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
-    @FXML private Label errorLabel; // Nếu FXML chưa có, bạn có thể xóa dòng này hoặc thêm vào FXML
+
+    // Khai báo Service để kết nối Database
+    private UserService userService = new UserService();
 
     @FXML
     void handleLogin(ActionEvent event) {
-        String user = usernameField.getText().trim();
-        String pass = passwordField.getText();
+        String userStr = usernameField.getText().trim();
+        String passStr = passwordField.getText();
 
-        // Kiểm tra đăng nhập dùng UserStore (đã đăng ký trước đó)
-        if (UserStore.users.containsKey(user) && UserStore.users.get(user).equals(pass)) {
-            System.out.println("Đăng nhập thành công!");
-            switchScene(event, "/view/MainAuctionView.fxml", "Hệ thống Đấu giá");
+        // 1. Gọi Database để kiểm tra
+        User loggedInUser = userService.login(userStr, passStr);
+
+        if (loggedInUser != null) {
+
+            // Cất ngay khi biết loggedInUser không bị null
+            CurrentUser.setUser(loggedInUser);
+             System.out.println("Đã cất user " + loggedInUser.getUsername() + " vào phiên làm việc!");
+            // ----------------------------------
+
+            // 2. Sau khi cất xong mới bắt đầu chuyển trang
+            if (loggedInUser instanceof Admin) {
+                switchScene(event, "/view/AdminDashboard.fxml", "Quản trị hệ thống");
+            } else {
+                switchScene(event, "/view/MainAuctionView.fxml", "Hệ thống Đấu giá");
+            }
         } else {
-            // Hiển thị thông báo lỗi
+            // Nếu login thất bại thì không cất gì cả
             Alert alert = new Alert(Alert.AlertType.ERROR, "Sai tài khoản hoặc mật khẩu!");
             alert.show();
         }
@@ -36,16 +51,17 @@ public class LoginController {
 
     @FXML
     void handleDemoBuyer(ActionEvent event) {
-        usernameField.setText("buyer");
+        // Jeff nhớ đăng ký user này trước trong Database thì bấm mới được nhé
+        usernameField.setText("buyer_demo");
         passwordField.setText("123");
-        handleLogin(event); // Bấm hộ người dùng luôn
+        handleLogin(event);
     }
 
     @FXML
     void handleDemoSeller(ActionEvent event) {
-        usernameField.setText("seller");
+        usernameField.setText("seller_demo");
         passwordField.setText("123");
-        handleLogin(event); // Bấm hộ người dùng luôn
+        handleLogin(event);
     }
 
     @FXML
@@ -53,22 +69,13 @@ public class LoginController {
         switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
     }
 
-    // Hàm dùng chung để chuyển trang KHÔNG NHẢY DISCO
     private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
+            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
-            // Lưu lại kích thước hiện tại trước khi đổi
-            double width = stage.getWidth();
-            double height = stage.getHeight();
-
-            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
-            Scene scene = new Scene(root);
-            stage.setScene(scene);
-
-            // Áp lại kích thước cũ ngay lập tức
-            stage.setWidth(width);
-            stage.setHeight(height);
+            // Dùng setRoot để giữ kích thước Stage không bị nhảy
+            stage.getScene().setRoot(root);
             stage.setTitle(title);
 
         } catch (IOException e) {
