@@ -16,6 +16,6 @@ public class UserController {
     public boolean registerUser(String username, String password, String role) {
         System.out.println("Controller nhận request register");
 
-        return userService.register(username, password, role);
+        return userService.register(username, password, "email@example.com", role);
     }
 }
