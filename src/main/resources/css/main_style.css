@@ -1,0 +1,83 @@
+/* Tổng thể nền ứng dụng */
+.root {
+    -fx-font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    -fx-background-color: #f4f7f9;
+}
+
+/* HEADER TRÊN CÙNG */
+.header-top {
+    -fx-background-color: #00addc; /* Màu xanh cyan chuẩn trong ảnh */
+}
+
+.header-title {
+    -fx-font-weight: bold;
+    -fx-font-size: 26px;
+    -fx-text-fill: white;
+}
+
+.header-subtitle {
+    -fx-font-size: 13px;
+    -fx-text-fill: white;
+}
+
+/* THANH NAVIGATION (Menu xanh đậm) */
+.nav-bar {
+    -fx-background-color: #1a5276; /* Xanh Navy đậm */
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #bdc3c7; /* Màu xám nhạt cho các nút chưa chọn */
+    -fx-font-size: 15px;
+    -fx-padding: 10 20;
+    -fx-cursor: hand;
+}
+
+.nav-button:hover {
+    -fx-text-fill: white;
+}
+
+.nav-button-active {
+    -fx-background-color: transparent;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    /* Tạo gạch chân trắng dưới nút đang chọn */
+    -fx-border-color: transparent transparent white transparent;
+    -fx-border-width: 0 0 3 0;
+}
+
+/* THANH TÌM KIẾM (Search Bar) */
+.search-field {
+    -fx-background-radius: 25;
+    -fx-border-radius: 25;
+    -fx-border-color: #dfe1e5;
+    -fx-background-color: white;
+    -fx-padding: 0 20;
+    -fx-font-size: 14px;
+}
+
+.search-field:focus {
+    -fx-border-color: #00addc;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,173,220,0.2), 5, 0, 0, 0);
+}
+
+.filter-combo {
+    -fx-background-radius: 10;
+    -fx-background-color: white;
+    -fx-border-color: #dfe1e5;
+    -fx-border-radius: 10;
+}
+
+/* NÚT ĐĂNG XUẤT */
+.logout-button {
+    -fx-background-color: transparent;
+    -fx-border-color: white;
+    -fx-border-radius: 5;
+    -fx-text-fill: white;
+    -fx-font-weight: bold;
+    -fx-cursor: hand;
+}
+
+.logout-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.1);
+}

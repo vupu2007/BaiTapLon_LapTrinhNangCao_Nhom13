@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<VBox spacing="25.0" style="-fx-background-color: #f3f4f6; -fx-padding: 30;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <Label text="&lt;&gt;Cài đặt tài khoản" textFill="#1f2937">
+            <font>
+                <Font name="System Bold" size="24.0" />
+            </font>
+        </Label>
+
+        <HBox spacing="30.0" VBox.vgrow="ALWAYS">
+            <children>
+                <!-- Khối Thông tin cá nhân -->
+                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 3);" HBox.hgrow="ALWAYS">
+                    <children>
+                        <Label text="Thông tin cá nhân" textFill="#1f2937">
+                            <font>
+                                <Font name="System Bold" size="18.0" />
+                            </font>
+                        </Label>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Họ và tên hiển thị" textFill="#4b5563" />
+                                <TextField promptText="Nhập họ và tên..." style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Địa chỉ Email" textFill="#4b5563" />
+                                <TextField promptText="Nhập email..." style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Số điện thoại liên hệ" textFill="#4b5563" />
+                                <TextField promptText="Nhập số điện thoại..." style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <Button mnemonicParsing="false" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-weight: bold;" text="Lưu thông tin" />
+                    </children>
+                </VBox>
+
+                <!-- Khối Đổi mật khẩu -->
+                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 3);" HBox.hgrow="ALWAYS">
+                    <children>
+                        <Label text="Đổi mật khẩu" textFill="#1f2937">
+                            <font>
+                                <Font name="System Bold" size="18.0" />
+                            </font>
+                        </Label>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Mật khẩu hiện tại" textFill="#4b5563" />
+                                <PasswordField promptText="••••••••" style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Mật khẩu mới" textFill="#4b5563" />
+                                <PasswordField promptText="••••••••" style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="Xác nhận mật khẩu mới" textFill="#4b5563" />
+                                <PasswordField promptText="••••••••" style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6;" />
+                            </children>
+                        </VBox>
+                        <Button mnemonicParsing="false" style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-weight: bold;" text="Cập nhật mật khẩu" />
+                    </children>
+                </VBox>
+            </children>
+        </HBox>
+    </children>
+</VBox>

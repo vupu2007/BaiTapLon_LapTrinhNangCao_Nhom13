@@ -22,7 +22,7 @@
                     </VBox.margin>
                 </Label>
 
-                <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #e0f2fe; -fx-alignment: center-left; -fx-padding: 15 20;" text="🏠  Tổng quan" textFill="#0369a1">
+                <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: #e0f2fe; -fx-alignment: center-left; -fx-padding: 15 20;" text="🏠  Trang chủ " textFill="#0369a1">
                     <font><Font name="System Bold" size="15.0" /></font>
                 </Button>
                 <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 15 20;" text="🔨  Đang đấu giá" textFill="#64748b">
@@ -31,8 +31,6 @@
                 <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 15 20;" text="🛒  Sản phẩm của tôi" textFill="#64748b">
                     <font><Font name="System Bold" size="15.0" /></font>
                 </Button>
-
-                <VBox VBox.vgrow="ALWAYS" />
 
                 <Button maxWidth="Infinity" mnemonicParsing="false" style="-fx-background-color: transparent; -fx-alignment: center-left; -fx-padding: 15 20;" text="⚙  Cài đặt" textFill="#64748b">
                     <font><Font name="System Bold" size="15.0" /></font>
@@ -97,6 +95,8 @@
                             <font><Font name="System Bold" size="20.0" /></font>
                             <VBox.margin><Insets bottom="20.0" /></VBox.margin>
                         </Label>
+      
+                      <VBox VBox.vgrow="ALWAYS" />
 
                         <HBox alignment="CENTER_LEFT" prefHeight="70.0" style="-fx-border-color: transparent transparent #f1f5f9 transparent; -fx-border-width: 1;">
                             <children>

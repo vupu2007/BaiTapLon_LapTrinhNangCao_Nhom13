@@ -1,0 +1,96 @@
+/* product_card.css */
+
+/* Bo góc cho toàn bộ khung card và đổ bóng */
+.product-card {
+    -fx-background-color: white;
+    -fx-background-radius: 12px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 4);
+    -fx-pref-width: 380px;
+    -fx-min-width: 380px;
+}
+
+/* Phần chứa hình ảnh, cũng bo góc trên */
+.image-container {
+    -fx-background-color: #f7f9fa; /* Màu nền nhẹ nếu ảnh lỗi */
+    -fx-background-radius: 12px 12px 0 0;
+}
+
+/* Quan trọng: Để bo góc ImageView, ta phải dùng Clipping */
+.clipped-image {
+    -fx-background-radius: 12px 12px 0 0;
+}
+
+/* Tag thời gian (Xanh dương) */
+.timer-tag {
+    -fx-background-color: rgba(3, 169, 244, 0.9); /* Xanh trong ảnh */
+    -fx-text-fill: white;
+    -fx-padding: 6 12 6 12;
+    -fx-background-radius: 20; /* Bo tròn đều */
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Tag loại sản phẩm (VD: Điện thoại) */
+.category-tag {
+    -fx-background-color: #e8f0fe;
+    -fx-text-fill: #1967d2;
+    -fx-background-radius: 4px;
+    -fx-padding: 3 9;
+    -fx-font-size: 11px;
+}
+
+/* Giá tiền xanh dương */
+.current-price {
+    -fx-text-fill: #1a73e8;
+    -fx-font-weight: bold;
+    -fx-font-size: 16px;
+}
+
+/* Mức tăng giá xanh lá */
+.price-increase {
+    -fx-text-fill: #1e8e3e;
+    -fx-font-weight: bold;
+    -fx-font-size: 13px;
+}
+
+/* Các text phụ màu xám */
+.secondary-text {
+    -fx-text-fill: #616161;
+    -fx-font-size: 13px;
+}
+/* Màu xanh dương sáng cho Header trên cùng */
+.header-top {
+    -fx-background-color: #00addc;
+}
+
+/* Màu xanh đậm cho thanh Menu */
+.nav-bar {
+    -fx-background-color: #2c3e50;
+}
+
+/* Style cho các nút trên Menu */
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #bdc3c7;
+    -fx-font-size: 14px;
+    -fx-cursor: hand;
+}
+
+.nav-button:hover {
+    -fx-text-fill: white;
+}
+
+/* Nút đang được chọn (Active) */
+.nav-button-active {
+    -fx-text-fill: white;
+    -fx-border-color: transparent transparent white transparent;
+    -fx-border-width: 0 0 2 0;
+}
+
+/* Thanh tìm kiếm bo tròn */
+.search-field {
+    -fx-background-radius: 20;
+    -fx-border-radius: 20;
+    -fx-border-color: #dfe1e5;
+    -fx-padding: 0 15 0 15;
+}
