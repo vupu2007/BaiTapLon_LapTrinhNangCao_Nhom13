@@ -4,6 +4,7 @@ public abstract class User implements Entity {
     protected String id;
     protected String username;
     protected String password;
+
     public User(String id, String username,String password){
         this.id = id;
         this.username = username;
