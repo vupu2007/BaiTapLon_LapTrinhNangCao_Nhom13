@@ -6,38 +6,48 @@ import java.sql.Statement;
 import java.sql.SQLException;
 
 public class DatabaseConnection {
-    // Dùng đúng port 3307 Jeff đã đổi trong XAMPP
-    private static final String SERVER_URL = "jdbc:mysql://localhost:3307/";
-    private static final String DB_NAME = "online_auction_db";
+    // 1. Sửa URL: Chỉ để đến localhost:3306/
+    private static final String SERVER_URL = "jdbc:mysql://localhost:3306/";
+    // 2. Sửa DB_NAME: Phải là auction_system để khớp với Workbench của bạn
+    private static final String DB_NAME = "auction_system";
     private static final String USER = "root";
-    private static final String PASSWORD = "";
+    // 3. ĐIỀN MẬT KHẨU CỦA BẠN VÀO ĐÂY (Giống bên JDBCUtil)
+    private static final String PASSWORD = "123456";
 
     public static Connection getConnection() throws SQLException {
         try {
-            // 1. Kết nối đến Server trước để tạo Database nếu chưa có
+            // Đăng ký driver (Cần thiết cho một số phiên bản JDBC cũ hơn)
+            DriverManager.registerDriver(new com.mysql.cj.jdbc.Driver());
+
+            // Bước 1: Kết nối đến Server để đảm bảo DB tồn tại
             Connection serverConn = DriverManager.getConnection(SERVER_URL, USER, PASSWORD);
             Statement stmt = serverConn.createStatement();
             stmt.executeUpdate("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
+            stmt.close();
             serverConn.close();
 
-            // 2. Kết nối chính thức vào Database
+            // Bước 2: Kết nối chính thức vào Database auction_system
             String fullUrl = SERVER_URL + DB_NAME;
             Connection conn = DriverManager.getConnection(fullUrl, USER, PASSWORD);
 
-            // 3. Tự động tạo bảng Users
-            String createTableUser = "CREATE TABLE IF NOT EXISTS Users ("
-                    + "user_id INT AUTO_INCREMENT PRIMARY KEY,"
+            // Bước 3: Tự động tạo bảng users (Sửa lại cấu hình cột cho khớp với UserService)
+            // Lưu ý: Đổi user_id thành id để khớp với lệnh SELECT trong UserService
+            String createTableUser = "CREATE TABLE IF NOT EXISTS users ("
+                    + "id INT AUTO_INCREMENT PRIMARY KEY,"
                     + "username VARCHAR(50) UNIQUE NOT NULL,"
                     + "password VARCHAR(255) NOT NULL,"
-                    + "email VARCHAR(100) UNIQUE NOT NULL,"
-                    + "role ENUM('ADMIN', 'USER') DEFAULT 'USER')";
+                    + "email VARCHAR(100),"
+                    + "role VARCHAR(20) DEFAULT 'USER',"
+                    + "full_name VARCHAR(100),"
+                    + "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)";
 
             Statement tableStmt = conn.createStatement();
             tableStmt.execute(createTableUser);
+            tableStmt.close();
 
             return conn;
         } catch (SQLException e) {
-            System.err.println("Lỗi kết nối MySQL: " + e.getMessage());
+            System.err.println("Lỗi kết nối MySQL tại DatabaseConnection: " + e.getMessage());
             throw e;
         }
     }

@@ -70,7 +70,8 @@
                                 <Label text="Tên đăng nhập" textFill="#0f172a">
                                     <font><Font name="System Bold" size="13.0" /></font>
                                 </Label>
-                                <TextField prefHeight="40.0" promptText="👤  Nhập tên đăng nhập" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
+                                <!-- THÊM fx:id="txtUsername" -->
+                                <TextField fx:id="txtUsername" prefHeight="40.0" promptText="👤  Nhập tên đăng nhập" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
                                     <font><Font size="13.0" /></font>
                                 </TextField>
                             </children>
@@ -82,7 +83,8 @@
                                 <Label text="Mật khẩu" textFill="#0f172a">
                                     <font><Font name="System Bold" size="13.0" /></font>
                                 </Label>
-                                <PasswordField prefHeight="40.0" promptText="🔒  ••••••••" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
+                                <!-- THÊM fx:id="txtPassword" -->
+                                <PasswordField fx:id="txtPassword" prefHeight="40.0" promptText="🔒  ••••••••" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
                                     <font><Font size="13.0" /></font>
                                 </PasswordField>
                             </children>
@@ -94,14 +96,16 @@
                                 <Label text="Xác nhận mật khẩu" textFill="#0f172a">
                                     <font><Font name="System Bold" size="13.0" /></font>
                                 </Label>
-                                <PasswordField prefHeight="40.0" promptText="🔒  ••••••••" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
+                                <!-- THÊM fx:id="txtConfirmPassword" -->
+                                <PasswordField fx:id="txtConfirmPassword" prefHeight="40.0" promptText="🔒  ••••••••" style="-fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;">
                                     <font><Font size="13.0" /></font>
                                 </PasswordField>
                             </children>
                             <VBox.margin><Insets bottom="20.0" /></VBox.margin>
                         </VBox>
 
-                        <Button maxWidth="Infinity" mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #129def; -fx-background-radius: 8;" text="Đăng ký" textFill="WHITE">
+                        <!-- THÊM onAction="#handleRegister" -->
+                        <Button onAction="#handleRegister" maxWidth="Infinity" mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #129def; -fx-background-radius: 8;" text="Đăng ký" textFill="WHITE">
                             <font><Font name="System Bold" size="15.0" /></font>
                         </Button>
 
