@@ -2,43 +2,34 @@ package com.auction.util;
 
 import java.sql.Connection;
 import java.sql.DriverManager;
-import java.sql.Statement;
 import java.sql.SQLException;
+import java.sql.Statement;
 
 public class DatabaseConnection {
-    // Dùng đúng port 3307 Jeff đã đổi trong XAMPP
-    private static final String SERVER_URL = "jdbc:mysql://localhost:3307/";
+    // Sửa về port 3306 theo đúng XAMPP hiện tại của bạn
+    private static final String SERVER_URL = "jdbc:mysql://localhost:3306/";
     private static final String DB_NAME = "online_auction_db";
     private static final String USER = "root";
     private static final String PASSWORD = "";
 
-    public static Connection getConnection() throws SQLException {
+    public static Connection getConnection() {
         try {
-            // 1. Kết nối đến Server trước để tạo Database nếu chưa có
+            // 1. Đăng ký Driver (giúp Java nhận diện MySQL)
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
+            // 2. Kết nối tạm thời để đảm bảo DB tồn tại
             Connection serverConn = DriverManager.getConnection(SERVER_URL, USER, PASSWORD);
             Statement stmt = serverConn.createStatement();
             stmt.executeUpdate("CREATE DATABASE IF NOT EXISTS " + DB_NAME);
             serverConn.close();
 
-            // 2. Kết nối chính thức vào Database
+            // 3. Kết nối chính thức vào DB
             String fullUrl = SERVER_URL + DB_NAME;
-            Connection conn = DriverManager.getConnection(fullUrl, USER, PASSWORD);
+            return DriverManager.getConnection(fullUrl, USER, PASSWORD);
 
-            // 3. Tự động tạo bảng Users
-            String createTableUser = "CREATE TABLE IF NOT EXISTS Users ("
-                    + "user_id INT AUTO_INCREMENT PRIMARY KEY,"
-                    + "username VARCHAR(50) UNIQUE NOT NULL,"
-                    + "password VARCHAR(255) NOT NULL,"
-                    + "email VARCHAR(100) UNIQUE NOT NULL,"
-                    + "role ENUM('ADMIN', 'USER') DEFAULT 'USER')";
-
-            Statement tableStmt = conn.createStatement();
-            tableStmt.execute(createTableUser);
-
-            return conn;
-        } catch (SQLException e) {
-            System.err.println("Lỗi kết nối MySQL: " + e.getMessage());
-            throw e;
+        } catch (Exception e) {
+            System.err.println("Lỗi kết nối Database: " + e.getMessage());
+            return null;
         }
     }
 }
