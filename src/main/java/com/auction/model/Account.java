@@ -20,6 +20,6 @@ public abstract class Account {
     public String getUsername() { return username; }
     public String getRole() { return role; }
 
-    // Phương thức trừu tượng: Mỗi loại tài khoản sẽ mở ra giao diện JavaFX khác nhau
+    // Phương thức trừu tượng: Mỗi loại tài khoản sẽ mở ra giao diện JavaFX khác nhau.
     public abstract void loginSuccessAction();
 }
