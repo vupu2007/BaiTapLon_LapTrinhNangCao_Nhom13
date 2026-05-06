@@ -1,14 +1,12 @@
 package com.auction.service;
 
 import com.auction.dao.ItemDAO;
-import com.auction.model.Bidder;
 import com.auction.model.Item;
+import com.auction.model.User; // Sử dụng lớp cha User
 import java.util.List;
 
 public class AuctionService {
-    // 1. Gọi ItemDAO để xử lý Database chuyên nghiệp
     private ItemDAO itemDAO = new ItemDAO();
-
     private boolean isRunning;
 
     public AuctionService() {
@@ -16,38 +14,30 @@ public class AuctionService {
     }
 
     /**
-     * Hàm đặt giá thầu (Logic chính của bạn)
+     * Logic đặt giá: Cho phép mọi User đặt giá miễn là không phải chủ sở hữu món đồ
      */
-    public synchronized String handlePlaceBid(String itemId, double bidAmount, Bidder bidder) {
-        if (!isRunning) return "Phiên đấu giá đã kết thúc!";
+    public synchronized boolean placeBid(String itemId, double bidAmount, User user) {
+        if (!isRunning) return false;
 
-        // Bước 1: Lấy thông tin mới nhất từ DB (Không dùng giá cũ trong RAM để so sánh)
+        // 1. Lấy thông tin món hàng từ DB
         Item item = itemDAO.getItemById(itemId);
-        if (item == null) return "Sản phẩm không tồn tại!";
+        if (item == null) return false;
 
-        // Bước 2: Kiểm tra giá (Logic nghiệp vụ)
+        // 2. Kiểm tra giá đặt phải cao hơn giá hiện tại
         if (bidAmount <= item.getCurrentPrice()) {
-            return "Giá đặt phải cao hơn giá hiện tại: " + item.getCurrentPrice();
+            return false;
         }
 
-        // Bước 3: Kiểm tra người bán (Không cho tự đấu giá đồ của mình)
-        // Lưu ý: bidder.getId() là String nên cần ép kiểu nếu ownerId trong DB là int
-        if (item.getOwnerId() == Integer.parseInt(bidder.getId())) {
-            return "Bạn không thể đấu giá sản phẩm của chính mình!";
+        // 3. LOGIC QUAN TRỌNG: Kiểm tra quyền sở hữu
+        // Một người bán (Seller) vẫn có thể đặt giá nếu món đồ này KHÔNG thuộc về họ
+        if (item.getOwnerId() == Integer.parseInt(user.getId())) {
+            return false; // Chặn nếu tự đấu giá đồ của chính mình
         }
 
-        // Bước 4: Thực thi lưu vào Database
-        // Gọi hàm updateCurrentPrice mà bạn vừa viết xong ở ItemDAO
-        boolean success = itemDAO.updateCurrentPrice(itemId, bidAmount);
-
-        if (success) {
-            return "Đặt giá thành công! Bạn đang dẫn đầu.";
-        } else {
-            return "Lỗi hệ thống khi cập nhật giá.";
-        }
+        // 4. Cập nhật vào Database
+        return itemDAO.updateCurrentPrice(itemId, bidAmount);
     }
 
-    // Các hàm bổ trợ cho giao diện
     public List<Item> getAuctionList() {
         return itemDAO.getAllItems();
     }
