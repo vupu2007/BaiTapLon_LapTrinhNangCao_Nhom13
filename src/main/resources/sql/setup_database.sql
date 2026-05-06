@@ -2,7 +2,7 @@
 CREATE DATABASE IF NOT EXISTS online_auction_db;
 USE online_auction_db;
 
--- 2. Bảng Users (Đã sửa role theo yêu cầu: Admin, Seller, Bidder)
+-- 2. Bảng Users ( Admin, Seller, Bidder)
 CREATE TABLE Users (
                        user_id INT AUTO_INCREMENT PRIMARY KEY,
                        username VARCHAR(50) UNIQUE NOT NULL,
