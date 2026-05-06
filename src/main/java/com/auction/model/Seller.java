@@ -2,8 +2,8 @@ package com.auction.model;
 
 public class Seller extends User {
 
-    public Seller(String id, String username, String password, String email, String role) {
-        super(id, username, password, email, role);}
+    public Seller(String id, String username, String password , String role) {
+        super(id, username, password,  role);}
 
     @Override
     public String displayRole() {

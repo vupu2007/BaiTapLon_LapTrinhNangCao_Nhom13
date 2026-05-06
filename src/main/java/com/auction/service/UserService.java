@@ -30,18 +30,17 @@ public class UserService {
             if (rs.next()) {
                 String id = String.valueOf(rs.getInt("user_id"));
                 String role = rs.getString("role");
-                String email = rs.getString("email");
 
                 System.out.println("Vibe thành công: " + username + " [" + role + "]");
 
                 // Trả về đúng loại đối tượng con dựa trên Role
                 if ("ADMIN".equalsIgnoreCase(role)) {
-                    return new Admin(id, username, password, email, role);
+                    return new Admin(id, username, password, role);
                 } else if ("SELLER".equalsIgnoreCase(role)) {
-                    return new Seller(id, username, password, email, role);
+                    return new Seller(id, username, password, role);
                 } else {
                     // Mặc định là Bidder (Người mua)
-                    return new Bidder(id, username, password, email, role);
+                    return new Bidder(id, username, password, role);
                 }
             }
         } catch (SQLException e) {
@@ -53,16 +52,15 @@ public class UserService {
     /**
      * Hàm đăng ký người dùng mới
      */
-    public boolean register(String username, String password, String email, String role) {
-        String sql = "INSERT INTO Users (username, password, email, role) VALUES (?, ?, ?, ?)";
+    public boolean register(String username, String password, String role) {
+        String sql = "INSERT INTO Users (username, password, role) VALUES ( ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, username);
             pstmt.setString(2, password);
-            pstmt.setString(3, email);
-            pstmt.setString(4, role.toUpperCase());
+            pstmt.setString(3, role.toUpperCase());
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
