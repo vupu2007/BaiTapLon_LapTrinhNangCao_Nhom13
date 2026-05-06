@@ -1,47 +1,62 @@
--- Tạo Database
-
+-- 1. Tạo Database
 CREATE DATABASE IF NOT EXISTS online_auction_db;
 USE online_auction_db;
 
--- 1. Bảng Users
+-- 2. Bảng Users ( Admin, Seller, Bidder)
 CREATE TABLE Users (
                        user_id INT AUTO_INCREMENT PRIMARY KEY,
                        username VARCHAR(50) UNIQUE NOT NULL,
                        password VARCHAR(255) NOT NULL,
-                       email VARCHAR(100) UNIQUE NOT NULL,
-                       role ENUM('ADMIN', 'USER') DEFAULT 'USER'
+                       role ENUM('ADMIN', 'SELLER', 'BIDDER') DEFAULT 'BIDDER'
 );
 
--- 2. Bảng Categories
+-- 3. Bảng Categories
 CREATE TABLE Categories (
                             category_id INT AUTO_INCREMENT PRIMARY KEY,
                             name VARCHAR(100) NOT NULL
 );
 
--- 3. Bảng Items
+-- 4. Bảng Items
 CREATE TABLE Items (
-                       item_id INT AUTO_INCREMENT PRIMARY KEY,
+    -- item_id để VARCHAR để Phú có thể đặt là 'EL001', 'FA002', v.v.
+                       item_id VARCHAR(20) PRIMARY KEY,
                        name VARCHAR(100) NOT NULL,
                        description TEXT,
+
+    -- Các cột giá tiền
+                       starting_price DOUBLE NOT NULL,
+                       current_price DOUBLE NOT NULL, -- Giá này sẽ cập nhật mỗi khi có người đấu giá
+
+    -- Phân loại và Chủ sở hữu
                        category_id INT,
                        owner_id INT,
+
+    -- Thời gian và Trạng thái
+                       end_time DATETIME NOT NULL,
+                       status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SOLD, EXPIRED
+
+    -- Khóa ngoại kết nối với các bảng khác
                        FOREIGN KEY (category_id) REFERENCES Categories(category_id),
                        FOREIGN KEY (owner_id) REFERENCES Users(user_id)
 );
 
--- 4. Bảng Auctions
+-- 5. Bảng Auctions (Thêm winner_id, min_increment và các trạng thái chuẩn)
 CREATE TABLE Auctions (
                           auction_id INT AUTO_INCREMENT PRIMARY KEY,
                           item_id INT,
                           start_price DECIMAL(10, 2) NOT NULL,
                           current_price DECIMAL(10, 2) DEFAULT 0,
+                          min_increment DECIMAL(10, 2) DEFAULT 1.0, -- Bước giá tối thiểu
                           start_time DATETIME,
                           end_time DATETIME,
-                          status VARCHAR(20) CHECK (status IN ('OPEN', 'CLOSED', 'CANCELED')),
-                          FOREIGN KEY (item_id) REFERENCES Items(item_id)
+    -- Trạng thái: OPEN (chưa bắt đầu), RUNNING (đang diễn ra), FINISHED (kết thúc), PAID (đã thanh toán), CANCELED (hủy)
+                          status ENUM('OPEN', 'RUNNING', 'FINISHED', 'PAID', 'CANCELED') DEFAULT 'OPEN',
+                          winner_id INT NULL,
+                          FOREIGN KEY (item_id) REFERENCES Items(item_id),
+                          FOREIGN KEY (winner_id) REFERENCES Users(user_id)
 );
 
--- 5. Bảng Bids
+-- 6. Bảng Bids
 CREATE TABLE Bids (
                       bid_id INT AUTO_INCREMENT PRIMARY KEY,
                       auction_id INT,
@@ -50,4 +65,4 @@ CREATE TABLE Bids (
                       bid_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                       FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
                       FOREIGN KEY (user_id) REFERENCES Users(user_id)
-);
+);;

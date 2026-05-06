@@ -1,42 +1,30 @@
 package com.auction.model;
 
-import java.sql.ResultSet;
-import java.sql.SQLException;
-
 public abstract class User implements Entity {
     protected String id;
     protected String username;
     protected String password;
+    protected String role;  // Thêm mới
 
-    public User(String id, String username,String password){
+    public User(String id, String username, String password , String role) {
         this.id = id;
         this.username = username;
         this.password = password;
-    }
-    public String getUsername(){
-        return username;
-    }
-    public void setUsername(String username){
-        this.username = username;
-    }
-    public String getPassword(){
-        return password;
-    }
-    public void setPassword(String password){
-        this.password = this.password;
-    }
-    public String getId(){
-        return id;
+        this.role = role;
     }
 
-//    public boolean login(String inputPassword){
-//        return this.password.equals(inputPassword);
-//
-//    }
-//    public boolean register(){
-//        //lưu user mới vào database thông qua lớp DAO(Data Access Object)
-//        System.out.println("Đăng kí tài khoản thành công cho user: "+ this.username);
-//           return true;
-//    }
+
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+
+    public String getId() { return id; }
+
     public abstract String displayRole();
 }

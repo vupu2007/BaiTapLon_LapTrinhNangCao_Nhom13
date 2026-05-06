@@ -18,7 +18,7 @@ public class RegisterController {
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
     @FXML private PasswordField txtConfirmPassword;
-    @FXML private TextField txtEmail;
+    @FXML private TextField txtEmail; // Bạn nên thêm một ô nhập Email trong FXML nhé
 
     // Khai báo Service để dùng
     private UserService userService = new UserService();
@@ -71,7 +71,6 @@ public class RegisterController {
             e.printStackTrace();
         }
     }
-
 
     private void showAlert(AlertType alertType, String title, String message) {
         Alert alert = new Alert(alertType);
