@@ -1,81 +1,58 @@
 package com.auction.service;
 
+import com.auction.dao.ItemDAO;
 import com.auction.model.Bidder;
 import com.auction.model.Item;
-import com.auction.util.DatabaseConnection;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import java.util.List;
 
 public class AuctionService {
-    // Các thuộc tính cũ có thể giữ lại nếu bạn muốn dùng làm cache
-    private String auctionId;
-    private Item auctionItem;
-    private double currentHighestBid;
-    private Bidder highestBidder;
+    // 1. Gọi ItemDAO để xử lý Database chuyên nghiệp
+    private ItemDAO itemDAO = new ItemDAO();
+
     private boolean isRunning;
 
-    // 1. THÊM MỚI: Constructor không tham số để hết báo đỏ ở Controller
     public AuctionService() {
         this.isRunning = true;
     }
 
-    // 2. GIỮ LẠI: Constructor cũ (nếu cần dùng ở chỗ khác)
-    public AuctionService(String auctionId, Item auctionItem) {
-        this.auctionId = auctionId;
-        this.auctionItem = auctionItem;
-        this.currentHighestBid = (auctionItem != null) ? auctionItem.getStartingPrice() : 0;
-        this.isRunning = true;
+    /**
+     * Hàm đặt giá thầu (Logic chính của bạn)
+     */
+    public synchronized String handlePlaceBid(String itemId, double bidAmount, Bidder bidder) {
+        if (!isRunning) return "Phiên đấu giá đã kết thúc!";
+
+        // Bước 1: Lấy thông tin mới nhất từ DB (Không dùng giá cũ trong RAM để so sánh)
+        Item item = itemDAO.getItemById(itemId);
+        if (item == null) return "Sản phẩm không tồn tại!";
+
+        // Bước 2: Kiểm tra giá (Logic nghiệp vụ)
+        if (bidAmount <= item.getCurrentPrice()) {
+            return "Giá đặt phải cao hơn giá hiện tại: " + item.getCurrentPrice();
+        }
+
+        // Bước 3: Kiểm tra người bán (Không cho tự đấu giá đồ của mình)
+        // Lưu ý: bidder.getId() là String nên cần ép kiểu nếu ownerId trong DB là int
+        if (item.getOwnerId() == Integer.parseInt(bidder.getId())) {
+            return "Bạn không thể đấu giá sản phẩm của chính mình!";
+        }
+
+        // Bước 4: Thực thi lưu vào Database
+        // Gọi hàm updateCurrentPrice mà bạn vừa viết xong ở ItemDAO
+        boolean success = itemDAO.updateCurrentPrice(itemId, bidAmount);
+
+        if (success) {
+            return "Đặt giá thành công! Bạn đang dẫn đầu.";
+        } else {
+            return "Lỗi hệ thống khi cập nhật giá.";
+        }
     }
 
-    /**
-     * Sửa hàm placeBid để vừa cập nhật RAM vừa lưu vào MySQL
-     */
-    public synchronized boolean placeBid(Bidder bidder, double bidAmount) {
-        if (!isRunning) {
-            System.out.println("Phiên đã đóng!");
-            return false;
-        }
-
-        // Kiểm tra giá đặt (logic này sau này sẽ SELECT từ DB để check chính xác hơn)
-        if (bidAmount <= currentHighestBid) {
-            System.out.println("Giá đặt phải cao hơn giá hiện tại!");
-            return false;
-        }
-
-        // Bước A: Lưu vào Database (MySQL)
-        String sql = "INSERT INTO Bids (user_id, bid_amount, bid_time) VALUES (?, ?, NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, Integer.parseInt(bidder.getId()));
-            pstmt.setDouble(2, bidAmount);
-            pstmt.executeUpdate();
-
-            // Bước B: Cập nhật lại bộ nhớ RAM để hiển thị nhanh
-            this.currentHighestBid = bidAmount;
-            this.highestBidder = bidder;
-
-            System.out.println("Lưu DB & RAM thành công: " + bidder.getUsername());
-            return true;
-
-        } catch (SQLException e) {
-            System.err.println("Lỗi kết nối MySQL khi đặt giá: " + e.getMessage());
-            return false;
-        } catch (NumberFormatException e) {
-            System.err.println("Lỗi định dạng ID người dùng.");
-            return false;
-        }
+    // Các hàm bổ trợ cho giao diện
+    public List<Item> getAuctionList() {
+        return itemDAO.getAllItems();
     }
 
     public void closeAuction() {
         this.isRunning = false;
-        System.out.println("Auction kết thúc!");
-        // Sau này có thể thêm lệnh UPDATE trạng thái phiên đấu giá trong Database ở đây
     }
-
-    // Các hàm getter giữ nguyên
-    public double getCurrentHighestBid() { return currentHighestBid; }
-    public Bidder getHighestBidder() { return highestBidder; }
-    public boolean isRunning() { return isRunning; }
 }
