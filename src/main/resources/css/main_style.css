@@ -1,79 +1,115 @@
-/* MENU */
+/* Sidebar và Menu */
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #1b70d2, #14aab3);
+}
+
+.hamburger-btn {
+    -fx-background-color: white;
+    -fx-background-radius: 5;
+    -fx-cursor: hand;
+    -fx-font-size: 18;
+}
+
 .menu-item {
     -fx-background-color: transparent;
-    -fx-text-fill: white;
+    -fx-text-fill: #e0f2f1;
     -fx-alignment: CENTER_LEFT;
-    -fx-padding: 12 20;
-    -fx-font-size: 14px;
-    -fx-background-radius: 10;
+    -fx-padding: 12 15;
+    -fx-font-size: 14;
 }
 
 .menu-item:hover {
-    -fx-background-color: rgba(255,255,255,0.25);
+    -fx-background-color: rgba(255, 255, 255, 0.1);
 }
 
 .menu-item.active {
-    -fx-background-color: white;
-    -fx-text-fill: #4facfe;
-}
-
-.menu-item.logout {
-    -fx-text-fill: #ff4d4f;
-}
-
-/* TITLE */
-.title {
-    -fx-font-size: 26px;
+    -fx-background-color: rgba(255, 255, 255, 0.2);
     -fx-font-weight: bold;
 }
 
-.sub-text {
-    -fx-text-fill: #64748b;
+/* Banner */
+.banner-card {
+    -fx-background-color: linear-gradient(to right, #1b70d2, #14aab3);
+    -fx-background-radius: 15;
+    -fx-padding: 30;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);
 }
 
-/* CARD */
-.card {
-    -fx-background-color: white;
-    -fx-padding: 20;
-    -fx-background-radius: 20;
-    -fx-effect: dropshadow(gaussian, rgba(0,0,0,0.08), 10,0,0,4);
-}
-
-/* NUMBER */
-.number {
-    -fx-font-size: 28px;
+.banner-title {
+    -fx-font-size: 24;
     -fx-font-weight: bold;
-}
-
-.blue { -fx-text-fill: #4facfe; }
-.orange { -fx-text-fill: #f59e0b; }
-.green { -fx-text-fill: #10b981; }
-
-/* SECTION */
-.section-title {
-    -fx-font-size: 18px;
-    -fx-font-weight: bold;
-}
-
-/* ITEM */
-.item-row {
-    -fx-padding: 10;
-    -fx-background-radius: 10;
-}
-
-.item-row:hover {
-    -fx-background-color: #f1f5f9;
-}
-
-/* PRICE */
-.price {
-    -fx-text-fill: #ef4444;
-    -fx-padding: 0 15 0 0;
-}
-
-/* BUTTON */
-.btn-primary {
-    -fx-background-color: #4facfe;
     -fx-text-fill: white;
-    -fx-background-radius: 8;
+}
+
+.banner-subtitle {
+    -fx-text-fill: #e0f2f1;
+}
+
+.icon-box {
+    -fx-font-size: 40;
+    -fx-text-fill: white;
+}
+
+/* Stats & Cards */
+.stat-card {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-padding: 20;
+    -fx-min-width: 200;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);
+}
+
+.stat-value {
+    -fx-font-size: 22;
+    -fx-font-weight: bold;
+}
+
+.stat-value-green {
+    -fx-font-size: 22;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2e7d32;
+}
+
+/* Nội dung chính */
+.main-content-area {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-padding: 25;
+}
+
+.section-title {
+    -fx-font-size: 18;
+    -fx-font-weight: bold;
+    -fx-padding: 0 0 15 0;
+}
+
+.btn-logout {
+    -fx-background-color: #1b70d2;
+    -fx-text-fill: white;
+    -fx-background-radius: 5;
+}
+
+.auction-card {
+    -fx-background-color: white;
+    -fx-border-color: #eceff1;
+    -fx-border-radius: 10;
+    -fx-padding: 15;
+    -fx-spacing: 10;
+}
+
+.btn-bid {
+    -fx-background-color: #1b70d2;
+    -fx-text-fill: white;
+    -fx-padding: 8;
+}
+.sidebar {
+    -fx-background-color: linear-gradient(to bottom, #1b70d2, #14aab3);
+    /* Đảm bảo nội dung không bị tràn ra ngoài khi thu nhỏ */
+    -fx-alignment: TOP_LEFT;
+}
+
+.menu-item {
+    -fx-alignment: CENTER_LEFT;
+    -fx-min-width: 40; /* Đảm bảo icon vẫn ở giữa khi thu nhỏ */
+    -fx-content-display: LEFT;
 }

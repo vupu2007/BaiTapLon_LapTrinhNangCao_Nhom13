@@ -57,6 +57,7 @@
                             <VBox.margin><Insets bottom="15.0" /></VBox.margin>
                         </VBox>
 
+
                         <VBox spacing="8.0">
                             <children>
                                 <Label text="Mật khẩu" textFill="#0f172a">
@@ -68,6 +69,7 @@
                             </children>
                             <VBox.margin><Insets bottom="5.0" /></VBox.margin>
                         </VBox>
+
 
                         <Label fx:id="errorLabel" alignment="CENTER" maxWidth="Infinity" text="" textFill="RED">
                             <font><Font size="13.0" /></font>

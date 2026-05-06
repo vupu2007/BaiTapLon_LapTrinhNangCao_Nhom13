@@ -45,7 +45,7 @@ public class RegisterController {
 
         // 2. GỌI DATABASE THAY VÌ USERSTORE
         // Mình truyền 4 tham số: Username, Password, Email, và Role (mặc định là USER)
-        boolean success = userService.register(username, password, email, "USER");
+        boolean success = userService.register(username, password, email);
 
         if (success) {
             showAlert(AlertType.INFORMATION, "Thành công", "Đăng ký thành công vào Database!");
@@ -55,7 +55,7 @@ public class RegisterController {
         }
     }
 
-    // Các hàm goToLogin, switchScene, showAlert giữ nguyên như code cũ của bạn...
+    // Các hàm goToLogin, switchScene, showAlert giữ nguyên ...
     @FXML
     public void goToLogin(ActionEvent event) {
         switchScene(event, "/view/LoginView.fxml", "Đăng nhập");

@@ -99,5 +99,9 @@ public class LoginController {
             // Hiển thị thông báo lỗi nếu đăng nhập thất bại
         }
     }
+    @FXML
+    private void togglePassword() {
+        // code ở đây
+    }
 
 }

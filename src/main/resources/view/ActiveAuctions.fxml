@@ -1,117 +1,100 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
 
-<VBox prefHeight="673.0" prefWidth="816.0" spacing="20.0" style="-fx-background-color: #f3f4f6; -fx-padding: 30;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1">
-    <children>
-        <Label text="&lt;&gt; Phiên đang đấu giá" textFill="#1f2937">
-            <font>
-                <Font name="System Bold" size="24.0" />
-            </font>
-        </Label>
+<BorderPane xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.auction.controller.AuctionController"
+            prefWidth="1200" prefHeight="700"
+            stylesheets="@/css/product_card.css">
 
-        <!-- Thanh tìm kiếm và lọc -->
-        <HBox spacing="10.0">
+    <left>
+        <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">
+            <HBox alignment="CENTER_LEFT">
+                <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
+                <Button text="☰" onAction="#toggleSidebar" styleClass="toggle-btn"/>
+            </HBox>
+            <Button fx:id="btnHome" text="🏠  Trang chủ" styleClass="menu-item"/>
+            <Button fx:id="btnProducts" text="📦  Sản phẩm của tôi" styleClass="menu-item"/>
+            <Button fx:id="btnCreate" text="➕  Tạo phiên đấu giá" styleClass="menu-item"/>
+            <Button fx:id="btnHistory" text="🕘  Lịch sử" styleClass="menu-item"/>
+        </VBox>
+    </left>
+
+    <center>
+        <VBox spacing="0" styleClass="main-bg">
             <children>
-                <TextField prefWidth="350.0" promptText="Tìm kiếm sản phẩm đang đấu giá..." style="-fx-background-radius: 6; -fx-padding: 10; -fx-border-color: #e5e7eb; -fx-border-radius: 6; -fx-background-color: white;" />
-                <Button mnemonicParsing="false" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-weight: bold;" text="Tìm kiếm" />
+                <HBox alignment="CENTER_RIGHT" spacing="15" prefHeight="60.0">
+                    <padding><Insets right="20" /></padding>
+                    <Label text="Xin chào, Trần Thị B" style="-fx-text-fill: #555555; -fx-font-size: 14;"/>
+                    <Button text="Đăng xuất" styleClass="logout-btn"/>
+                </HBox>
+
+                <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
+                    <VBox spacing="25.0">
+                        <padding><Insets top="10" right="25" bottom="25" left="25"/></padding>
+                        <children>
+
+                            <VBox styleClass="header-card">
+                                <padding><Insets top="20" right="25" bottom="20" left="25"/></padding>
+                                <children>
+                                    <HBox spacing="15" alignment="CENTER_LEFT">
+                                        <Label text="🔔" styleClass="header-icon"/>
+                                        <VBox>
+                                            <Label text="Phiên đang đấu giá" styleClass="header-title"/>
+                                            <Label text="Tham gia đấu giá các sản phẩm hot nhất hiện nay" styleClass="header-sub"/>
+                                        </VBox>
+                                    </HBox>
+                                </children>
+                            </VBox>
+
+                            <HBox spacing="10.0" alignment="CENTER_LEFT">
+                                <TextField prefWidth="400.0" promptText="Tìm kiếm sản phẩm đang đấu giá..."
+                                           style="-fx-background-radius: 20; -fx-padding: 10 20; -fx-border-color: #ddd; -fx-border-radius: 20; -fx-background-color: white;"/>
+                                <Button text="Tìm kiếm" style="-fx-background-color: #1491a3; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 10 25; -fx-font-weight: bold; -fx-cursor: hand;"/>
+                            </HBox>
+
+                            <VBox spacing="15.0">
+                                <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="card-white-item">
+                                    <padding><Insets top="15" right="20" bottom="15" left="20"/></padding>
+                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                        <Label text="📱 iPhone 15 Pro Max 256GB Titan" style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;"/>
+                                        <Label text="Người đăng: admin_store" style="-fx-text-fill: #6b7280;"/>
+                                    </VBox>
+                                    <VBox alignment="CENTER_RIGHT" prefWidth="150">
+                                        <Label text="Giá hiện tại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
+                                        <Label text="24,500,000 đ" style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                    </VBox>
+                                    <VBox alignment="CENTER_RIGHT" prefWidth="150">
+                                        <Label text="Thời gian còn lại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
+                                        <Label text="02:15:45" style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                    </VBox>
+                                    <Button text="Vào phòng đấu" styleClass="btn-action-blue"/>
+                                </HBox>
+
+                                <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="card-white-item">
+                                    <padding><Insets top="15" right="20" bottom="15" left="20"/></padding>
+                                    <VBox spacing="5.0" HBox.hgrow="ALWAYS">
+                                        <Label text="💻 MacBook Pro M3 16GB 512GB" style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;"/>
+                                        <Label text="Người đăng: mac_world" style="-fx-text-fill: #6b7280;"/>
+                                    </VBox>
+                                    <VBox alignment="CENTER_RIGHT" prefWidth="150">
+                                        <Label text="Giá hiện tại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
+                                        <Label text="38,000,000 đ" style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                    </VBox>
+                                    <VBox alignment="CENTER_RIGHT" prefWidth="150">
+                                        <Label text="Thời gian còn lại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
+                                        <Label text="14:05:10" style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                    </VBox>
+                                    <Button text="Vào phòng đấu" styleClass="btn-action-blue"/>
+                                </HBox>
+                            </VBox>
+                        </children>
+                    </VBox>
+                </ScrollPane>
             </children>
-        </HBox>
-
-        <!-- Danh sách các phiên (Cuộn được) -->
-        <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
-            <content>
-                <VBox spacing="15.0">
-                    <children>
-                        <!-- Card Sản phẩm 1 -->
-                        <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 3);">
-                            <children>
-                                <VBox spacing="5.0">
-                                    <children>
-                                        <Label text="📱 iPhone 15 Pro Max 256GB Titan" textFill="#1f2937">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                        <Label text="Người đăng: admin_store" textFill="#6b7280" />
-                                    </children>
-                                </VBox>
-                                <Region HBox.hgrow="ALWAYS" />
-                                <VBox alignment="CENTER_RIGHT" spacing="5.0">
-                                    <children>
-                                        <Label text="Giá hiện tại:" textFill="#6b7280" />
-                                        <Label text="24,500,000 đ" textFill="#ef4444">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                                <VBox alignment="CENTER_RIGHT" spacing="5.0" style="-fx-padding: 0 20 0 20;">
-                                    <children>
-                                        <Label text="Thời gian còn lại" textFill="#6b7280" />
-                                        <Label text="02:15:45" textFill="#f59e0b">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                                <Button mnemonicParsing="false" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-weight: bold;" text="Vào phòng đấu" />
-                            </children>
-                        </HBox>
-
-                        <!-- Card Sản phẩm 2 -->
-                        <HBox alignment="CENTER_LEFT" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 10; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 3);">
-                            <children>
-                                <VBox spacing="5.0">
-                                    <children>
-                                        <Label text="💻 MacBook Pro M3 16GB 512GB" textFill="#1f2937">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                        <Label text="Người đăng: mac_world" textFill="#6b7280" />
-                                    </children>
-                                </VBox>
-                                <Region HBox.hgrow="ALWAYS" />
-                                <VBox alignment="CENTER_RIGHT" spacing="5.0">
-                                    <children>
-                                        <Label text="Giá hiện tại:" textFill="#6b7280" />
-                                        <Label text="38,000,000 đ" textFill="#ef4444">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                                <VBox alignment="CENTER_RIGHT" spacing="5.0" style="-fx-padding: 0 20 0 20;">
-                                    <children>
-                                        <Label text="Thời gian còn lại" textFill="#6b7280" />
-                                        <Label text="14:05:10" textFill="#f59e0b">
-                                            <font>
-                                                <Font name="System Bold" size="16.0" />
-                                            </font>
-                                        </Label>
-                                    </children>
-                                </VBox>
-                                <Button mnemonicParsing="false" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-padding: 10 20; -fx-font-weight: bold;" text="Vào phòng đấu" />
-                            </children>
-                        </HBox>
-                    </children>
-                    <padding>
-                        <Insets bottom="10.0" left="5.0" right="5.0" top="5.0" />
-                    </padding>
-                </VBox>
-            </content>
-        </ScrollPane>
-    </children>
-</VBox>
+        </VBox>
+    </center>
+</BorderPane>

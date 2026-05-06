@@ -26,18 +26,20 @@
 }
 
 /* TOPBAR */
-.topbar {
-    -fx-background-color: linear-gradient(to right, #1b70d2, #14aab3);
+.topbar-transparent {
+    -fx-background-color: transparent; /* Xóa màu xanh */
 }
 
-.topbar-text {
-    -fx-text-fill: white;
+.topbar-text-dark {
+    -fx-text-fill: #555555;
+    -fx-font-size: 14px;
 }
-
 .logout-btn {
-    -fx-background-color: rgba(255,255,255,0.3);
+    -fx-background-color: #1a84c6;
     -fx-text-fill: white;
-    -fx-background-radius: 10;
+    -fx-background-radius: 5;
+    -fx-padding: 5 15;
+    -fx-cursor: hand;
 }
 
 /* BACKGROUND */

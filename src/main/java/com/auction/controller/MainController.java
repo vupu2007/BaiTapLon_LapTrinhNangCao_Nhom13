@@ -109,4 +109,38 @@ public class MainController {
             System.err.println("Lỗi chuyển màn hình khi Logout: " + e.getMessage());
         }
     }
+    @FXML
+    private VBox sidebar;
+    @FXML
+    private Button btnHome, btnProducts, btnCreate, btnHistory;
+
+    private boolean isCollapsed = false;
+
+    @FXML
+    private void toggleSidebar() {
+        if (isCollapsed) {
+            // MỞ RỘNG
+            sidebar.setMinWidth(250);
+            sidebar.setPrefWidth(250);
+
+            btnHome.setText("🏠  Trang chủ");
+            btnProducts.setText("📦  Sản phẩm của tôi");
+            btnCreate.setText("➕  Tạo phiên đấu giá");
+            btnHistory.setText("🕒  Lịch sử");
+
+            isCollapsed = false;
+        } else {
+            // THU NHỎ
+            sidebar.setMinWidth(70);
+            sidebar.setPrefWidth(70);
+
+            // Ẩn chữ, chỉ để lại Icon
+            btnHome.setText("🏠");
+            btnProducts.setText("📦");
+            btnCreate.setText("➕");
+            btnHistory.setText("🕒");
+
+            isCollapsed = true;
+        }
+    }
 }

@@ -9,98 +9,79 @@
             prefWidth="1200" prefHeight="700"
             stylesheets="@/css/product_card.css">
 
-    <!-- SIDEBAR -->
     <left>
         <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">
-
-            <!-- Toggle -->
             <HBox alignment="CENTER_LEFT">
                 <padding>
                     <Insets top="10" right="10" bottom="10" left="10"/>
                 </padding>
-
-                <Button text="☰"
-                        onAction="#toggleSidebar"
-                        styleClass="toggle-btn"/>
+                <Button text="☰" onAction="#toggleSidebar" styleClass="toggle-btn"/>
             </HBox>
 
-            <!-- Menu -->
-            <Button text="🏠  Trang chủ" styleClass="menu-item"/>
-            <Button text="📦  Sản phẩm của tôi" styleClass="menu-item"/>
-            <Button text="➕  Tạo phiên đấu giá" styleClass="menu-item"/>
-            <Button text="🕘  Lịch sử" styleClass="menu-item"/>
-
+            <Button fx:id="btnHome" text="🏠  Trang chủ" styleClass="menu-item"/>
+            <Button fx:id="btnProducts" text="📦  Sản phẩm của tôi" styleClass="menu-item, active"/>
+            <Button fx:id="btnCreate" text="➕  Tạo phiên đấu giá" styleClass="menu-item"/>
+            <Button fx:id="btnHistory" text="🕘  Lịch sử" styleClass="menu-item"/>
         </VBox>
     </left>
 
-    <!-- TOP BAR -->
-    <top>
-        <HBox alignment="CENTER_RIGHT" spacing="15" styleClass="topbar">
-            <padding>
-                <Insets top="10" right="15" bottom="10" left="15"/>
-            </padding>
-
-            <Label text="Xin chào, Trần Thị B" styleClass="topbar-text"/>
-            <Button text="Đăng xuất" styleClass="logout-btn"/>
-        </HBox>
-    </top>
-
-    <!-- CONTENT -->
     <center>
-        <VBox spacing="20" styleClass="main-bg">
-            <padding>
-                <Insets top="20" right="20" bottom="20" left="20"/>
-            </padding>
+        <VBox spacing="0" styleClass="main-bg">
+            <children>
+                <HBox alignment="CENTER_RIGHT" spacing="15" prefHeight="60.0">
+                    <padding>
+                        <Insets right="20" />
+                    </padding>
+                    <Label text="Xin chào, Trần Thị B" style="-fx-text-fill: #555555; -fx-font-size: 14;"/>
+                    <Button text="Đăng xuất" styleClass="logout-btn"/>
+                </HBox>
 
-            <!-- HEADER -->
-            <HBox spacing="15" styleClass="header-card">
-                <padding>
-                    <Insets top="20" right="20" bottom="20" left="20"/>
-                </padding>
+                <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
+                    <VBox spacing="20">
+                        <padding>
+                            <Insets top="10" right="20" bottom="20" left="20"/>
+                        </padding>
 
-                <Label text="📦" styleClass="header-icon"/>
+                        <HBox spacing="15" styleClass="header-card">
+                            <padding>
+                                <Insets top="20" right="20" bottom="20" left="20"/>
+                            </padding>
+                            <Label text="📦" styleClass="header-icon"/>
+                            <VBox>
+                                <Label text="Sản phẩm của tôi" styleClass="header-title"/>
+                                <Label text="Quản lý các sản phẩm bạn đang bán" styleClass="header-sub"/>
+                            </VBox>
+                        </HBox>
 
-                <VBox>
-                    <Label text="Sản phẩm của tôi" styleClass="header-title"/>
-                    <Label text="Quản lý các sản phẩm bạn đang bán" styleClass="header-sub"/>
-                </VBox>
-            </HBox>
+                        <HBox spacing="20">
+                            <VBox styleClass="card">
+                                <Label text="Sản phẩm đang bán" textFill="#666666"/>
+                                <Label text="0" styleClass="card-number"/>
+                            </VBox>
+                            <VBox styleClass="card">
+                                <Label text="Tổng doanh thu dự kiến" textFill="#666666"/>
+                                <Label text="0.0M đ" styleClass="card-money"/>
+                            </VBox>
+                            <VBox styleClass="card">
+                                <Label text="Tổng lượt đấu giá" textFill="#666666"/>
+                                <Label text="0" styleClass="card-number"/>
+                            </VBox>
+                        </HBox>
 
-            <!-- STATS -->
-            <HBox spacing="20">
-                <VBox styleClass="card">
-                    <Label text="Sản phẩm đang bán"/>
-                    <Label text="0" styleClass="card-number"/>
-                </VBox>
-
-                <VBox styleClass="card">
-                    <Label text="Tổng doanh thu dự kiến"/>
-                    <Label text="0.0M đ" styleClass="card-money"/>
-                </VBox>
-
-                <VBox styleClass="card">
-                    <Label text="Tổng lượt đấu giá"/>
-                    <Label text="0" styleClass="card-number"/>
-                </VBox>
-            </HBox>
-
-            <!-- LIST -->
-            <VBox spacing="15" styleClass="card">
-                <padding>
-                    <Insets top="20" right="20" bottom="20" left="20"/>
-                </padding>
-
-                <Label text="Danh sách sản phẩm" styleClass="section-title"/>
-
-                <VBox alignment="CENTER" spacing="10" prefHeight="200"
-                      styleClass="empty-box">
-                    <Label text="📦" styleClass="empty-icon"/>
-                    <Label text="Bạn chưa có sản phẩm nào"/>
-                    <Label text="Tạo phiên đấu giá mới để bắt đầu!"/>
-                </VBox>
-            </VBox>
-
+                        <VBox spacing="15" styleClass="card" VBox.vgrow="ALWAYS">
+                            <padding>
+                                <Insets top="20" right="20" bottom="20" left="20"/>
+                            </padding>
+                            <Label text="Danh sách sản phẩm" styleClass="section-title"/>
+                            <VBox alignment="CENTER" spacing="10" prefHeight="300" styleClass="empty-box">
+                                <Label text="📦" style="-fx-font-size: 40;"/>
+                                <Label text="Bạn chưa có sản phẩm nào" style="-fx-text-fill: #666666;"/>
+                                <Label text="Tạo phiên đấu giá mới để bắt đầu!" style="-fx-text-fill: #999999;"/>
+                            </VBox>
+                        </VBox>
+                    </VBox>
+                </ScrollPane>
+            </children>
         </VBox>
     </center>
-
 </BorderPane>
