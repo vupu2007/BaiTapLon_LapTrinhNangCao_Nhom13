@@ -8,7 +8,6 @@ CREATE TABLE Accounts (
                           username VARCHAR(50) UNIQUE NOT NULL,
                           password VARCHAR(255) NOT NULL,
                           email VARCHAR(100),
-                          full_name VARCHAR(100),
                           role ENUM('ADMIN', 'SELLER', 'BIDDER') DEFAULT 'BIDDER',
                           balance DECIMAL(15, 2) DEFAULT 0.0
 );
