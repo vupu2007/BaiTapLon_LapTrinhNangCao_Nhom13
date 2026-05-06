@@ -12,7 +12,7 @@ public class Item implements Entity {
     // 1. Constructor rỗng
     public Item() {}
 
-    // 2. Constructor đầy đủ (Jeff dùng khi tạo mới từ giao diện)
+    // 2. Constructor đầy đủ ( dùng khi tạo mới từ giao diện)
     public Item(String itemId, String name, String description, double startingPrice, double currentPrice, int ownerId, String endTime) {
         this.itemId = itemId;
         this.name = name;
