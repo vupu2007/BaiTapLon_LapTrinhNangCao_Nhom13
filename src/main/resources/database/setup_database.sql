@@ -2,7 +2,7 @@
 CREATE DATABASE IF NOT EXISTS online_auction_db;
 USE online_auction_db;
 
--- 2. Bảng Users (Đã sửa role theo yêu cầu: Admin, Seller, Bidder)
+-- 2. Bảng Users ( Admin, Seller, Bidder)
 CREATE TABLE Users (
                        user_id INT AUTO_INCREMENT PRIMARY KEY,
                        username VARCHAR(50) UNIQUE NOT NULL,
@@ -18,11 +18,24 @@ CREATE TABLE Categories (
 
 -- 4. Bảng Items
 CREATE TABLE Items (
-                       item_id INT AUTO_INCREMENT PRIMARY KEY,
+    -- item_id để VARCHAR để Phú có thể đặt là 'EL001', 'FA002', v.v.
+                       item_id VARCHAR(20) PRIMARY KEY,
                        name VARCHAR(100) NOT NULL,
                        description TEXT,
+
+    -- Các cột giá tiền
+                       starting_price DOUBLE NOT NULL,
+                       current_price DOUBLE NOT NULL, -- Giá này sẽ cập nhật mỗi khi có người đấu giá
+
+    -- Phân loại và Chủ sở hữu
                        category_id INT,
                        owner_id INT,
+
+    -- Thời gian và Trạng thái
+                       end_time DATETIME NOT NULL,
+                       status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SOLD, EXPIRED
+
+    -- Khóa ngoại kết nối với các bảng khác
                        FOREIGN KEY (category_id) REFERENCES Categories(category_id),
                        FOREIGN KEY (owner_id) REFERENCES Users(user_id)
 );
