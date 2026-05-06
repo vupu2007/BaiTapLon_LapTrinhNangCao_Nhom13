@@ -1,81 +1,48 @@
 package com.auction.service;
 
-import com.auction.model.Bidder;
+import com.auction.dao.ItemDAO;
 import com.auction.model.Item;
-import com.auction.util.DatabaseConnection;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import com.auction.model.User; // Sử dụng lớp cha User
+import java.util.List;
 
 public class AuctionService {
-    // Các thuộc tính cũ có thể giữ lại nếu bạn muốn dùng làm cache
-    private String auctionId;
-    private Item auctionItem;
-    private double currentHighestBid;
-    private Bidder highestBidder;
+    private ItemDAO itemDAO = new ItemDAO();
     private boolean isRunning;
 
-    // 1. THÊM MỚI: Constructor không tham số để hết báo đỏ ở Controller
     public AuctionService() {
         this.isRunning = true;
     }
 
-    // 2. GIỮ LẠI: Constructor cũ (nếu cần dùng ở chỗ khác)
-    public AuctionService(String auctionId, Item auctionItem) {
-        this.auctionId = auctionId;
-        this.auctionItem = auctionItem;
-        this.currentHighestBid = (auctionItem != null) ? auctionItem.getStartingPrice() : 0;
-        this.isRunning = true;
+    /**
+     * Logic đặt giá: Cho phép mọi User đặt giá miễn là không phải chủ sở hữu món đồ
+     */
+    public synchronized boolean placeBid(String itemId, double bidAmount, User user) {
+        if (!isRunning) return false;
+
+        // 1. Lấy thông tin món hàng từ DB
+        Item item = itemDAO.getItemById(itemId);
+        if (item == null) return false;
+
+        // 2. Kiểm tra giá đặt phải cao hơn giá hiện tại
+        if (bidAmount <= item.getCurrentPrice()) {
+            return false;
+        }
+
+        // 3. LOGIC QUAN TRỌNG: Kiểm tra quyền sở hữu
+        // Một người bán (Seller) vẫn có thể đặt giá nếu món đồ này KHÔNG thuộc về họ
+        if (item.getOwnerId() == Integer.parseInt(user.getId())) {
+            return false; // Chặn nếu tự đấu giá đồ của chính mình
+        }
+
+        // 4. Cập nhật vào Database
+        return itemDAO.updateCurrentPrice(itemId, bidAmount);
     }
 
-    /**
-     * Sửa hàm placeBid để vừa cập nhật RAM vừa lưu vào MySQL
-     */
-    public synchronized boolean placeBid(Bidder bidder, double bidAmount) {
-        if (!isRunning) {
-            System.out.println("Phiên đã đóng!");
-            return false;
-        }
-
-        // Kiểm tra giá đặt (logic này sau này sẽ SELECT từ DB để check chính xác hơn)
-        if (bidAmount <= currentHighestBid) {
-            System.out.println("Giá đặt phải cao hơn giá hiện tại!");
-            return false;
-        }
-
-        // Bước A: Lưu vào Database (MySQL)
-        String sql = "INSERT INTO Bids (user_id, bid_amount, bid_time) VALUES (?, ?, NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, Integer.parseInt(bidder.getId()));
-            pstmt.setDouble(2, bidAmount);
-            pstmt.executeUpdate();
-
-            // Bước B: Cập nhật lại bộ nhớ RAM để hiển thị nhanh
-            this.currentHighestBid = bidAmount;
-            this.highestBidder = bidder;
-
-            System.out.println("Lưu DB & RAM thành công: " + bidder.getUsername());
-            return true;
-
-        } catch (SQLException e) {
-            System.err.println("Lỗi kết nối MySQL khi đặt giá: " + e.getMessage());
-            return false;
-        } catch (NumberFormatException e) {
-            System.err.println("Lỗi định dạng ID người dùng.");
-            return false;
-        }
+    public List<Item> getAuctionList() {
+        return itemDAO.getAllItems();
     }
 
     public void closeAuction() {
         this.isRunning = false;
-        System.out.println("Auction kết thúc!");
-        // Sau này có thể thêm lệnh UPDATE trạng thái phiên đấu giá trong Database ở đây
     }
-
-    // Các hàm getter giữ nguyên
-    public double getCurrentHighestBid() { return currentHighestBid; }
-    public Bidder getHighestBidder() { return highestBidder; }
-    public boolean isRunning() { return isRunning; }
 }
