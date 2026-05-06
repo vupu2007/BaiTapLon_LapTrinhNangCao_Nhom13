@@ -5,11 +5,12 @@ public class Bidder extends User {
     private double increment;
 
     // Sửa Constructor: Thêm email và role vào tham số
-    public Bidder(String id, String username, String password,  String role) {
+    public Bidder(String id, String username, String password,  String role, double initialBalance) {
         // Truyền đủ 5 tham số lên class cha User qua super()
-        super(id, username, password , role);
+        super(id, username, password , role, initialBalance );
         this.maxBid = 0.0;
         this.increment = 0.0;
+
     }
 
     @Override

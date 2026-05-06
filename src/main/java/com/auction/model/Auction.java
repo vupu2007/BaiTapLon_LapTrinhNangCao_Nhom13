@@ -22,13 +22,15 @@ public class Auction implements Serializable {
     private Integer highestBidderId;// ID người đang trả giá cao nhất
     private LocalDateTime startTime; // Thời gian bắt đầu
     private LocalDateTime endTime;   // Thời gian kết thúc
-    private AuctionStatus status;    // Trạng thái phiên đấu giá
+    private AuctionStatus status;// Trạng thái phiên đấu giá
+    private double stepPrice;
+    private User currentWinner;
 
     public Auction() {
     }
 
     public Auction(int id, int itemId, int sellerId, double startingPrice, double currentPrice,
-                   Integer highestBidderId, LocalDateTime startTime, LocalDateTime endTime, AuctionStatus status) {
+                   Integer highestBidderId, LocalDateTime startTime, LocalDateTime endTime, AuctionStatus status, double stepPrice,User currentWinner) {
         this.id = id;
         this.itemId = itemId;
         this.sellerId = sellerId;
@@ -38,7 +40,12 @@ public class Auction implements Serializable {
         this.startTime = startTime;
         this.endTime = endTime;
         this.status = status;
+        this.stepPrice = stepPrice;
+        this.currentWinner = null;
+
+
     }
+
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -63,6 +70,9 @@ public class Auction implements Serializable {
 
     public LocalDateTime getEndTime() { return endTime; }
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+    public User getCurrentWinner(){
+        return this.currentWinner;
+    }
 
     public AuctionStatus getStatus() { return status; }
     public void setStatus(AuctionStatus status) { this.status = status; }
@@ -71,4 +81,45 @@ public class Auction implements Serializable {
     public boolean isActive() {
         return this.status == AuctionStatus.ACTIVE && LocalDateTime.now().isBefore(this.endTime);
     }
+    public boolean isExpired(){
+        return LocalDateTime.now().isAfter(startTime);
+    }
+    public boolean hasStarted(){
+        return LocalDateTime.now().isAfter(endTime);
+    }
+    public synchronized boolean placeBid(User u ,double amount ){// //giá đặt có lớn hơn hiện tại kooong, người dùng có đủ tiền ko
+        if (!hasStarted()){
+            System.out.println(" Phiên đấu giá chưa bắt đầu. Hãy quay lại sau! ");
+            return false;
+        }
+        if (isExpired()){
+            this.status = AuctionStatus.ENDED;//Tự động cập nhật trạng thái hết giờ
+            System.out.println(" Phiên đấu giá đã kết thúc! ");
+            return false;
+        }
+        if(u.getBalance() < amount){
+            System.out.println(" Số dư của bạn không đủ! ");
+            return false;
+        }
+        double minRequired;
+        if(currentWinner == null){// NullPointerException phải xử lí khi lâấy dữ liệu ra ngoài giao diện
+            minRequired = startingPrice;}
+        else{
+            minRequired = currentPrice + stepPrice;
+        }
+
+        if (amount < minRequired) {
+            System.out.println(" Giá đặt không hợp lệ! ");
+            return false;
+        }
+
+        // Cập nhật người thắng mới và giá mới
+        this.currentPrice = amount;
+        this.currentWinner = u;
+        notifyObservers();
+        return true;
+    }
+
 }
+
+

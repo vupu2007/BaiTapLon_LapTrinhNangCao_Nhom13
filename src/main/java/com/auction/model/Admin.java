@@ -1,9 +1,9 @@
 package com.auction.model;
 
-public class Admin extends User {
+public class Admin extends Account {
 
      public Admin(String id, String username, String password, String role) {
-         super(id, username, password , role);
+         super(id, username, password , role );
     }
 
     @Override

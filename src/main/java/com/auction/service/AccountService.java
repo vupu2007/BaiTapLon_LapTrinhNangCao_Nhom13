@@ -1,9 +1,6 @@
 package com.auction.service;
 
-import com.auction.model.Admin;
-import com.auction.model.Bidder;
-import com.auction.model.Seller;
-import com.auction.model.User;
+import com.auction.model.*;
 import com.auction.util.DatabaseConnection;
 
 import java.sql.Connection;
@@ -11,12 +8,12 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
-public class UserService {
+public class AccountService {
 
     /**
      * Hàm đăng nhập: Trả về đối tượng thuộc kiểu User (Cha)
      */
-    public User login(String username, String password) {
+    public Account login(String username, String password) {
          String sql = "SELECT * FROM Users WHERE username = ? AND password = ?";
 
         try (Connection conn = DatabaseConnection.getConnection();
@@ -35,12 +32,21 @@ public class UserService {
 
                 // Trả về đúng loại đối tượng con dựa trên Role
                 if ("ADMIN".equalsIgnoreCase(role)) {
+                    // Admin không cần tiền, chỉ cần 4 tham số
                     return new Admin(id, username, password, role);
-                } else if ("SELLER".equalsIgnoreCase(role)) {
-                    return new Seller(id, username, password, role);
+
                 } else {
-                    // Mặc định là Bidder (Người mua)
-                    return new Bidder(id, username, password, role);
+                    // SỬA 2: Lấy tiền từ DB ra cho Seller và Bidder
+                    // (Hãy đảm bảo trong bảng user của bạn có cột tên là "balance")
+                    double balance = rs.getDouble("balance");
+
+                    if ("SELLER".equalsIgnoreCase(role)) {
+                        // Seller cần 5 tham số (có thêm balance)
+                        return new Seller(id, username, password, role, balance);
+                    } else {
+                        // Bidder cũng cần 5 tham số
+                        return new Bidder(id, username, password, role, balance);
+                    }
                 }
             }
         } catch (SQLException e) {

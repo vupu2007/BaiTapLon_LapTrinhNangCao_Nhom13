@@ -1,9 +1,10 @@
 package com.auction.controller;
 
+import com.auction.model.Account;
 import com.auction.model.Bidder;
 import com.auction.model.User;
 import com.auction.service.AuctionService;
-import com.auction.util.CurrentUser;
+import com.auction.util.CurrentAccount;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextField;
@@ -24,16 +25,16 @@ public class AuctionController {
      */
     @FXML
     public void handlePlaceBid() {
-        User currentUser = CurrentUser.getUser(); // Lấy người dùng hiện tại
+        Account currentAccount = CurrentAccount.getAccount(); // Lấy người dùng hiện tại
 
         // 1. Kiểm tra xem người dùng đã đăng nhập chưa
-        if (currentUser == null) {
+        if (currentAccount == null) {
             showAlert("Lỗi", "Bạn cần đăng nhập để đấu giá!");
             return;
         }
 
         // 2. Chỉ có Bidder (người mua) mới được đặt giá
-        if (!(currentUser instanceof Bidder)) {
+        if (!(currentAccount instanceof Bidder)) {
             showAlert("Lỗi", "Chỉ người mua mới có quyền đặt giá!");
             return;
         }
@@ -42,7 +43,7 @@ public class AuctionController {
             double amount = Double.parseDouble(txtBidAmount.getText());
 
             // 3. Gọi Service để kiểm tra giá và lưu vào Database
-            boolean success = auctionService.placeBid((Bidder) currentUser, amount);
+            boolean success = auctionService.placeBid((Bidder) currentAccount, amount);
 
             if (success) {
                 showAlert("Thành công", "Bạn đã đặt giá thành công!");

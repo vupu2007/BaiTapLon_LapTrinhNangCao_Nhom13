@@ -1,15 +1,14 @@
 package com.auction.controller;
 
 import com.auction.model.Item;
-import com.auction.model.User;
+import com.auction.model.Account;
 import com.auction.service.MainService;
-import com.auction.util.CurrentUser;
+import com.auction.util.CurrentAccount;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
@@ -35,7 +34,7 @@ public class MainController {
     @FXML
     public void initialize() {
         // Kiểm tra xem đã đăng nhập chưa trước khi load dữ liệu
-        User current = CurrentUser.getUser();
+        Account current = CurrentAccount.getAccount();
         if (current != null) {
             if (welcomeLabel != null) {
                 welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
@@ -87,14 +86,14 @@ public class MainController {
     }
 
     private void handleBidAction(Item item) {
-        System.out.println("User " + CurrentUser.getUser().getUsername() + " đang đấu giá món: " + item.getName());
+        System.out.println("User " + CurrentAccount.getAccount().getUsername() + " đang đấu giá món: " + item.getName());
         // Chỗ này sau này sẽ gọi sang BidService để xử lý đặt giá
     }
 
     @FXML
     private void handleLogout(ActionEvent event) {
         // 1. Xóa thông tin phiên đăng nhập
-        CurrentUser.logOut();
+        CurrentAccount.logOut();
 
         // 2. Chuyển hướng về trang Login
         try {
