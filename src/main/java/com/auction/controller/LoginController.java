@@ -14,6 +14,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class LoginController {
+    private final String API_URL = "http://localhost:8080/api/auth/login";
 
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
