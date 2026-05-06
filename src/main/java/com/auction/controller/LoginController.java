@@ -14,7 +14,7 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class LoginController {
-    private final String API_URL = "http://localhost:8080/api/auth/login";
+    private final String API_URL = "http://localhost:8080/api/auth/login";// sẽ xửa link ngrok khi thầy cô yêu cầu sau
 
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
