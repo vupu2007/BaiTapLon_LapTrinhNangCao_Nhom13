@@ -2,16 +2,17 @@
 CREATE DATABASE IF NOT EXISTS online_auction_db;
 USE online_auction_db;
 
--- 2. Bảng Users ( Admin, Seller, Bidder)
-CREATE TABLE Users (
-                       user_id INT AUTO_INCREMENT PRIMARY KEY,
-                       username VARCHAR(50) UNIQUE NOT NULL,
-                       password VARCHAR(255) NOT NULL,
-                       role ENUM('ADMIN', 'SELLER', 'BIDDER') DEFAULT 'BIDDER' ,
-                       balance DOUBLE DEFAULT 0.0
+-- 2. Bảng Accounts (Thay thế cho bảng Users để khớp với Class Account trong Java)
+CREATE TABLE Accounts (
+                          account_id INT AUTO_INCREMENT PRIMARY KEY,
+                          username VARCHAR(50) UNIQUE NOT NULL,
+                          password VARCHAR(255) NOT NULL,
+                          email VARCHAR(100),
+                          role ENUM('ADMIN', 'SELLER', 'BIDDER') DEFAULT 'BIDDER',
+                          balance DECIMAL(15, 2) DEFAULT 0.0
 );
 
--- 3. Bảng Categories
+-- 3. Bảng Categories (Giữ nguyên)
 CREATE TABLE Categories (
                             category_id INT AUTO_INCREMENT PRIMARY KEY,
                             name VARCHAR(100) NOT NULL
@@ -19,51 +20,39 @@ CREATE TABLE Categories (
 
 -- 4. Bảng Items
 CREATE TABLE Items (
-    -- item_id để VARCHAR để Phú có thể đặt là 'EL001', 'FA002', v.v.
-                       item_id VARCHAR(20) PRIMARY KEY,
+                       item_id VARCHAR(20) PRIMARY KEY, -- Ví dụ: 'EL001'
                        name VARCHAR(100) NOT NULL,
                        description TEXT,
-
-    -- Các cột giá tiền
-                       starting_price DOUBLE NOT NULL,
-                       current_price DOUBLE NOT NULL, -- Giá này sẽ cập nhật mỗi khi có người đấu giá
-
-    -- Phân loại và Chủ sở hữu
+                       starting_price DECIMAL(15, 2) NOT NULL,
                        category_id INT,
-                       owner_id INT,
-
-    -- Thời gian và Trạng thái
-                       end_time DATETIME NOT NULL,
-                       status VARCHAR(20) DEFAULT 'ACTIVE', -- ACTIVE, SOLD, EXPIRED
-
-    -- Khóa ngoại kết nối với các bảng khác
+                       owner_id INT, -- Liên kết với account_id của người bán
+                       status VARCHAR(20) DEFAULT 'ACTIVE',
                        FOREIGN KEY (category_id) REFERENCES Categories(category_id),
-                       FOREIGN KEY (owner_id) REFERENCES Users(user_id)
+                       FOREIGN KEY (owner_id) REFERENCES Accounts(account_id) -- Đổi sang Accounts
 );
 
--- 5. Bảng Auctions (Thêm winner_id, min_increment và các trạng thái chuẩn)
+-- 5. Bảng Auctions
 CREATE TABLE Auctions (
                           auction_id INT AUTO_INCREMENT PRIMARY KEY,
-                          item_id INT,
-                          start_price DECIMAL(10, 2) NOT NULL,
-                          current_price DECIMAL(10, 2) DEFAULT 0,
-                          min_increment DECIMAL(10, 2) DEFAULT 1.0, -- Bước giá tối thiểu
+                          item_id VARCHAR(20),
+                          start_price DECIMAL(15, 2) NOT NULL,
+                          current_price DECIMAL(15, 2) DEFAULT 0,
+                          min_increment DECIMAL(15, 2) DEFAULT 1.0,
                           start_time DATETIME,
                           end_time DATETIME,
-    -- Trạng thái: OPEN (chưa bắt đầu), RUNNING (đang diễn ra), FINISHED (kết thúc), PAID (đã thanh toán), CANCELED (hủy)
                           status ENUM('OPEN', 'RUNNING', 'FINISHED', 'PAID', 'CANCELED') DEFAULT 'OPEN',
-                          winner_id INT NULL,
+                          winner_id INT NULL, -- Liên kết với account_id của người thắng
                           FOREIGN KEY (item_id) REFERENCES Items(item_id),
-                          FOREIGN KEY (winner_id) REFERENCES Users(user_id)
+                          FOREIGN KEY (winner_id) REFERENCES Accounts(account_id) -- Đổi sang Accounts
 );
 
 -- 6. Bảng Bids
 CREATE TABLE Bids (
                       bid_id INT AUTO_INCREMENT PRIMARY KEY,
                       auction_id INT,
-                      user_id INT,
-                      bid_amount DECIMAL(10, 2) NOT NULL,
+                      bidder_id INT, -- Đổi user_id thành bidder_id cho rõ nghĩa
+                      bid_amount DECIMAL(15, 2) NOT NULL,
                       bid_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                       FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
-                      FOREIGN KEY (user_id) REFERENCES Users(user_id)
-);;
+                      FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id) -- Đổi sang Accounts
+);
