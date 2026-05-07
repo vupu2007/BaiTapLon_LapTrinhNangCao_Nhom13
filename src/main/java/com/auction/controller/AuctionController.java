@@ -1,7 +1,8 @@
 package com.auction.controller;
 
-import com.auction.model.User; // Cần thêm dòng này
-import com.auction.service.AuctionService; // Cần thêm dòng này
+import com.auction.model.Account;
+import com.auction.model.Admin;
+import com.auction.service.AuctionService;
 import com.auction.util.CurrentUser;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -18,32 +19,30 @@ public class AuctionController {
 
     @FXML
     public void handlePlaceBid() {
-        User currentUser = CurrentUser.getUser();
+        Account currentUser = CurrentUser.getUser();
 
-        // 1. Kiểm tra đăng nhập
         if (currentUser == null) {
             showAlert("Lỗi", "Bạn cần đăng nhập để đấu giá!");
             return;
         }
 
-        // 2. CHỈNH SỬA: Không chặn Seller nữa.
-        // Logic chặn "tự đấu giá đồ mình bán" đã được đưa xuống Service xử lý.
+        if (currentUser instanceof Admin) {
+            showAlert("Lỗi", "Admin không được phép đặt giá!");
+            return;
+        }
 
         try {
             double amount = Double.parseDouble(txtBidAmount.getText());
-
-            // Giả sử bạn lấy itemId từ sản phẩm đang được chọn trên giao diện
-            // Ở đây mình tạm để là "1", bạn hãy thay bằng biến itemId thực tế nhé
             String itemId = "1";
 
-            // 3. Gọi Service (truyền User chung vào)
+            // Truyền currentUser (Account) xuống Service
             boolean success = auctionService.placeBid(itemId, amount, currentUser);
 
             if (success) {
                 showAlert("Thành công", "Bạn đã đặt giá thành công!");
-                txtBidAmount.clear(); // Xóa ô nhập sau khi thành công
+                txtBidAmount.clear();
             } else {
-                showAlert("Thất bại", "Giá không hợp lệ hoặc bạn là chủ sở hữu món đồ này!");
+                showAlert("Thất bại", "Đặt giá không thành công!");
             }
         } catch (NumberFormatException e) {
             showAlert("Lỗi", "Vui lòng nhập số tiền hợp lệ!");
