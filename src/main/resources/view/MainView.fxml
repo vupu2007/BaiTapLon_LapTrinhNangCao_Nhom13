@@ -9,7 +9,6 @@
     <stylesheets>
         <URL value="@/css/main_style.css" />
     </stylesheets>
-
     <left>
         <VBox fx:id="sidebar" prefWidth="250.0" styleClass="sidebar">
             <children>
@@ -20,10 +19,18 @@
 
                 <VBox fx:id="menuContainer" spacing="10.0" VBox.vgrow="ALWAYS">
                     <padding><Insets left="15.0" right="15.0" top="20.0" /></padding>
+
                     <Button fx:id="btnHome" maxWidth="1.7976931348623157E308" styleClass="menu-item, active" text="🏠  Trang chủ" />
-                    <Button fx:id="btnProducts" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="📦  Sản phẩm của tôi" />
-                    <Button fx:id="btnCreate" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="➕  Tạo phiên đấu giá" />
+
+                    <Button fx:id="btnBidding" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🔨  Đang đấu giá" />
+
+                    <Button fx:id="btnSelling" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="📦  Đang bán" />
+
+                    <Button fx:id="btnCreate" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="👜  Tạo phiên đấu giá" />
+
                     <Button fx:id="btnHistory" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🕒  Lịch sử" />
+
+                    <Button fx:id="btnSettings" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="⚙️  Cài đặt" />
                 </VBox>
             </children>
         </VBox>
@@ -38,26 +45,31 @@
                     <Button styleClass="btn-logout" text="Đăng xuất" />
                 </HBox>
 
-                <VBox styleClass="banner-card">
+                <VBox styleClass="banner-card" prefHeight="200.0" VBox.vgrow="NEVER">
                     <children>
-                        <HBox alignment="CENTER_LEFT" spacing="20.0">
-                            <Label styleClass="icon-box" text="🏠" />
-                            <VBox>
-                                <Label styleClass="banner-title" text="Trang chủ" />
-                                <Label styleClass="banner-subtitle" text="Hệ thống đấu giá trực tuyến chuyên nghiệp" />
+                        <HBox alignment="CENTER_LEFT" spacing="30.0">
+                            <padding><Insets left="40.0" /></padding>
+                            <Label style="-fx-font-size: 50px;" styleClass="icon-box" text="🏠" />
+                            <VBox alignment="CENTER_LEFT">
+                                <Label style="-fx-font-size: 32px; -fx-font-weight: bold;" styleClass="banner-title" text="Trang chủ" />
+                                <Label style="-fx-font-size: 16px;" styleClass="banner-subtitle" text="Hệ thống đấu giá trực tuyến chuyên nghiệp - Chào mừng bạn quay trở lại!" />
                             </VBox>
                         </HBox>
                     </children>
                 </VBox>
 
-                <HBox spacing="20.0">
-                    <VBox styleClass="stat-card">
-                        <Label text="Phiên đang mở" textFill="#666" />
-                        <Label styleClass="stat-value" text="12" />
+                <HBox spacing="20.0" maxWidth="1.7976931348623157E308">
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
+                        <Label text="Phiên đang mở" style="-fx-font-size: 16px;" />
+                        <Label styleClass="stat-value" text="12" style="-fx-font-size: 36px;" />
                     </VBox>
-                    <VBox styleClass="stat-card">
-                        <Label text="Số dư khả dụng" textFill="#666" />
-                        <Label styleClass="stat-value-green" text="10.0M đ" />
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
+                        <Label text="Số dư khả dụng" style="-fx-font-size: 16px;" />
+                        <Label styleClass="stat-value-green" text="10.0M đ" style="-fx-font-size: 36px;" />
+                    </VBox>
+                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
+                        <Label text="Thông báo mới" style="-fx-font-size: 16px;" />
+                        <Label styleClass="stat-value" text="05" style="-fx-font-size: 36px; -fx-text-fill: #f39c12;" />
                     </VBox>
                 </HBox>
 

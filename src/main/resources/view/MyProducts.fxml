@@ -7,7 +7,7 @@
 <BorderPane xmlns:fx="http://javafx.com/fxml"
             fx:controller="com.auction.controller.MyProductController"
             prefWidth="1200" prefHeight="700"
-            stylesheets="@/css/product_card.css">
+            stylesheets="@/css/main_style.css">
 
     <left>
         <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">
