@@ -2,21 +2,33 @@ package com.auction.controller;
 
 import com.auction.model.Account;
 import com.auction.model.Admin;
+import com.auction.observer.AuctionObserver;
 import com.auction.service.AuctionService;
 import com.auction.util.CurrentUser;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 
-public class AuctionController {
+public class AuctionController implements AuctionObserver {
 
     @FXML private TextField txtBidAmount;
+    @FXML private Label lblCurrentPrice;  // Hiển thị giá hiện tại trên UI
 
     private final AuctionService auctionService = new AuctionService();
     private int currentAuctionId;
 
     public void setAuctionId(int auctionId) {
         this.currentAuctionId = auctionId;
+        auctionService.addObserver(this);  // Đăng ký lắng nghe khi có bid mới
+    }
+
+    // Tự động chạy khi có bid mới — Observer nhận thông báo
+    @Override
+    public void onBidPlaced(int auctionId, double newPrice) {
+        if (auctionId == currentAuctionId && lblCurrentPrice != null) {
+            lblCurrentPrice.setText("Giá hiện tại: " + newPrice);
+        }
     }
 
     @FXML
