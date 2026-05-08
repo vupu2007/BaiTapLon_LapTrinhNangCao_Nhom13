@@ -1,42 +1,72 @@
 package com.auction.service;
 
-import com.auction.util.DatabaseConnection;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
+import com.auction.dao.ItemDAO;
+import com.auction.model.Item;
+
+import java.util.List;
 
 public class ItemService {
 
-    public ItemService() {
-    }
+    private final ItemDAO itemDAO = new ItemDAO();
 
-    /**
-     * Thêm sản phẩm mới vào bảng Items
-     */
-    public boolean addItem(String name, String description, int categoryId, int ownerId) {
-        // Lệnh SQL bám sát 100% cấu trúc bảng trong ảnh
-        String sql = "INSERT INTO Items (name, description, category_id, owner_id) VALUES (?, ?, ?, ?)";
-
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // Set dữ liệu đúng thứ tự các dấu ?
-            pstmt.setString(1, name);
-            pstmt.setString(2, description);
-            pstmt.setInt(3, categoryId); // Truyền ID của danh mục (ví dụ: Điện thoại, Xe cộ...)
-            pstmt.setInt(4, ownerId);    // Truyền ID của người dùng đang đăng nhập
-
-            int rowsAffected = pstmt.executeUpdate();
-
-            if (rowsAffected > 0) {
-                System.out.println("Đã thêm thành công sản phẩm: " + name);
-                return true;
-            }
-
-        } catch (SQLException e) {
-            System.err.println("Lỗi khi thêm sản phẩm: " + e.getMessage());
+    // 1. Seller thêm sản phẩm mới
+    public boolean addItem(Item item) {
+        if (item.getName() == null || item.getName().isBlank()) {
+            System.err.println("Tên sản phẩm không được để trống!");
+            return false;
+        }
+        if (item.getStartingPrice() <= 0) {
+            System.err.println("Giá khởi điểm phải lớn hơn 0!");
+            return false;
         }
 
-        return false;
+        return itemDAO.insertItem(item);
+    }
+
+    // 2. Seller cập nhật thông tin sản phẩm
+    public boolean updateItem(Item item) {
+        Item existing = itemDAO.getItemById(item.getItemId());
+        if (existing == null) {
+            System.err.println("Sản phẩm không tồn tại!");
+            return false;
+        }
+        // Chỉ sửa được khi sản phẩm chưa vào đấu giá
+        if (!"AVAILABLE".equals(existing.getStatus())) {
+            System.err.println("Không thể sửa sản phẩm đang đấu giá hoặc đã bán!");
+            return false;
+        }
+
+        return itemDAO.updateItem(item);
+    }
+
+    // 3. Seller xóa sản phẩm (chỉ xóa được khi AVAILABLE)
+    public boolean deleteItem(String itemId, int requesterId) {
+        Item existing = itemDAO.getItemById(itemId);
+        if (existing == null) {
+            System.err.println("Sản phẩm không tồn tại!");
+            return false;
+        }
+        // Chỉ chủ sở hữu mới được xóa
+        if (existing.getOwnerId() != requesterId) {
+            System.err.println("Bạn không có quyền xóa sản phẩm này!");
+            return false;
+        }
+
+        return itemDAO.deleteItem(itemId);
+    }
+
+    // 4. Lấy tất cả sản phẩm (hiển thị danh sách)
+    public List<Item> getAllItems() {
+        return itemDAO.getAllItems();
+    }
+
+    // 5. Lấy sản phẩm theo ID
+    public Item getItemById(String itemId) {
+        return itemDAO.getItemById(itemId);
+    }
+
+    // 6. Lấy sản phẩm của một Seller
+    public List<Item> getItemsByOwner(int ownerId) {
+        return itemDAO.getItemsByOwner(ownerId);
     }
 }

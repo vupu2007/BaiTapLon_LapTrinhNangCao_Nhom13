@@ -18,7 +18,6 @@ public class RegisterController {
     @FXML private TextField txtUsername;
     @FXML private PasswordField txtPassword;
     @FXML private PasswordField txtConfirmPassword;
-    @FXML private TextField txtEmail; // Bạn nên thêm một ô nhập Email trong FXML nhé
 
     // Khai báo Service để dùng
     private UserService userService = new UserService();
@@ -28,9 +27,6 @@ public class RegisterController {
         String username = txtUsername.getText().trim();
         String password = txtPassword.getText();
         String confirm = txtConfirmPassword.getText();
-
-        // Vì Database của mình có cột Email lấy từ txtEmail hoặc để tạm một giá trị
-        String email = (txtEmail != null) ? txtEmail.getText().trim() : username + "@auction.com";
 
         // 1. Kiểm tra cơ bản
         if (username.isEmpty() || password.isEmpty()) {
@@ -44,8 +40,8 @@ public class RegisterController {
         }
 
         // 2. GỌI DATABASE THAY VÌ USERSTORE
-        // Mình truyền 4 tham số: Username, Password, Email, và Role (mặc định là USER)
-        boolean success = userService.register(username, password, email);
+        // Mình truyền 3 tham số: Username, Password, và Role (mặc định là USER)
+        boolean success = userService.register(username, password, "USER");
 
         if (success) {
             showAlert(AlertType.INFORMATION, "Thành công", "Đăng ký thành công vào Database!");
@@ -55,7 +51,7 @@ public class RegisterController {
         }
     }
 
-    // Các hàm goToLogin, switchScene, showAlert giữ nguyên ...
+    // Các hàm goToLogin, switchScene, showAlert giữ nguyên như code cũ của bạn...
     @FXML
     public void goToLogin(ActionEvent event) {
         switchScene(event, "/view/LoginView.fxml", "Đăng nhập");
