@@ -28,7 +28,8 @@ CREATE TABLE Items (
                        owner_id INT, -- Liên kết với account_id của người bán
                        status VARCHAR(20) DEFAULT 'ACTIVE',
                        FOREIGN KEY (category_id) REFERENCES Categories(category_id),
-                       FOREIGN KEY (owner_id) REFERENCES Accounts(account_id) -- Đổi sang Accounts
+                       FOREIGN KEY (owner_id) REFERENCES Accounts(account_id) ,-- Đổi sang Accounts
+                       attributes JSON
 );
 
 -- 5. Bảng Auctions
