@@ -41,7 +41,6 @@ public class LoginController {
             showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu!");
         }
     }
-
     @FXML
     public void goToRegister(ActionEvent event) {
         switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
