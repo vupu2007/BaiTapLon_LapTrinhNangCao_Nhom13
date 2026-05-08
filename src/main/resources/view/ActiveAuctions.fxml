@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="700" prefWidth="1200" stylesheets="@/css/main_style.css" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/26" fx:controller="com.auction.controller.AuctionController">
+<BorderPane prefHeight="700" prefWidth="1200" stylesheets="@/css/style.css" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/26" fx:controller="com.auction.controller.AuctionController">
 
     <left>
         <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">

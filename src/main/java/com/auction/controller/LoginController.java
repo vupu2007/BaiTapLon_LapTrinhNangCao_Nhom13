@@ -42,7 +42,6 @@ public class LoginController {
             alert.show();
         }
     }
-
     @FXML
     void handleDemoBuyer(ActionEvent event) {
         usernameField.setText("buyer_demo");
