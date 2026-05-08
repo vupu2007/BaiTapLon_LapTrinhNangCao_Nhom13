@@ -1,0 +1,80 @@
+.root {
+    -fx-font-family: "Segoe UI", Tahoma, sans-serif;
+}
+
+/* Card màu trắng bo góc và đổ bóng */
+.login-card {
+    -fx-background-color: white;
+    -fx-background-radius: 15;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);
+}
+
+/* Tiêu đề chính */
+.title-main {
+    -fx-font-size: 28px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #1a56db;
+}
+
+/* Tiêu đề phụ */
+.title-sub {
+    -fx-font-size: 14px;
+    -fx-text-fill: #6b7280;
+}
+
+/* Label của ô nhập liệu */
+.field-label {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #374151;
+}
+
+/* Ô nhập liệu (TextField & PasswordField) */
+.input-field {
+    -fx-background-color: white;
+    -fx-border-color: #d1d5db;
+    -fx-border-radius: 8;
+    -fx-background-radius: 8;
+    -fx-padding: 10 15;
+}
+
+.input-field:focus {
+    -fx-border-color: #3b82f6;
+    -fx-border-width: 2;
+}
+
+/* Nút đăng nhập với Gradient */
+.login-button {
+    -fx-background-color: linear-gradient(to right, #2563eb, #0891b2);
+    -fx-background-radius: 10;
+    -fx-text-fill: white;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-padding: 12 0;
+    -fx-cursor: hand;
+}
+
+.login-button:hover {
+    -fx-opacity: 0.9;
+}
+
+/* Các liên kết Hyperlink */
+.forgot-link, .register-link {
+    -fx-text-fill: #2563eb;
+    -fx-underline: false;
+    -fx-border-color: transparent;
+}
+
+.register-link {
+    -fx-font-weight: bold;
+}
+
+/* Thông tin demo bên dưới */
+.demo-text {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9ca3af;
+}
+
+.separator {
+    -fx-opacity: 0.5;
+}

@@ -13,7 +13,7 @@ public class MainApp {
         @Override
         public void start(Stage primaryStage) throws Exception {
             // Sửa lại đường dẫn dùng dấu gạch chéo /
-            URL fxmlLocation = getClass().getResource("/view/MyProducts.fxml");
+            URL fxmlLocation = getClass().getResource("/view/MainView.fxml");
 
             if (fxmlLocation == null) {
                 System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
