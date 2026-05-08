@@ -77,4 +77,12 @@ public class Auction implements Serializable {
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
+    // Logic kiểm tra thời gian cực kỳ quan trọng
+    public boolean isExpired() {
+        return LocalDateTime.now().isAfter(endTime);
+    }
+
+    public boolean hasStarted() {
+        return LocalDateTime.now().isAfter(startTime);
+    }
 }
