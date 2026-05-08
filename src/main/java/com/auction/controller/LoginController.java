@@ -66,4 +66,18 @@ public class LoginController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+
+    @FXML
+    void handleDemoBuyer(ActionEvent event) {
+        usernameField.setText("buyer_demo");
+        passwordField.setText("123");
+        handleLogin(event);
+    }
+
+    @FXML
+    void handleDemoSeller(ActionEvent event) {
+        usernameField.setText("seller_demo");
+        passwordField.setText("123");
+        handleLogin(event);
+    }
 }
