@@ -63,4 +63,5 @@ public class AuctionController {
         alert.setContentText(content);
         alert.showAndWait();
     }
+
 }
