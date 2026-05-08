@@ -2,16 +2,18 @@ package com.auction.model;
 
 public class Admin extends Account {
 
-     public Admin(String id, String username, String password, String role) {
-         super(id, username, password , role );
+    public Admin(String id, String username, String password, String email) {
+        super(id, username, password, email, "ADMIN");
     }
 
     @Override
     public String displayRole() {
-        return "Admin";
+        return "System Administrator";
     }
 
-    public void manageSystem() {
-        System.out.println("Admin [" + this.username + "] đang truy cập hệ thống quản trị...");
+    @Override
+    public void navigateDashboard() {
+        System.out.println("Redirecting to Admin Dashboard (Manage Users, Items, Auctions)...");
+
     }
 }

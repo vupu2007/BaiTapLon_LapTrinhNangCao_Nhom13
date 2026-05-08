@@ -1,32 +1,33 @@
 package com.auction.model;
 
-public abstract class Account {
+public abstract class Account implements Entity {
     protected String id;
     protected String username;
     protected String password;
-    protected String role;// Thêm mới
+    protected String role;
+    protected String email; // Thêm email
 
-    public Account(String id, String username, String password , String role) {
+    public Account(String id, String username, String password, String email, String role) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.email = email;
         this.role = role;
     }
 
-
-
-    public String getRole() { return role; }
-    public void setRole(String role) { this.role = role; }
-
+    // Getter & Setter
+    public String getId() { return id; }
     public String getUsername() { return username; }
-    public void setUsername(String username) { this.username = username; }
-
     public String getPassword() { return password; }
+    public String getRole() { return role; }
+    public String getEmail() { return email; }
+
+    public void setUsername(String username) { this.username = username; }
     public void setPassword(String password) { this.password = password; }
 
-    public String getId() { return id; }
-
-
+    // Phương thức trừu tượng
     public abstract String displayRole();
-}
 
+    // Phương thức để mỗi lớp con tự quyết định mở giao diện nào
+    public abstract void navigateDashboard();
+}

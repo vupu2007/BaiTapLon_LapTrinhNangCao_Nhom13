@@ -1,54 +1,48 @@
 package com.auction.controller;
 
 import com.auction.model.Account;
-import com.auction.model.Bidder;
-import com.auction.model.User;
+import com.auction.model.Admin;
 import com.auction.service.AuctionService;
-import com.auction.util.CurrentAccount;
+import com.auction.util.CurrentUser;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.TextField;
 
 public class AuctionController {
 
-    @FXML private TextField txtBidAmount; // Ô nhập giá tiền từ FXML
-
+    @FXML private TextField txtBidAmount;
     private AuctionService auctionService;
 
-    // Constructor mặc định để JavaFX không báo lỗi
     public AuctionController() {
         this.auctionService = new AuctionService();
     }
 
-    /**
-     * Xử lý khi người dùng nhấn nút "Đặt giá"
-     */
     @FXML
     public void handlePlaceBid() {
-        Account currentAccount = CurrentAccount.getAccount(); // Lấy người dùng hiện tại
+        Account currentUser = CurrentUser.getUser();
 
-        // 1. Kiểm tra xem người dùng đã đăng nhập chưa
-        if (currentAccount == null) {
+        if (currentUser == null) {
             showAlert("Lỗi", "Bạn cần đăng nhập để đấu giá!");
             return;
         }
 
-        // 2. Chỉ có Bidder (người mua) mới được đặt giá
-        if (!(currentAccount instanceof Bidder)) {
-            showAlert("Lỗi", "Chỉ người mua mới có quyền đặt giá!");
+        if (currentUser instanceof Admin) {
+            showAlert("Lỗi", "Admin không được phép đặt giá!");
             return;
         }
 
         try {
             double amount = Double.parseDouble(txtBidAmount.getText());
+            String itemId = "1";
 
-            // 3. Gọi Service để kiểm tra giá và lưu vào Database
-            boolean success = auctionService.placeBid((Bidder) currentAccount, amount);
+            // Truyền currentUser (Account) xuống Service
+            boolean success = auctionService.placeBid(itemId, amount, currentUser);
 
             if (success) {
                 showAlert("Thành công", "Bạn đã đặt giá thành công!");
+                txtBidAmount.clear();
             } else {
-                showAlert("Thất bại", "Giá đặt phải cao hơn giá hiện tại!");
+                showAlert("Thất bại", "Đặt giá không thành công!");
             }
         } catch (NumberFormatException e) {
             showAlert("Lỗi", "Vui lòng nhập số tiền hợp lệ!");
@@ -57,7 +51,6 @@ public class AuctionController {
 
     @FXML
     public void handleCloseAuction() {
-        // Sau này có thể thêm kiểm tra: Chỉ Admin mới được đóng phiên
         auctionService.closeAuction();
         showAlert("Thông báo", "Phiên đấu giá đã kết thúc!");
     }
