@@ -1,106 +1,104 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import java.net.URL?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.Button?>
-<?import javafx.scene.control.Label?>
-<?import javafx.scene.control.ScrollPane?>
-<?import javafx.scene.layout.BorderPane?>
-<?import javafx.scene.layout.FlowPane?>
-<?import javafx.scene.layout.HBox?>
-<?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.VBox?>
-<?import javafx.scene.text.Font?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+<?import java.net.URL?>
 
-<BorderPane fx:id="rootPane" prefHeight="720.0" prefWidth="1200.0" style="-fx-background-color: #f0f7f9;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.MainController">
+<BorderPane style="-fx-background-color: #F0F9FF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.MainController">
     <stylesheets>
-        <URL value="@/css/main_style.css" />
+        <URL value="@../css/style.css" />
     </stylesheets>
+
+    <top>
+        <HBox alignment="CENTER_LEFT" prefHeight="70.0" spacing="20.0" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 0 0 1 0;">
+            <padding><Insets left="30.0" right="30.0" /></padding>
+
+            <ImageView fitHeight="40.0" fitWidth="40.0" pickOnBounds="true" preserveRatio="true">
+                <Image url="@../images/uet_logo.png" />
+            </ImageView>
+
+            <VBox alignment="CENTER_LEFT">
+                <Label text="Đấu Giá UET" textFill="#0056b3" style="-fx-font-weight: bold; -fx-font-size: 20;" />
+                <Label text="Đại học Công nghệ - ĐHQGHN" textFill="#64748b" style="-fx-font-size: 10;" />
+            </VBox>
+
+            <Region HBox.hgrow="ALWAYS" />
+
+            <Label style="-fx-background-color: #f1f5f9; -fx-padding: 8 15; -fx-background-radius: 10;" text="👤 minh huyền" />
+
+            <MenuButton fx:id="roleMenuButton" style="-fx-background-color: #A21CAF; -fx-background-radius: 10;" text="🔄 Người mua" textFill="WHITE">
+                <items>
+                    <MenuItem onAction="#switchToBuyer" text="Người mua - Tham gia đấu giá" />
+                    <MenuItem onAction="#switchToSeller" text="Người bán - Quản lý sản phẩm" />
+                </items>
+                <font><Font name="System Bold" size="13.0" /></font>
+            </MenuButton>
+
+            <Button styleClass="btn-logout" text="🚪 Đăng xuất" />
+        </HBox>
+    </top>
+
     <left>
-        <VBox fx:id="sidebar" prefWidth="250.0" styleClass="sidebar">
-            <children>
-                <HBox alignment="CENTER_LEFT" prefHeight="80.0">
-                    <padding><Insets left="20.0" /></padding>
-                    <Button fx:id="btnToggle" mnemonicParsing="false" onAction="#toggleSidebar" styleClass="hamburger-btn" text="≡">
-                  <font>
-                     <Font size="21.0" />
-                  </font></Button>
-                </HBox>
+        <VBox prefWidth="260.0" spacing="15.0">
+            <padding><Insets bottom="20.0" left="25.0" right="10.0" top="25.0" /></padding>
 
-                <VBox fx:id="menuContainer" spacing="10.0" VBox.vgrow="ALWAYS">
-                    <padding><Insets left="15.0" right="15.0" top="20.0" /></padding>
+            <VBox fx:id="roleBox" style="-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;">
+                <Label text="Tư cách hiện tại" textFill="#86198f" style="-fx-font-size: 11;" />
+                <Label fx:id="lblRoleSidebar" text="🛒 Người mua" textFill="#86198f">
+                    <font><Font name="System Bold" size="18.0" /></font>
+                </Label>
+            </VBox>
 
-                    <Button fx:id="btnHome" maxWidth="1.7976931348623157E308" styleClass="menu-item, active" text="🏠  Trang chủ" />
+            <VBox spacing="8.0" styleClass="shadow-pane" VBox.vgrow="ALWAYS">
+                <padding><Insets bottom="20.0" left="15.0" right="15.0" top="20.0" /></padding>
 
-                                <Button fx:id="btnSelling" lineSpacing="10.0" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="📦  Sản phẩm của tôi" />
+                <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button-active" text="🏠 Trang chủ" />
+                <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="👛 Ví tiền" />
 
-                    <Button fx:id="btnBidding" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🔨  Đang đấu giá" />
-
-                    <Button fx:id="btnCreate" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="👜  Tạo phiên đấu giá" />
-
-                    <Button fx:id="btnHistory" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🕒  Lịch sử" />
-               <Button mnemonicParsing="false" prefHeight="27.0" prefWidth="220.0" text="💳 Ví tiền " />
-
-                    <Button fx:id="btnSettings" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="⚙  Cài đặt" />
+                <VBox fx:id="buyerMenu" spacing="8.0">
+                    <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="🔨 Đang đấu giá" />
                 </VBox>
-            </children>
+
+                <VBox fx:id="sellerMenu" managed="false" spacing="8.0" visible="false">
+                    <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="📦 Đang bán" />
+                    <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="➕ Tạo phiên đấu giá" />
+                </VBox>
+
+                <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="🕒 Lịch sử" />
+                <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" prefHeight="45.0" styleClass="nav-button" text="⚙ Cài đặt" />
+            </VBox>
         </VBox>
     </left>
 
     <center>
-        <VBox spacing="20.0">
-            <padding><Insets bottom="30.0" left="30.0" right="30.0" top="20.0" /></padding>
-            <children>
-                <HBox alignment="CENTER_RIGHT" spacing="15.0">
-                    <Label text="Xin chào, Trần Thị B" textFill="#555555" />
-                    <Button styleClass="btn-logout" text="Đăng xuất" />
+        <VBox spacing="25.0">
+            <padding><Insets bottom="25.0" left="15.0" right="25.0" top="25.0" /></padding>
+
+            <VBox styleClass="shadow-pane">
+                <padding><Insets bottom="30.0" left="30.0" right="30.0" top="30.0" /></padding>
+                <Label text="Danh sách phiên đấu giá" textFill="#0284c7">
+                    <font><Font name="System Bold" size="28.0" /></font>
+                </Label>
+                <Label text="Khám phá các sản phẩm đang được đấu giá" textFill="#64748b" />
+            </VBox>
+
+            <VBox styleClass="shadow-pane" VBox.vgrow="ALWAYS">
+                <padding><Insets bottom="20.0" left="25.0" right="25.0" top="25.0" /></padding>
+                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                    <TextField prefWidth="450.0" promptText="🔍 Tìm kiếm sản phẩm..." styleClass="search-field" />
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Button style="-fx-background-color: #0284c7; -fx-text-fill: white; -fx-background-radius: 10;" text="Tất cả" prefWidth="80" prefHeight="35"/>
+                    <Button style="-fx-background-color: #f1f5f9; -fx-background-radius: 10;" text="Đang diễn ra" prefHeight="35"/>
+                    <Button style="-fx-background-color: #f1f5f9; -fx-background-radius: 10;" text="Sắp diễn ra" prefHeight="35"/>
                 </HBox>
 
-                <VBox prefHeight="200.0" styleClass="banner-card" VBox.vgrow="NEVER">
-                    <children>
-                        <HBox alignment="CENTER_LEFT" spacing="30.0">
-                            <padding><Insets left="40.0" /></padding>
-                            <Label style="-fx-font-size: 50px;" styleClass="icon-box" text="🏠" />
-                            <VBox alignment="CENTER_LEFT">
-                                <Label style="-fx-font-size: 32px; -fx-font-weight: bold;" styleClass="banner-title" text="Trang chủ" />
-                                <Label style="-fx-font-size: 16px;" styleClass="banner-subtitle" text="Hệ thống đấu giá trực tuyến chuyên nghiệp - Chào mừng bạn quay trở lại!" />
-                            </VBox>
-                        </HBox>
-                    </children>
-                </VBox>
-
-                <HBox maxWidth="1.7976931348623157E308" spacing="20.0">
-                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-size: 16px;" text="Phiên đang mở" />
-                        <Label style="-fx-font-size: 36px;" styleClass="stat-value" text="12" />
-                    </VBox>
-                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-size: 16px;" text="Số dư khả dụng" />
-                        <Label style="-fx-font-size: 36px;" styleClass="stat-value-green" text="10.0M đ" />
-                    </VBox>
-                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
-                        <Label style="-fx-font-size: 16px;" text="Thông báo mới" />
-                        <Label style="-fx-font-size: 36px; -fx-text-fill: #f39c12;" styleClass="stat-value" text="05" />
-                    </VBox>
-                </HBox>
-
-                <VBox styleClass="main-content-area" VBox.vgrow="ALWAYS">
-                    <Label styleClass="section-title" text="Phiên đấu giá nổi bật" />
-                    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
-                        <FlowPane hgap="20.0" vgap="20.0">
-                            <VBox styleClass="auction-card">
-                                <Region prefHeight="150.0" style="-fx-background-color: #f9f9f9; -fx-background-radius: 10;" />
-                                <Label style="-fx-font-weight: bold;" text="iPhone 15 Pro Max" />
-                                <HBox>
-                                    <Label text="Giá hiện tại: " />
-                                    <Label style="-fx-text-fill: #1491a3; -fx-font-weight: bold;" text="25.000.000 đ" />
-                                </HBox>
-                                <Button maxWidth="1.7976931348623157E308" styleClass="btn-bid" text="Đấu giá ngay" />
-                            </VBox>
-                        </FlowPane>
-                    </ScrollPane>
-                </VBox>
-            </children>
+                <FlowPane hgap="20.0" vgap="20.0">
+                    <padding><Insets top="25.0" /></padding>
+                </FlowPane>
+            </VBox>
         </VBox>
     </center>
 </BorderPane>

@@ -1,0 +1,63 @@
+.root {
+    -fx-font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+/* Hiệu ứng đổ bóng cho các khối trắng */
+.shadow-pane {
+    -fx-background-color: white;
+    -fx-background-radius: 20; /* Bo góc lớn như mẫu */
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 15, 0, 0, 5);
+}
+
+/* Nút Trang chủ đang được chọn (Active) */
+.nav-button-active {
+    -fx-background-color: #0284c7;
+    -fx-text-fill: white;
+    -fx-background-radius: 12;
+    -fx-font-weight: bold;
+}
+
+/* Các nút menu bình thường */
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #64748b;
+    -fx-cursor: hand;
+}
+.nav-button:hover {
+    -fx-background-color: #f1f5f9;
+    -fx-background-radius: 12;
+}
+
+/* Ô tìm kiếm */
+.search-field {
+    -fx-background-color: white;
+    -fx-border-color: #e2e8f0;
+    -fx-border-radius: 10;
+    -fx-background-radius: 10;
+}
+
+/* Nút Đăng xuất */
+.btn-logout {
+    -fx-background-color: #dc2626;
+    -fx-text-fill: white;
+    -fx-background-radius: 8;
+    -fx-font-weight: bold;
+}
+/* Tăng kích thước ô tìm kiếm */
+.text-field {
+    -fx-pref-height: 45px;
+    -fx-font-size: 14px;
+    -fx-background-radius: 10;
+}
+
+/* Làm các nút lọc to hơn */
+.button {
+    -fx-pref-height: 40px;
+    -fx-padding: 0 20 0 20;
+    -fx-font-weight: bold;
+}
+
+/* Sidebar rộng hơn */
+.sidebar {
+    -fx-pref-width: 250px;
+}

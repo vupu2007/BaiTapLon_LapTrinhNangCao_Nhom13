@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.geometry.Insets?>
+
+<HBox fx:id="rootNode" alignment="CENTER_LEFT" spacing="10.0" styleClass="switcher-box" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+    <children>
+        <ImageView fx:id="icon" fitHeight="24.0" fitWidth="24.0" pickOnBounds="true" preserveRatio="true" />
+        <VBox alignment="CENTER_LEFT">
+            <children>
+                <Label fx:id="mainLabel" styleClass="switcher-text" text="Đang tải..." />
+                <Label fx:id="subLabel" styleClass="demo-text" text="Đang tải..." />
+            </children>
+        </VBox>
+    </children>
+    <padding>
+        <Insets bottom="10.0" left="15.0" right="15.0" top="10.0" />
+    </padding>
+</HBox>
