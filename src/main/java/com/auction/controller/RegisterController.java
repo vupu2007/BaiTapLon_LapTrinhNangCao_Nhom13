@@ -1,6 +1,6 @@
 package com.auction.controller;
 
-import com.auction.service.UserService; // Import Service mới
+import com.auction.service.AccountService; // Import Service mới
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -20,7 +20,7 @@ public class RegisterController {
     @FXML private PasswordField txtConfirmPassword;
 
     // Khai báo Service để dùng
-    private UserService userService = new UserService();
+    private AccountService userService = new AccountService();
 
     @FXML
     void handleRegister(ActionEvent event) {
