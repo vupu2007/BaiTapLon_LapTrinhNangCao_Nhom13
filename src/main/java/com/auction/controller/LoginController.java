@@ -3,7 +3,7 @@ package com.auction.controller;
 import com.auction.model.Account;
 import com.auction.model.Admin;
 import com.auction.service.UserService;
-import com.auction.util.CurrentUser;
+import com.auction.util.CurrentAccount;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.Node;
@@ -29,7 +29,7 @@ public class LoginController {
         Account loggedInAccount = userService.login(userStr, passStr);
 
         if (loggedInAccount != null) {
-            CurrentUser.setUser(loggedInAccount);
+            CurrentAccount.setUser(loggedInAccount);
             System.out.println("Đã cất user " + loggedInAccount.getUsername() + " vào phiên làm việc!");
 
             if (loggedInAccount instanceof Admin) {
