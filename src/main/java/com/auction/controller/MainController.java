@@ -10,6 +10,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuButton;
@@ -81,13 +82,29 @@ public class MainController {
 
     @FXML
     private void handleLogout(ActionEvent event) {
-        CurrentUser.logOut();
         try {
-            Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
+            // 1. Tải file FXML của màn hình Đăng nhập
+            // Đảm bảo đường dẫn tới login.fxml là chính xác
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/auction/view/login.fxml"));
+            Parent loginRoot = loader.load();
+
+            // 2. Lấy Stage hiện tại từ sự kiện nhấn nút
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-            stage.getScene().setRoot(root);
+
+            // 3. Tạo Scene mới với màn hình Login
+            Scene scene = new Scene(loginRoot);
+
+            // Nếu bạn có file CSS riêng cho Login, hãy thêm vào đây
+            // scene.getStylesheets().add(getClass().getResource("/com/auction/css/style.css").toExternalForm());
+
+            // 4. Đặt Scene vào Stage và hiển thị
+            stage.setScene(scene);
+            stage.centerOnScreen(); // Đưa cửa sổ ra giữa màn hình
+            stage.show();
+
         } catch (IOException e) {
             e.printStackTrace();
+            System.err.println("Không thể chuyển hướng về màn hình đăng nhập!");
         }
     }
 
@@ -174,5 +191,6 @@ public class MainController {
             e.printStackTrace();
         }
     }
+
 
 }
