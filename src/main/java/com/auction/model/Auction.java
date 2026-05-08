@@ -87,7 +87,7 @@ public class Auction implements Serializable {
     public boolean hasStarted(){
         return LocalDateTime.now().isAfter(endTime);
     }
-    public synchronized boolean placeBid(User u ,double amount ){// //giá đặt có lớn hơn hiện tại kooong, người dùng có đủ tiền ko
+    public synchronized boolean placeBid(Bidder u ,double amount ){// //giá đặt có lớn hơn hiện tại kooong, người dùng có đủ tiền ko
         if (!hasStarted()){
             System.out.println(" Phiên đấu giá chưa bắt đầu. Hãy quay lại sau! ");
             return false;
