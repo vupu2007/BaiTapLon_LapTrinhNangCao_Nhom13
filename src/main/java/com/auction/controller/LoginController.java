@@ -2,14 +2,16 @@ package com.auction.controller;
 
 import com.auction.model.Account;
 import com.auction.model.Admin;
-import com.auction.service.UserService;
+import com.auction.service.AccountService;
 import com.auction.util.CurrentUser;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*;
-import javafx.fxml.FXMLLoader;
+import javafx.scene.control.Alert;
+import javafx.scene.control.PasswordField;
+import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import java.io.IOException;
 
@@ -18,43 +20,26 @@ public class LoginController {
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
 
-    private UserService userService = new UserService();
+    private final AccountService accountService = new AccountService();
 
     @FXML
     void handleLogin(ActionEvent event) {
-        String userStr = usernameField.getText().trim();
-        String passStr = passwordField.getText();
+        String username = usernameField.getText().trim();
+        String password = passwordField.getText();
 
-        // Sửa kiểu dữ liệu từ User sang Account
-        Account loggedInAccount = userService.login(userStr, passStr);
+        Account loggedIn = accountService.login(username, password);
 
-        if (loggedInAccount != null) {
-            CurrentUser.setUser(loggedInAccount);
-            System.out.println("Đã cất user " + loggedInAccount.getUsername() + " vào phiên làm việc!");
+        if (loggedIn != null) {
+            CurrentUser.setUser(loggedIn);
 
-            if (loggedInAccount instanceof Admin) {
-                switchScene(event, "/view/AdminDashboard.fxml", "Quản trị hệ thống");
+            if (loggedIn instanceof Admin) {
+                switchScene(event, "/view/AdminView.fxml", "Quản trị hệ thống");
             } else {
-                switchScene(event, "/view/MainAuctionView.fxml", "Hệ thống Đấu giá");
+                switchScene(event, "/view/MainView.fxml", "Hệ thống đấu giá");
             }
         } else {
-            Alert alert = new Alert(Alert.AlertType.ERROR, "Sai tài khoản hoặc mật khẩu!");
-            alert.show();
+            showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu!");
         }
-    }
-
-    @FXML
-    void handleDemoBuyer(ActionEvent event) {
-        usernameField.setText("buyer_demo");
-        passwordField.setText("123");
-        handleLogin(event);
-    }
-
-    @FXML
-    void handleDemoSeller(ActionEvent event) {
-        usernameField.setText("seller_demo");
-        passwordField.setText("123");
-        handleLogin(event);
     }
 
     @FXML
@@ -72,5 +57,13 @@ public class LoginController {
             System.err.println("Không tìm thấy file: " + fxmlPath);
             e.printStackTrace();
         }
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

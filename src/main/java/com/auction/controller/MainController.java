@@ -1,9 +1,10 @@
 package com.auction.controller;
 
 import com.auction.model.Account;
-import com.auction.model.Item;
+import com.auction.model.Auction;
 import com.auction.model.User;
-import com.auction.service.MainService;
+import com.auction.service.AccountService;
+import com.auction.service.AuctionService;
 import com.auction.util.CurrentUser;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -20,72 +21,102 @@ import java.util.List;
 
 public class MainController {
 
+    @FXML private Label welcomeLabel;
     @FXML private Label balanceLabel;
     @FXML private Label ongoingLabel;
     @FXML private Label wonLabel;
-    @FXML private Label welcomeLabel;
     @FXML private VBox hotItemsContainer;
 
-    private MainService mainService;
-
-    public MainController() {
-        this.mainService = new MainService();
-    }
+    private final AuctionService auctionService = new AuctionService();
+    private final AccountService accountService = new AccountService();
 
     @FXML
     public void initialize() {
         Account current = CurrentUser.getUser();
-        if (current != null) {
-            if (welcomeLabel != null) {
-                welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
-            }
-            refreshDashboard();
-        }
-    }
+        if (current == null) return;
 
-    private void refreshDashboard() {
-        Account current = CurrentUser.getUser();
-        // Chỉ hiện balance nếu account đó là User (Bidder/Seller)
+        welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
+
+        // Hiện balance nếu là User (Bidder/Seller)
         if (current instanceof User) {
             balanceLabel.setText(String.format("%.0f VNĐ", ((User) current).getBalance()));
         } else {
             balanceLabel.setText("N/A");
         }
 
-        ongoingLabel.setText(String.valueOf(mainService.getOngoingCount()));
-        wonLabel.setText(String.valueOf(mainService.getWonCount()));
-        loadHotAuctions();
+        loadActiveAuctions();
     }
 
-    private void loadHotAuctions() {
+    private void loadActiveAuctions() {
         hotItemsContainer.getChildren().clear();
-        List<Item> items = mainService.getHotAuctions();
-        for (Item item : items) {
-            VBox card = createItemCard(item);
+
+        List<Auction> auctions = auctionService.getActiveAuctions();
+        ongoingLabel.setText(String.valueOf(auctions.size()));
+
+        for (Auction auction : auctions) {
+            VBox card = createAuctionCard(auction);
             hotItemsContainer.getChildren().add(card);
         }
     }
 
-    private VBox createItemCard(Item item) {
+    private VBox createAuctionCard(Auction auction) {
         VBox card = new VBox(10);
         card.setStyle("-fx-background-color: white; -fx-padding: 15; -fx-border-color: #ddd; -fx-border-radius: 8;");
-        Label name = new Label(item.getName());
-        Label price = new Label("Giá: " + String.format("%.0f", item.getStartingPrice()) + " VNĐ");
+
+        Label itemId = new Label("Sản phẩm: " + auction.getItemId());
+        Label price  = new Label("Giá hiện tại: " + String.format("%.0f", auction.getCurrentPrice()) + " VNĐ");
+        Label endTime = new Label("Kết thúc: " + auction.getEndTime());
+
         Button bidButton = new Button("Đấu giá ngay");
-        bidButton.setOnAction(e -> System.out.println("Đang đấu giá: " + item.getName()));
-        card.getChildren().addAll(name, price, bidButton);
+        bidButton.setOnAction(e -> goToAuction(auction.getId()));
+
+        card.getChildren().addAll(itemId, price, endTime, bidButton);
         return card;
+    }
+
+    private void goToAuction(int auctionId) {
+        // TODO: truyền auctionId sang AuctionController
+        System.out.println("Mở phiên đấu giá: " + auctionId);
+    }
+
+    @FXML
+    public void handleSwitchRole(ActionEvent event) {
+        Account current = CurrentUser.getUser();
+        Account updated = accountService.switchRole(current);
+
+        if (updated != null) {
+            CurrentUser.setUser(updated);
+            showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                    "Đã chuyển sang vai trò: " + updated.getRole());
+            initialize(); // Refresh dashboard
+        } else {
+            showAlert(Alert.AlertType.ERROR, "Thất bại", "Không thể đổi vai trò!");
+        }
     }
 
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentUser.logOut();
+        switchScene(event, "/view/LoginView.fxml", "Đăng nhập");
+    }
+
+    private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
-            Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
+            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.getScene().setRoot(root);
+            stage.setTitle(title);
         } catch (IOException e) {
+            System.err.println("Không tìm thấy file: " + fxmlPath);
             e.printStackTrace();
         }
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }
