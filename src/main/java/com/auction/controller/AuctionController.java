@@ -11,13 +11,10 @@ import javafx.scene.control.TextField;
 public class AuctionController {
 
     @FXML private TextField txtBidAmount;
+    private AuctionService auctionService;
 
-    private final AuctionService auctionService = new AuctionService();
-    private int currentAuctionId; // FIX: thay hardcode "1" bằng ID thực
-
-    // Được gọi từ MainController khi user chọn phiên đấu giá
-    public void setAuctionId(int auctionId) {
-        this.currentAuctionId = auctionId;
+    public AuctionController() {
+        this.auctionService = new AuctionService();
     }
 
     @FXML
@@ -28,6 +25,7 @@ public class AuctionController {
             showAlert("Lỗi", "Bạn cần đăng nhập để đấu giá!");
             return;
         }
+
         if (currentUser instanceof Admin) {
             showAlert("Lỗi", "Admin không được phép đặt giá!");
             return;
@@ -35,15 +33,16 @@ public class AuctionController {
 
         try {
             double amount = Double.parseDouble(txtBidAmount.getText());
+            String itemId = "1";
 
-            // FIX: dùng currentAuctionId thay vì hardcode "1"
-            boolean success = auctionService.placeBid(currentAuctionId, amount, currentUser);
+            // Truyền currentUser (Account) xuống Service
+            boolean success = auctionService.placeBid(itemId, amount, currentUser);
 
             if (success) {
                 showAlert("Thành công", "Bạn đã đặt giá thành công!");
                 txtBidAmount.clear();
             } else {
-                showAlert("Thất bại", "Đặt giá không thành công. Kiểm tra lại số tiền hoặc số dư!");
+                showAlert("Thất bại", "Đặt giá không thành công!");
             }
         } catch (NumberFormatException e) {
             showAlert("Lỗi", "Vui lòng nhập số tiền hợp lệ!");
@@ -52,13 +51,8 @@ public class AuctionController {
 
     @FXML
     public void handleCloseAuction() {
-        // FIX: truyền currentAuctionId vào thay vì không có tham số
-        boolean success = auctionService.closeAuction(currentAuctionId);
-        if (success) {
-            showAlert("Thông báo", "Phiên đấu giá đã kết thúc!");
-        } else {
-            showAlert("Lỗi", "Không thể đóng phiên đấu giá!");
-        }
+        auctionService.closeAuction();
+        showAlert("Thông báo", "Phiên đấu giá đã kết thúc!");
     }
 
     private void showAlert(String title, String content) {
