@@ -1,82 +1,90 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.auction.controller.MyProductController"
-            prefWidth="1200" prefHeight="700"
-            stylesheets="@/css/main_style.css">
+<BorderPane prefHeight="700" prefWidth="1200" stylesheets="@/css/main_style.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.MyProductController">
 
     <left>
-        <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">
-            <HBox alignment="CENTER_LEFT">
+        <VBox fx:id="sidebar" prefWidth="220" spacing="10.0" styleClass="sidebar">
+            <HBox alignment="CENTER_LEFT" spacing="10.0">
                 <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
+                    <Insets bottom="10" left="10" right="10" top="10" />
                 </padding>
-                <Button text="☰" onAction="#toggleSidebar" styleClass="toggle-btn"/>
+                <Button onAction="#toggleSidebar" styleClass="toggle-btn" text="≡">
+               <font>
+                  <Font size="21.0" />
+               </font></Button>
             </HBox>
 
-            <Button fx:id="btnHome" text="🏠  Trang chủ" styleClass="menu-item"/>
-            <Button fx:id="btnProducts" text="📦  Sản phẩm của tôi" styleClass="menu-item, active"/>
-            <Button fx:id="btnCreate" text="➕  Tạo phiên đấu giá" styleClass="menu-item"/>
-            <Button fx:id="btnHistory" text="🕘  Lịch sử" styleClass="menu-item"/>
+            <Button fx:id="btnHome" lineSpacing="10.0" prefHeight="27.0" prefWidth="237.0" styleClass="menu-item" text="🏠  Trang chủ" />
+            <Button fx:id="btnProducts" prefHeight="27.0" prefWidth="224.0" styleClass="menu-item, active" text="📦  Sản phẩm của tôi" />
+            <Button fx:id="btnCreate" prefHeight="27.0" prefWidth="221.0" styleClass="menu-item" text="🔨  Đang đấu giá" />
+         <Button mnemonicParsing="false" prefHeight="27.0" prefWidth="224.0" text="👜  Tạo phiên đấu giá" />
+            <Button fx:id="btnHistory" prefHeight="27.0" prefWidth="222.0" styleClass="menu-item" text="🕘  Lịch sử" />
+         <Button mnemonicParsing="false" prefHeight="27.0" prefWidth="220.0" text="💳 Ví tiền " />
+         <Button mnemonicParsing="false" prefHeight="22.0" prefWidth="220.0" text="⚙  Cài đặt" />
         </VBox>
     </left>
 
     <center>
         <VBox spacing="0" styleClass="main-bg">
             <children>
-                <HBox alignment="CENTER_RIGHT" spacing="15" prefHeight="60.0">
+                <HBox alignment="CENTER_RIGHT" prefHeight="60.0" spacing="10.0">
                     <padding>
                         <Insets right="20" />
                     </padding>
-                    <Label text="Xin chào, Trần Thị B" style="-fx-text-fill: #555555; -fx-font-size: 14;"/>
-                    <Button text="Đăng xuất" styleClass="logout-btn"/>
+                    <Label style="-fx-text-fill: #555555; -fx-font-size: 14;" text="Xin chào, Trần Thị B" />
+                    <Button styleClass="logout-btn" text="Đăng xuất" />
                 </HBox>
 
                 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
                     <VBox spacing="20">
                         <padding>
-                            <Insets top="10" right="20" bottom="20" left="20"/>
+                            <Insets bottom="20" left="20" right="20" top="10" />
                         </padding>
 
-                        <HBox spacing="15" styleClass="header-card">
+                        <HBox spacing="10.0" styleClass="header-card">
                             <padding>
-                                <Insets top="20" right="20" bottom="20" left="20"/>
+                                <Insets bottom="20" left="20" right="20" top="20" />
                             </padding>
-                            <Label text="📦" styleClass="header-icon"/>
+                            <Label styleClass="header-icon" text="📦" />
                             <VBox>
-                                <Label text="Sản phẩm của tôi" styleClass="header-title"/>
-                                <Label text="Quản lý các sản phẩm bạn đang bán" styleClass="header-sub"/>
+                                <Label styleClass="header-title" text="Sản phẩm của tôi" />
+                                <Label styleClass="header-sub" text="Quản lý các sản phẩm bạn đang bán" />
                             </VBox>
                         </HBox>
 
                         <HBox spacing="20">
                             <VBox styleClass="card">
-                                <Label text="Sản phẩm đang bán" textFill="#666666"/>
-                                <Label text="0" styleClass="card-number"/>
+                                <Label text="Sản phẩm đang bán" textFill="#666666" />
+                                <Label styleClass="card-number" text="0" />
                             </VBox>
                             <VBox styleClass="card">
-                                <Label text="Tổng doanh thu dự kiến" textFill="#666666"/>
-                                <Label text="0.0M đ" styleClass="card-money"/>
+                                <Label text="Tổng doanh thu dự kiến" textFill="#666666" />
+                                <Label styleClass="card-money" text="0.0M đ" />
                             </VBox>
                             <VBox styleClass="card">
-                                <Label text="Tổng lượt đấu giá" textFill="#666666"/>
-                                <Label text="0" styleClass="card-number"/>
+                                <Label text="Tổng lượt đấu giá" textFill="#666666" />
+                                <Label styleClass="card-number" text="0" />
                             </VBox>
                         </HBox>
 
                         <VBox spacing="15" styleClass="card" VBox.vgrow="ALWAYS">
                             <padding>
-                                <Insets top="20" right="20" bottom="20" left="20"/>
+                                <Insets bottom="20" left="20" right="20" top="20" />
                             </padding>
-                            <Label text="Danh sách sản phẩm" styleClass="section-title"/>
-                            <VBox alignment="CENTER" spacing="10" prefHeight="300" styleClass="empty-box">
-                                <Label text="📦" style="-fx-font-size: 40;"/>
-                                <Label text="Bạn chưa có sản phẩm nào" style="-fx-text-fill: #666666;"/>
-                                <Label text="Tạo phiên đấu giá mới để bắt đầu!" style="-fx-text-fill: #999999;"/>
+                            <Label styleClass="section-title" text="Danh sách sản phẩm" />
+                            <VBox alignment="CENTER" prefHeight="300" spacing="10.0" styleClass="empty-box">
+                                <Label style="-fx-font-size: 40;" text="📦" />
+                                <Label style="-fx-text-fill: #666666;" text="Bạn chưa có sản phẩm nào" />
+                                <Label style="-fx-text-fill: #999999;" text="Tạo phiên đấu giá mới để bắt đầu!" />
                             </VBox>
                         </VBox>
                     </VBox>

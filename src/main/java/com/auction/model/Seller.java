@@ -16,7 +16,6 @@ public class Seller extends User {
         System.out.println("Redirecting to Seller Dashboard (Post Items, Manage Sales)...");
         // Gọi hàm load SellerView.fxml tại đây
     }
-
     public void postItem() {
         // Logic riêng cho việc đăng sản phẩm mới
     }

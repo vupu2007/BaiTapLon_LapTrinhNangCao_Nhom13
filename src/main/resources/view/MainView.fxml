@@ -2,10 +2,17 @@
 
 <?import java.net.URL?>
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<BorderPane fx:id="rootPane" prefHeight="720.0" prefWidth="1200.0" style="-fx-background-color: #f0f7f9;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.MainController">
+<BorderPane fx:id="rootPane" prefHeight="720.0" prefWidth="1200.0" style="-fx-background-color: #f0f7f9;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.MainController">
     <stylesheets>
         <URL value="@/css/main_style.css" />
     </stylesheets>
@@ -14,7 +21,10 @@
             <children>
                 <HBox alignment="CENTER_LEFT" prefHeight="80.0">
                     <padding><Insets left="20.0" /></padding>
-                    <Button fx:id="btnToggle" mnemonicParsing="false" onAction="#toggleSidebar" styleClass="hamburger-btn" text="☰" />
+                    <Button fx:id="btnToggle" mnemonicParsing="false" onAction="#toggleSidebar" styleClass="hamburger-btn" text="≡">
+                  <font>
+                     <Font size="21.0" />
+                  </font></Button>
                 </HBox>
 
                 <VBox fx:id="menuContainer" spacing="10.0" VBox.vgrow="ALWAYS">
@@ -22,15 +32,16 @@
 
                     <Button fx:id="btnHome" maxWidth="1.7976931348623157E308" styleClass="menu-item, active" text="🏠  Trang chủ" />
 
-                    <Button fx:id="btnBidding" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🔨  Đang đấu giá" />
+                                <Button fx:id="btnSelling" lineSpacing="10.0" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="📦  Sản phẩm của tôi" />
 
-                    <Button fx:id="btnSelling" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="📦  Đang bán" />
+                    <Button fx:id="btnBidding" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🔨  Đang đấu giá" />
 
                     <Button fx:id="btnCreate" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="👜  Tạo phiên đấu giá" />
 
                     <Button fx:id="btnHistory" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="🕒  Lịch sử" />
+               <Button mnemonicParsing="false" prefHeight="27.0" prefWidth="220.0" text="💳 Ví tiền " />
 
-                    <Button fx:id="btnSettings" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="⚙️  Cài đặt" />
+                    <Button fx:id="btnSettings" maxWidth="1.7976931348623157E308" styleClass="menu-item" text="⚙  Cài đặt" />
                 </VBox>
             </children>
         </VBox>
@@ -45,7 +56,7 @@
                     <Button styleClass="btn-logout" text="Đăng xuất" />
                 </HBox>
 
-                <VBox styleClass="banner-card" prefHeight="200.0" VBox.vgrow="NEVER">
+                <VBox prefHeight="200.0" styleClass="banner-card" VBox.vgrow="NEVER">
                     <children>
                         <HBox alignment="CENTER_LEFT" spacing="30.0">
                             <padding><Insets left="40.0" /></padding>
@@ -58,18 +69,18 @@
                     </children>
                 </VBox>
 
-                <HBox spacing="20.0" maxWidth="1.7976931348623157E308">
-                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
-                        <Label text="Phiên đang mở" style="-fx-font-size: 16px;" />
-                        <Label styleClass="stat-value" text="12" style="-fx-font-size: 36px;" />
+                <HBox maxWidth="1.7976931348623157E308" spacing="20.0">
+                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
+                        <Label style="-fx-font-size: 16px;" text="Phiên đang mở" />
+                        <Label style="-fx-font-size: 36px;" styleClass="stat-value" text="12" />
                     </VBox>
-                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
-                        <Label text="Số dư khả dụng" style="-fx-font-size: 16px;" />
-                        <Label styleClass="stat-value-green" text="10.0M đ" style="-fx-font-size: 36px;" />
+                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
+                        <Label style="-fx-font-size: 16px;" text="Số dư khả dụng" />
+                        <Label style="-fx-font-size: 36px;" styleClass="stat-value-green" text="10.0M đ" />
                     </VBox>
-                    <VBox styleClass="stat-card" HBox.hgrow="ALWAYS" prefHeight="120.0" alignment="CENTER">
-                        <Label text="Thông báo mới" style="-fx-font-size: 16px;" />
-                        <Label styleClass="stat-value" text="05" style="-fx-font-size: 36px; -fx-text-fill: #f39c12;" />
+                    <VBox alignment="CENTER" prefHeight="120.0" styleClass="stat-card" HBox.hgrow="ALWAYS">
+                        <Label style="-fx-font-size: 16px;" text="Thông báo mới" />
+                        <Label style="-fx-font-size: 36px; -fx-text-fill: #f39c12;" styleClass="stat-value" text="05" />
                     </VBox>
                 </HBox>
 

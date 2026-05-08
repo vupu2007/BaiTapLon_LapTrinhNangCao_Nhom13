@@ -1,94 +1,101 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.BorderPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane xmlns:fx="http://javafx.com/fxml"
-            fx:controller="com.auction.controller.AuctionController"
-            prefWidth="1200" prefHeight="700"
-            stylesheets="@/css/main_style.css">
+<BorderPane prefHeight="700" prefWidth="1200" stylesheets="@/css/main_style.css" xmlns:fx="http://javafx.com/fxml/1" xmlns="http://javafx.com/javafx/26" fx:controller="com.auction.controller.AuctionController">
 
     <left>
         <VBox fx:id="sidebar" prefWidth="220" styleClass="sidebar">
             <HBox alignment="CENTER_LEFT">
-                <padding><Insets top="10" right="10" bottom="10" left="10"/></padding>
-                <Button text="☰" onAction="#toggleSidebar" styleClass="toggle-btn"/>
+                <padding><Insets bottom="10" left="10" right="10" top="10" /></padding>
+                <Button onAction="#toggleSidebar" prefWidth="28.0" styleClass="toggle-btn" text="≡">
+               <font>
+                  <Font size="21.0" />
+               </font></Button>
             </HBox>
-            <Button fx:id="btnHome" text="🏠  Trang chủ" styleClass="menu-item"/>
-            <Button fx:id="btnProducts" text="📦  Sản phẩm của tôi" styleClass="menu-item"/>
-            <Button fx:id="btnCreate" text="➕  Tạo phiên đấu giá" styleClass="menu-item"/>
-            <Button fx:id="btnHistory" text="🕘  Lịch sử" styleClass="menu-item"/>
+            <Button fx:id="btnHome" styleClass="menu-item" text="🏠  Trang chủ" />
+            <Button fx:id="btnProducts" styleClass="menu-item" text="📦  Sản phẩm của tôi" />
+            <Button fx:id="btnCreate" styleClass="menu-item" text="🔨  Đang đấu giá" />
+         <Button mnemonicParsing="false" text="👜  Tạo phiên đấu giá" />
+         <Button mnemonicParsing="false" text="🕒  Lịch sử" />
+         <Button mnemonicParsing="false" text="💳 Ví tiền " />
+         <Button mnemonicParsing="false" text="⚙  Cài đặt" />
         </VBox>
     </left>
 
     <center>
         <VBox spacing="0" styleClass="main-bg">
             <children>
-                <HBox alignment="CENTER_RIGHT" spacing="15" prefHeight="60.0">
+                <HBox alignment="CENTER_RIGHT" prefHeight="60.0" spacing="15">
                     <padding><Insets right="20" /></padding>
-                    <Label text="Xin chào, Trần Thị B" style="-fx-text-fill: #555555; -fx-font-size: 14;"/>
-                    <Button text="Đăng xuất" styleClass="logout-btn"/>
+                    <Label style="-fx-text-fill: #555555; -fx-font-size: 14;" text="Xin chào, Trần Thị B" />
+                    <Button styleClass="logout-btn" text="Đăng xuất" />
                 </HBox>
 
                 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: transparent;" VBox.vgrow="ALWAYS">
                     <VBox spacing="25.0">
-                        <padding><Insets top="10" right="25" bottom="25" left="25"/></padding>
+                        <padding><Insets bottom="25" left="25" right="25" top="10" /></padding>
                         <children>
 
                             <VBox styleClass="header-card">
-                                <padding><Insets top="20" right="25" bottom="20" left="25"/></padding>
+                                <padding><Insets bottom="20" left="25" right="25" top="20" /></padding>
                                 <children>
-                                    <HBox spacing="15" alignment="CENTER_LEFT">
-                                        <Label text="🔔" styleClass="header-icon"/>
+                                    <HBox alignment="CENTER_LEFT" spacing="15">
+                                        <Label styleClass="header-icon" text="🔔" />
                                         <VBox>
-                                            <Label text="Phiên đang đấu giá" styleClass="header-title"/>
-                                            <Label text="Tham gia đấu giá các sản phẩm hot nhất hiện nay" styleClass="header-sub"/>
+                                            <Label styleClass="header-title" text="Phiên đang đấu giá" />
+                                            <Label styleClass="header-sub" text="Tham gia đấu giá các sản phẩm hot nhất hiện nay" />
                                         </VBox>
                                     </HBox>
                                 </children>
                             </VBox>
 
-                            <HBox spacing="10.0" alignment="CENTER_LEFT">
-                                <TextField prefWidth="400.0" promptText="Tìm kiếm sản phẩm đang đấu giá..."
-                                           style="-fx-background-radius: 20; -fx-padding: 10 20; -fx-border-color: #ddd; -fx-border-radius: 20; -fx-background-color: white;"/>
-                                <Button text="Tìm kiếm" style="-fx-background-color: #1491a3; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 10 25; -fx-font-weight: bold; -fx-cursor: hand;"/>
+                            <HBox alignment="CENTER_LEFT" spacing="10.0">
+                                <TextField prefWidth="400.0" promptText="Tìm kiếm sản phẩm đang đấu giá..." style="-fx-background-radius: 20; -fx-padding: 10 20; -fx-border-color: #ddd; -fx-border-radius: 20; -fx-background-color: white;" />
+                                <Button style="-fx-background-color: #1491a3; -fx-text-fill: white; -fx-background-radius: 20; -fx-padding: 10 25; -fx-font-weight: bold; -fx-cursor: hand;" text="Tìm kiếm" />
                             </HBox>
 
                             <VBox spacing="15.0">
                                 <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="card-white-item">
-                                    <padding><Insets top="15" right="20" bottom="15" left="20"/></padding>
+                                    <padding><Insets bottom="15" left="20" right="20" top="15" /></padding>
                                     <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                                        <Label text="📱 iPhone 15 Pro Max 256GB Titan" style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;"/>
-                                        <Label text="Người đăng: admin_store" style="-fx-text-fill: #6b7280;"/>
+                                        <Label style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;" text="📱 iPhone 15 Pro Max 256GB Titan" />
+                                        <Label style="-fx-text-fill: #6b7280;" text="Người đăng: admin_store" />
                                     </VBox>
                                     <VBox alignment="CENTER_RIGHT" prefWidth="150">
-                                        <Label text="Giá hiện tại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
-                                        <Label text="24,500,000 đ" style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                        <Label style="-fx-text-fill: #6b7280; -fx-font-size: 12;" text="Giá hiện tại" />
+                                        <Label style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;" text="24,500,000 đ" />
                                     </VBox>
                                     <VBox alignment="CENTER_RIGHT" prefWidth="150">
-                                        <Label text="Thời gian còn lại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
-                                        <Label text="02:15:45" style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                        <Label style="-fx-text-fill: #6b7280; -fx-font-size: 12;" text="Thời gian còn lại" />
+                                        <Label style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;" text="02:15:45" />
                                     </VBox>
-                                    <Button text="Vào phòng đấu" styleClass="btn-action-blue"/>
+                                    <Button styleClass="btn-action-blue" text="Vào phòng đấu" />
                                 </HBox>
 
                                 <HBox alignment="CENTER_LEFT" spacing="20.0" styleClass="card-white-item">
-                                    <padding><Insets top="15" right="20" bottom="15" left="20"/></padding>
+                                    <padding><Insets bottom="15" left="20" right="20" top="15" /></padding>
                                     <VBox spacing="5.0" HBox.hgrow="ALWAYS">
-                                        <Label text="💻 MacBook Pro M3 16GB 512GB" style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;"/>
-                                        <Label text="Người đăng: mac_world" style="-fx-text-fill: #6b7280;"/>
+                                        <Label style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1f2937;" text="💻 MacBook Pro M3 16GB 512GB" />
+                                        <Label style="-fx-text-fill: #6b7280;" text="Người đăng: mac_world" />
                                     </VBox>
                                     <VBox alignment="CENTER_RIGHT" prefWidth="150">
-                                        <Label text="Giá hiện tại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
-                                        <Label text="38,000,000 đ" style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                        <Label style="-fx-text-fill: #6b7280; -fx-font-size: 12;" text="Giá hiện tại" />
+                                        <Label style="-fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-font-size: 16;" text="38,000,000 đ" />
                                     </VBox>
                                     <VBox alignment="CENTER_RIGHT" prefWidth="150">
-                                        <Label text="Thời gian còn lại" style="-fx-text-fill: #6b7280; -fx-font-size: 12;"/>
-                                        <Label text="14:05:10" style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;"/>
+                                        <Label style="-fx-text-fill: #6b7280; -fx-font-size: 12;" text="Thời gian còn lại" />
+                                        <Label style="-fx-text-fill: #f59e0b; -fx-font-weight: bold; -fx-font-size: 16;" text="14:05:10" />
                                     </VBox>
-                                    <Button text="Vào phòng đấu" styleClass="btn-action-blue"/>
+                                    <Button styleClass="btn-action-blue" text="Vào phòng đấu" />
                                 </HBox>
                             </VBox>
                         </children>
