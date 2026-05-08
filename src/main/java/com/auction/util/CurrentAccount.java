@@ -11,13 +11,13 @@ public class CurrentAccount {
     private static Account account;
 
     // Khi đăng nhập thành công, gọi hàm này để "ghi nhớ" tài khoản
-    public static void setUser(Account loggedInAccount) {
+    public static void setAccount(Account loggedInAccount) {
         //  Gán vào biến 'account' ở trên, không gán vào tên Class 'CurrentAccount'
         account = loggedInAccount;
     }
 
     // Khi cần lấy thông tin, gọi hàm này
-    public static Account getUser() {
+    public static Account getAccount() {
         return account;
     }
 

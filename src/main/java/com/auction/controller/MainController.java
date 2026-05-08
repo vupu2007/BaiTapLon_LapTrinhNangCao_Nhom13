@@ -33,7 +33,7 @@ public class MainController {
 
     @FXML
     public void initialize() {
-        Account current = CurrentAccount.getUser();
+        Account current = CurrentAccount.getAccount();
         if (current != null) {
             if (welcomeLabel != null) {
                 welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
@@ -43,7 +43,7 @@ public class MainController {
     }
 
     private void refreshDashboard() {
-        Account current = CurrentAccount.getUser();
+        Account current = CurrentAccount.getAccount();
         // Chỉ hiện balance nếu account đó là User (Bidder/Seller)
         if (current instanceof User) {
             balanceLabel.setText(String.format("%.0f VNĐ", ((User) current).getBalance()));

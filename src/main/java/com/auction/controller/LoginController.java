@@ -2,7 +2,7 @@ package com.auction.controller;
 
 import com.auction.model.Account;
 import com.auction.model.Admin;
-import com.auction.service.UserService;
+import com.auction.service.AccountService;
 import com.auction.util.CurrentAccount;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -18,7 +18,7 @@ public class LoginController {
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
 
-    private UserService userService = new UserService();
+    private AccountService accountService = new AccountService();
 
     @FXML
     void handleLogin(ActionEvent event) {
@@ -26,10 +26,10 @@ public class LoginController {
         String passStr = passwordField.getText();
 
         // Sửa kiểu dữ liệu từ User sang Account
-        Account loggedInAccount = userService.login(userStr, passStr);
+        Account loggedInAccount = accountService.login(userStr, passStr);
 
         if (loggedInAccount != null) {
-            CurrentAccount.setUser(loggedInAccount);
+            CurrentAccount.setAccount(loggedInAccount);
             System.out.println("Đã cất user " + loggedInAccount.getUsername() + " vào phiên làm việc!");
 
             if (loggedInAccount instanceof Admin) {

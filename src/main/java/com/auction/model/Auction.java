@@ -2,6 +2,8 @@ package com.auction.model;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Auction implements Serializable {
     private static final long serialVersionUID = 1L;
@@ -25,12 +27,15 @@ public class Auction implements Serializable {
     private LocalDateTime startTime;    // Thời gian bắt đầu
     private LocalDateTime endTime;      // Thời gian kết thúc
     private AuctionStatus status;       // Trạng thái phiên đấu giá
+    private Account account;
+    private List<Observer> observers = new ArrayList<>();// danh sách ng nhân đc thông báo
+
 
     public Auction() {}
 
     public Auction(int id, String itemId, int sellerId, double startPrice, double currentPrice,
                    double minIncrement, Integer winnerId,
-                   LocalDateTime startTime, LocalDateTime endTime, AuctionStatus status) {
+                   LocalDateTime startTime, LocalDateTime endTime, AuctionStatus status, Account account) {
         this.id = id;
         this.itemId = itemId;
         this.sellerId = sellerId;
@@ -41,6 +46,8 @@ public class Auction implements Serializable {
         this.startTime = startTime;
         this.endTime = endTime;
         this.status = status;
+        this.account = account;
+
     }
 
     public int getId() { return id; }
@@ -77,12 +84,18 @@ public class Auction implements Serializable {
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
-    // Logic kiểm tra thời gian cực kỳ quan trọng
-    public boolean isExpired() {
-        return LocalDateTime.now().isAfter(endTime);
+    // thêm vào danh sách những ng theo dõi sẽ nhận đc thông báo
+    public void addObserver(Observer observer){
+        observers.add(observer);
+    }
+    // hủy yêu cầu
+    public void removeObserver(Observer observer){
+        observers.remove(observer);
     }
 
-    public boolean hasStarted() {
-        return LocalDateTime.now().isAfter(startTime);
+    public void notifyObservers(){
+        for (Observer o : observers){
+            o.update(currentPrice, account.getUsername());
+        }
     }
 }

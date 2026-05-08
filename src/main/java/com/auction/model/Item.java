@@ -6,7 +6,7 @@ public abstract class Item implements Entity {
     protected String name;
     protected String description;
     protected double startingPrice;
-    protected double ownerId;
+    protected int ownerId;
     protected int categoryId;   // THÊM: khớp với DB
     protected String status;    // THÊM: 'AVAILABLE', 'IN_AUCTION', 'SOLD'
 

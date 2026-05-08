@@ -1,11 +1,15 @@
 package com.auction.controller;
 
+import javafx.application.Platform;
+import javafx.event.ActionEvent;
+import com.auction.model.Observer;
 import com.auction.model.Account;
 import com.auction.model.Admin;
 import com.auction.service.AuctionService;
 import com.auction.util.CurrentAccount;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 
 public class AuctionController {
@@ -21,7 +25,7 @@ public class AuctionController {
 
     @FXML
     public void handlePlaceBid() {
-        Account currentUser = CurrentAccount.getUser();
+        Account currentUser = CurrentAccount.getAccount();
 
         if (currentUser == null) {
             showAlert("Lỗi", "Bạn cần đăng nhập để đấu giá!");
