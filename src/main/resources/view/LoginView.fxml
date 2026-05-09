@@ -7,69 +7,80 @@
 <?import javafx.scene.control.PasswordField?>
 <?import javafx.scene.control.Separator?>
 <?import javafx.scene.control.TextField?>
+<?import javafx.scene.control.ToggleButton?>
 <?import javafx.scene.image.Image?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 
-<StackPane alignment="CENTER" prefHeight="700.0" prefWidth="500.0" style="-fx-background-color: #f0f7ff;" stylesheets="@../css/login.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.LoginController"> <children>
-    <VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="400.0" spacing="15.0" styleClass="login-card">
-        <padding>
-            <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
-        </padding>
-        <children>
-            <ImageView fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true" smooth="true">
-                <image>
-                    <Image url="@../images/uet_logo.png" />
-                </image>
-            </ImageView>
+<StackPane alignment="CENTER" prefHeight="700.0" prefWidth="500.0" style="-fx-background-color: #f0f7ff;" stylesheets="@../css/login.css" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.LoginController">
+    <children>
+        <VBox alignment="TOP_CENTER" maxHeight="-Infinity" maxWidth="-Infinity" prefWidth="400.0" spacing="15.0" styleClass="login-card">
+            <padding>
+                <Insets bottom="40.0" left="40.0" right="40.0" top="40.0" />
+            </padding>
+            <children>
+                <ImageView fitHeight="100.0" fitWidth="100.0" pickOnBounds="true" preserveRatio="true" smooth="true">
+                    <image>
+                        <Image url="@../images/uet_logo.png" />
+                    </image>
+                </ImageView>
 
-            <VBox alignment="CENTER" spacing="5.0">
-                <children>
-                    <Label styleClass="title-main" text="Đấu Giá UET" />
-                    <Label styleClass="title-sub" text="Đại học Công nghệ - ĐHQG Hà Nội" />
-                </children>
-                <VBox.margin>
-                    <Insets bottom="10.0" top="10.0" />
-                </VBox.margin>
-            </VBox>
+                <VBox alignment="CENTER" spacing="5.0">
+                    <children>
+                        <Label styleClass="title-main" text="Đấu Giá UET" />
+                        <Label styleClass="title-sub" text="Đại học Công nghệ - ĐHQG Hà Nội" />
+                    </children>
+                    <VBox.margin>
+                        <Insets bottom="10.0" top="10.0" />
+                    </VBox.margin>
+                </VBox>
 
-            <VBox spacing="8.0">
-                <children>
-                    <Label styleClass="field-label" text="Tên đăng nhập" />
-                    <TextField fx:id="usernameField" promptText="Nhập tên đăng nhập" styleClass="input-field" />
-                </children>
-            </VBox>
+                <VBox spacing="8.0">
+                    <children>
+                        <Label styleClass="field-label" text="Tên đăng nhập" />
+                        <TextField fx:id="usernameField" promptText="Nhập tên đăng nhập" styleClass="input-field" />
+                    </children>
+                </VBox>
 
-            <VBox spacing="8.0">
-                <children>
-                    <Label styleClass="field-label" text="Mật khẩu" />
-                    <PasswordField fx:id="passwordField" onAction="#handleLogin" promptText="Nhập mật khẩu" styleClass="input-field" />
-                </children>
-            </VBox>
+                <VBox spacing="8.0">
+                    <children>
+                        <Label styleClass="field-label" text="Mật khẩu" />
+                        <StackPane alignment="CENTER_RIGHT">
+                            <children>
+                                <PasswordField fx:id="passwordField" onAction="#handleLogin" promptText="Nhập mật khẩu" styleClass="input-field" />
+                                <TextField fx:id="passwordTextField" onAction="#handleLogin" promptText="Nhập mật khẩu" styleClass="input-field" visible="false" />
+                                <ToggleButton fx:id="togglePasswordBtn" mnemonicParsing="false" onAction="#togglePasswordVisibility" style="-fx-background-color: transparent; -fx-cursor: hand;" text="👁">
+                                    <StackPane.margin>
+                                        <Insets right="5.0" />
+                                    </StackPane.margin>
+                                </ToggleButton>
+                            </children>
+                        </StackPane>
+                    </children>
+                </VBox>
+                <HBox alignment="CENTER_LEFT">
+                    <children>
+                        <Hyperlink styleClass="forgot-link" text="Quên mật khẩu?" />
+                    </children>
+                </HBox>
 
-            <HBox alignment="CENTER_LEFT">
-                <children>
-                    <Hyperlink styleClass="forgot-link" text="Quên mật khẩu?" />
-                </children>
-            </HBox>
+                <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLogin" styleClass="login-button" text="Đăng nhập" />
 
-            <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#handleLogin" styleClass="login-button" text="Đăng nhập" />
+                <HBox alignment="CENTER" spacing="5.0">
+                    <children>
+                        <Label text="Chưa có tài khoản?" />
+                        <Hyperlink onAction="#goToRegister" styleClass="register-link" text="Đăng ký ngay" />
+                    </children>
+                </HBox>
 
-            <HBox alignment="CENTER" spacing="5.0">
-                <children>
-                    <Label text="Chưa có tài khoản?" />
-                    <Hyperlink onAction="#goToRegister" styleClass="register-link" text="Đăng ký ngay" />
-                </children>
-            </HBox>
-
-            <Separator prefWidth="200.0">
-                <VBox.margin>
-                    <Insets top="10.0" />
-                </VBox.margin>
-            </Separator>
-        </children>
-    </VBox>
-</children>
+                <Separator prefWidth="200.0">
+                    <VBox.margin>
+                        <Insets top="10.0" />
+                    </VBox.margin>
+                </Separator>
+            </children>
+        </VBox>
+    </children>
 </StackPane>

@@ -20,4 +20,5 @@ public class Bidder extends User {
     public void placeBid() {
         // Logic riêng cho việc đặt giá
     }
+
 }

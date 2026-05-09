@@ -49,12 +49,32 @@
 
                         <VBox spacing="5.0">
                             <Label styleClass="field-label" text="Mật khẩu" />
-                            <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu (tối thiểu 6 ký tự)" styleClass="input-field" />
+                            <StackPane alignment="CENTER_RIGHT">
+                                <children>
+                                    <PasswordField fx:id="passwordField" promptText="Nhập mật khẩu (tối thiểu 6 ký tự)" styleClass="input-field" />
+                                    <TextField fx:id="passwordTextField" promptText="Nhập mật khẩu (tối thiểu 6 ký tự)" styleClass="input-field" visible="false" />
+                                    <ToggleButton fx:id="togglePasswordBtn" mnemonicParsing="false" onAction="#togglePasswordVisibility" style="-fx-background-color: transparent; -fx-cursor: hand;" text="👁">
+                                        <StackPane.margin>
+                                            <Insets right="5.0" />
+                                        </StackPane.margin>
+                                    </ToggleButton>
+                                </children>
+                            </StackPane>
                         </VBox>
 
                         <VBox spacing="5.0">
                             <Label styleClass="field-label" text="Xác nhận mật khẩu" />
-                            <PasswordField fx:id="confirmPasswordField" promptText="Nhập lại mật khẩu" styleClass="input-field" />
+                            <StackPane alignment="CENTER_RIGHT">
+                                <children>
+                                    <PasswordField fx:id="confirmPasswordField" promptText="Nhập lại mật khẩu" styleClass="input-field" />
+                                    <TextField fx:id="confirmPasswordTextField" promptText="Nhập lại mật khẩu" styleClass="input-field" visible="false" />
+                                    <ToggleButton fx:id="toggleConfirmPasswordBtn" mnemonicParsing="false" onAction="#toggleConfirmPasswordVisibility" style="-fx-background-color: transparent; -fx-cursor: hand;" text="👁">
+                                        <StackPane.margin>
+                                            <Insets right="5.0" />
+                                        </StackPane.margin>
+                                    </ToggleButton>
+                                </children>
+                            </StackPane>
                         </VBox>
                     </children>
                 </VBox>
