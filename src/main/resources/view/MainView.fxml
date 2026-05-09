@@ -1,98 +1,211 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
 <?import java.net.URL?>
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.FlowPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox spacing="25.0"
-      style="-fx-background-color: #F0F9FF;"
-      xmlns="http://javafx.com/javafx/17"
-      xmlns:fx="http://javafx.com/fxml/1">
-
-    <stylesheets>
-        <URL value="@../css/style.css"/>
-    </stylesheets>
-
-    <padding>
-        <Insets top="25.0"
-                right="25.0"
-                bottom="25.0"
-                left="15.0"/>
-    </padding>
-
-    <!-- HEADER -->
-
-    <VBox styleClass="shadow-pane">
-
-        <padding>
-            <Insets top="30.0"
-                    right="30.0"
-                    bottom="30.0"
-                    left="30.0"/>
-        </padding>
-
-        <Label text="Danh sách phiên đấu giá"
-               textFill="#0284c7">
-
-            <font>
-                <Font name="System Bold" size="28.0"/>
-            </font>
-
-        </Label>
-
-        <Label text="Khám phá các sản phẩm đang được đấu giá"
-               textFill="#64748b"/>
-
-    </VBox>
-
-    <!-- CONTENT -->
-
-    <VBox styleClass="shadow-pane"
-          VBox.vgrow="ALWAYS">
-
-        <padding>
-            <Insets top="25.0"
-                    right="25.0"
-                    bottom="20.0"
-                    left="25.0"/>
-        </padding>
-
-        <HBox alignment="CENTER_LEFT"
-              spacing="15.0">
-
-            <TextField prefWidth="450.0"
-                       promptText="🔍 Tìm kiếm sản phẩm..."
-                       styleClass="search-field"/>
-
-            <Region HBox.hgrow="ALWAYS"/>
-
-            <Button prefHeight="35"
-                    prefWidth="80"
-                    style="-fx-background-color: #0284c7; -fx-text-fill: white; -fx-background-radius: 10;"
-                    text="Tất cả"/>
-
-            <Button prefHeight="35"
-                    style="-fx-background-color: #f1f5f9; -fx-background-radius: 10;"
-                    text="Đang diễn ra"/>
-
-            <Button prefHeight="35"
-                    style="-fx-background-color: #f1f5f9; -fx-background-radius: 10;"
-                    text="Sắp diễn ra"/>
-
-        </HBox>
-
-        <FlowPane hgap="20.0"
-                  vgap="20.0"
-                  VBox.vgrow="ALWAYS">
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
+            <stylesheets>
+                <URL value="@../css/style.css" />
+            </stylesheets>
 
             <padding>
-                <Insets top="25.0"/>
+                <Insets bottom="25.0" left="15.0" right="25.0" top="25.0" />
             </padding>
 
-        </FlowPane>
+            <children>
+                <VBox fillWidth="true" maxWidth="1.7976931348623157E308" styleClass="shadow-pane" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                    <padding>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                    </padding>
+                    <children>
+                        <Label text="Danh sách phiên đấu giá" textFill="#0284c7">
+                            <font>
+                                <Font name="System Bold" size="28.0" />
+                            </font>
+                        </Label>
+                        <Label text="Khám phá các sản phẩm đang được đấu giá" textFill="#64748b">
+                            <font>
+                                <Font size="14.0" />
+                            </font>
+                            <VBox.margin>
+                                <Insets top="5.0" />
+                            </VBox.margin>
+                        </Label>
+                    </children>
+                </VBox>
 
-    </VBox>
+                <VBox fillWidth="true" maxWidth="1.7976931348623157E308" styleClass="shadow-pane" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
+                    </padding>
+                    <children>
+                        <HBox alignment="CENTER_LEFT" spacing="15.0">
+                            <children>
+                                <TextField prefHeight="40.0" prefWidth="400.0" promptText="🔍 Tìm kiếm sản phẩm..." styleClass="search-field" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </TextField>
+                                <Region HBox.hgrow="ALWAYS" />
+                                <Button prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Tất cả" />
+                                <Button prefHeight="40.0" prefWidth="110.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Đang diễn ra" />
+                                <Button prefHeight="40.0" prefWidth="110.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Sắp diễn ra" />
+                            </children>
+                        </HBox>
 
-</VBox>
+                        <FlowPane fx:id="flowPane" hgap="25.0" maxWidth="1.7976931348623157E308" vgap="25.0" VBox.vgrow="ALWAYS">
+                            <padding>
+                                <Insets top="30.0" />
+                            </padding>
+                            <children>
+
+                                <VBox prefWidth="300.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;">
+                                    <children>
+                                        <StackPane prefHeight="180.0">
+                                            <children>
+                                                <Region style="-fx-background-color: #262626; -fx-background-radius: 11 11 0 0;" />
+                                                <Label style="-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;" text="Đang diễn ra" StackPane.alignment="TOP_RIGHT">
+                                                    <StackPane.margin>
+                                                        <Insets right="10.0" top="10.0" />
+                                                    </StackPane.margin>
+                                                    <padding>
+                                                        <Insets bottom="5.0" left="12.0" right="12.0" top="5.0" />
+                                                    </padding>
+                                                </Label>
+                                            </children>
+                                        </StackPane>
+                                        <VBox spacing="8.0">
+                                            <padding>
+                                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="iPhone 15 Pro Max 256GB" textFill="#1e293b">
+                                                    <font>
+                                                        <Font name="System Bold" size="16.0" />
+                                                    </font>
+                                                </Label>
+                                                <Label prefHeight="40.0" text="Brand new, sealed. Space Black color. Full warranty." textFill="#64748b" wrapText="true" />
+                                                <Region prefHeight="10.0" />
+                                                <HBox alignment="CENTER_LEFT">
+                                                    <children>
+                                                        <Label text="Giá hiện tại:" textFill="#64748b" />
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <Label text="28.500.000 đ" textFill="#0284c7">
+                                                            <font>
+                                                                <Font name="System Bold" size="16.0" />
+                                                            </font>
+                                                        </Label>
+                                                    </children>
+                                                </HBox>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                                <VBox prefWidth="300.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;">
+                                    <children>
+                                        <StackPane prefHeight="180.0">
+                                            <children>
+                                                <Region style="-fx-background-color: #4c1d95; -fx-background-radius: 11 11 0 0;" />
+                                                <Label style="-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;" text="Đang diễn ra" StackPane.alignment="TOP_RIGHT">
+                                                    <StackPane.margin>
+                                                        <Insets right="10.0" top="10.0" />
+                                                    </StackPane.margin>
+                                                    <padding>
+                                                        <Insets bottom="5.0" left="12.0" right="12.0" top="5.0" />
+                                                    </padding>
+                                                </Label>
+                                            </children>
+                                        </StackPane>
+                                        <VBox spacing="8.0">
+                                            <padding>
+                                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="MacBook Pro 14&quot; M3 Max" textFill="#1e293b">
+                                                    <font>
+                                                        <Font name="System Bold" size="16.0" />
+                                                    </font>
+                                                </Label>
+                                                <Label prefHeight="40.0" text="32GB RAM, 1TB SSD. Perfect condition. AppleCare+ included." textFill="#64748b" wrapText="true" />
+                                                <Region prefHeight="10.0" />
+                                                <HBox alignment="CENTER_LEFT">
+                                                    <children>
+                                                        <Label text="Giá hiện tại:" textFill="#64748b" />
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <Label text="58.000.000 đ" textFill="#0284c7">
+                                                            <font>
+                                                                <Font name="System Bold" size="16.0" />
+                                                            </font>
+                                                        </Label>
+                                                    </children>
+                                                </HBox>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                                <VBox prefWidth="300.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;">
+                                    <children>
+                                        <StackPane prefHeight="180.0">
+                                            <children>
+                                                <Region style="-fx-background-color: #d6d3d1; -fx-background-radius: 11 11 0 0;" />
+                                                <Label style="-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;" text="Đang diễn ra" StackPane.alignment="TOP_RIGHT">
+                                                    <StackPane.margin>
+                                                        <Insets right="10.0" top="10.0" />
+                                                    </StackPane.margin>
+                                                    <padding>
+                                                        <Insets bottom="5.0" left="12.0" right="12.0" top="5.0" />
+                                                    </padding>
+                                                </Label>
+                                            </children>
+                                        </StackPane>
+                                        <VBox spacing="8.0">
+                                            <padding>
+                                                <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="Sony WH-1000XM5" textFill="#1e293b">
+                                                    <font>
+                                                        <Font name="System Bold" size="16.0" />
+                                                    </font>
+                                                </Label>
+                                                <Label prefHeight="40.0" text="Noise cancelling wireless headphones. Black color. Like new." textFill="#64748b" wrapText="true" />
+                                                <Region prefHeight="10.0" />
+                                                <HBox alignment="CENTER_LEFT">
+                                                    <children>
+                                                        <Label text="Giá hiện tại:" textFill="#64748b" />
+                                                        <Region HBox.hgrow="ALWAYS" />
+                                                        <Label text="6.200.000 đ" textFill="#0284c7">
+                                                            <font>
+                                                                <Font name="System Bold" size="16.0" />
+                                                            </font>
+                                                        </Label>
+                                                    </children>
+                                                </HBox>
+                                            </children>
+                                        </VBox>
+                                    </children>
+                                </VBox>
+
+                            </children>
+                        </FlowPane>
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </content>
+</ScrollPane>

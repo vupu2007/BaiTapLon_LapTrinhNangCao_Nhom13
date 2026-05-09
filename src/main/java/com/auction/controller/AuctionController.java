@@ -79,4 +79,5 @@ public class AuctionController implements AuctionObserver {
         alert.setContentText(content);
         alert.showAndWait();
     }
+
 }

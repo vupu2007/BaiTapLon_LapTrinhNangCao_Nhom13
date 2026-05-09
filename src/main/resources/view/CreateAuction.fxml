@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextArea?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+    <content>
+        <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
+            <padding>
+                <Insets bottom="25.0" left="15.0" right="25.0" top="25.0" />
+            </padding>
+            <children>
+
+                <VBox spacing="5.0" styleClass="shadow-pane" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                    <padding>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                    </padding>
+                    <children>
+                        <Label text="Tạo phiên đấu giá mới" textFill="#0284c7">
+                            <font>
+                                <Font name="System Bold" size="28.0" />
+                            </font>
+                        </Label>
+                        <Label text="Đăng bán sản phẩm của bạn" textFill="#64748b">
+                            <font>
+                                <Font size="14.0" />
+                            </font>
+                            <VBox.margin>
+                                <Insets top="5.0" />
+                            </VBox.margin>
+                        </Label>
+                    </children>
+                </VBox>
+
+                <VBox spacing="20.0" styleClass="shadow-pane" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                    <padding>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                    </padding>
+                    <children>
+
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="📦  Tên sản phẩm" textFill="#1e293b">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <TextField fx:id="productNameField" prefHeight="45.0" promptText="VD: iPhone 15 Pro Max 256GB" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </TextField>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="📄  Mô tả" textFill="#1e293b">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <TextArea fx:id="descriptionArea" prefHeight="120.0" promptText="Mô tả chi tiết về sản phẩm..." style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;" wrapText="true">
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </TextArea>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="💲  Giá khởi điểm (đ)" textFill="#1e293b">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <TextField fx:id="startPriceField" prefHeight="45.0" promptText="VD: 25000000" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </TextField>
+                            </children>
+                        </VBox>
+
+                        <VBox spacing="8.0">
+                            <children>
+                                <Label text="🖼️  URL hình ảnh" textFill="#1e293b">
+                                    <font>
+                                        <Font name="System Bold" size="14.0" />
+                                    </font>
+                                </Label>
+                                <TextField fx:id="imageUrlField" prefHeight="45.0" promptText="https://example.com/image.jpg" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                    <font>
+                                        <Font size="14.0" />
+                                    </font>
+                                </TextField>
+                            </children>
+                        </VBox>
+
+                        <HBox spacing="20.0">
+                            <children>
+                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label text="📅  Thời gian bắt đầu" textFill="#1e293b">
+                                            <font>
+                                                <Font name="System Bold" size="14.0" />
+                                            </font>
+                                        </Label>
+                                        <TextField fx:id="startTimeField" prefHeight="45.0" promptText="dd/mm/yyyy --:-- --" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                            <font>
+                                                <Font size="14.0" />
+                                            </font>
+                                        </TextField>
+                                    </children>
+                                </VBox>
+                                <VBox spacing="8.0" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label text="📅  Thời gian kết thúc" textFill="#1e293b">
+                                            <font>
+                                                <Font name="System Bold" size="14.0" />
+                                            </font>
+                                        </Label>
+                                        <TextField fx:id="endTimeField" prefHeight="45.0" promptText="dd/mm/yyyy --:-- --" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                            <font>
+                                                <Font size="14.0" />
+                                            </font>
+                                        </TextField>
+                                    </children>
+                                </VBox>
+                            </children>
+                        </HBox>
+
+                        <HBox alignment="CENTER_RIGHT" spacing="15.0">
+                            <padding>
+                                <Insets top="15.0" />
+                            </padding>
+                            <children>
+                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="250.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" text="Hủy" textFill="#475569" HBox.hgrow="SOMETIMES">
+                                    <font>
+                                        <Font name="System Bold" size="15.0" />
+                                    </font>
+                                </Button>
+                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="600.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo phiên đấu giá" textFill="WHITE" HBox.hgrow="ALWAYS">
+                                    <font>
+                                        <Font name="System Bold" size="15.0" />
+                                    </font>
+                                </Button>
+                            </children>
+                        </HBox>
+
+                    </children>
+                </VBox>
+            </children>
+        </VBox>
+    </content>
+</ScrollPane>
