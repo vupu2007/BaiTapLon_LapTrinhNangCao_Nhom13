@@ -7,6 +7,9 @@ import com.auction.model.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class AuctionService {
@@ -43,6 +46,36 @@ public class AuctionService {
             System.out.println("Tạo phiên đấu giá thành công!");
         }
         return created;
+    }
+    // Khai báo Map thay vì List
+    private Map<Integer, List<Observer>> auctionObservers = new ConcurrentHashMap<>();
+
+    // Hàm Add có thêm tham số auctionId
+    public void addObserver(int auctionId, Observer observer) {
+        auctionObservers.putIfAbsent(auctionId, new CopyOnWriteArrayList<>());
+        auctionObservers.get(auctionId).add(observer);
+    }
+    // Hàm Hủy đăng ký (Xóa màn hình khỏi danh sách)
+    public void removeObserver(int auctionId, Observer observer) {
+        List<Observer> viewers = auctionObservers.get(auctionId);
+        if (viewers != null) {
+            viewers.remove(observer);
+
+            // Tối ưu: Nếu phòng không còn ai xem thì xóa luôn cái list cho nhẹ RAM
+            if (viewers.isEmpty()) {
+                auctionObservers.remove(auctionId);
+            }
+        }
+    }
+
+    // Hàm Notify cũng tìm theo auctionId để báo đúng người
+    private void notifyObservers(int auctionId, double newPrice, String username) {
+        List<Observer> viewers = auctionObservers.get(auctionId);
+        if (viewers != null) {
+            for (Observer o : viewers) {
+                o.update(newPrice, username);
+            }
+        }
     }
 
     // 2. Đặt giá — đây là chức năng cốt lõi
@@ -95,18 +128,17 @@ public class AuctionService {
             bid.setBidderId(Integer.parseInt(account.getId()));
             bid.setBidAmount(amount);
 
-            boolean bidSaved = bidDAO.insertBid(bid);
-            if (!bidSaved) return false;
-
-            // Cập nhật giá hiện tại trong phiên đấu giá
-            boolean priceUpdated = auctionDAO.updateCurrentPrice(auctionId, amount, Integer.parseInt(account.getId()));
-            if (!priceUpdated) return false;
+            boolean transactionSuccess = auctionDAO.placeBidTransaction(bid, amount, Integer.parseInt(account.getId()));
+            // Nếu giao dịch DB thất bại (do có người nhanh tay hơn)
+            if (!transactionSuccess) {
+                return false;
+            }
 
             System.out.println("Đặt giá thành công: " + amount);
 
             // 2. THÊM VÀO ĐÂY: Phát tín hiệu cho các màn hình (Observers) cập nhật lại giá
             // Giả sử bạn truyền giá mới và tên người đặt
-            auction.notifyObservers();
+            notifyObservers(auctionId, amount, account.getUsername());
             return true;
         } finally {
             lock.unlock();

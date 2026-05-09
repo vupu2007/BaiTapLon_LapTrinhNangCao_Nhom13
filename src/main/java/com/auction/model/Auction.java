@@ -84,18 +84,5 @@ public class Auction implements Serializable {
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
-    // thêm vào danh sách những ng theo dõi sẽ nhận đc thông báo
-    public void addObserver(Observer observer){
-        observers.add(observer);
-    }
-    // hủy yêu cầu
-    public void removeObserver(Observer observer){
-        observers.remove(observer);
-    }
 
-    public void notifyObservers(){
-        for (Observer o : observers){
-            o.update(currentPrice, account.getUsername());
-        }
-    }
 }
