@@ -12,7 +12,12 @@ import com.auction.model.Item;
 import com.auction.model.Seller;
 import com.auction.model.User;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class AuctionService {
 
@@ -20,6 +25,9 @@ public class AuctionService {
     private final BidDAO     bidDAO     = new BidDAO();
     private final ItemDAO    itemDAO    = new ItemDAO();
     private final AccountDAO accountDAO = new AccountDAO();
+
+    // Scheduler dùng chung để lên lịch tự động đóng phiên
+    private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
 
     // 1. Tạo phiên đấu giá mới (chỉ Seller mới tạo được)
     public boolean createAuction(Auction auction, Account account) {
@@ -41,8 +49,23 @@ public class AuctionService {
         boolean created = auctionDAO.insertAuction(auction);
         if (created) {
             itemDAO.updateStatus(auction.getItemId(), "IN_AUCTION");
+
+            // THÊM: lên lịch tự động đóng phiên khi hết end_time
+            scheduleAutoClose(auction);
         }
         return created;
+    }
+
+    // Tự động đóng phiên khi hết giờ
+    private void scheduleAutoClose(Auction auction) {
+        long delay = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
+        if (delay <= 0) {
+            closeAuction(auction.getId());
+            return;
+        }
+        scheduler.schedule(() -> closeAuction(auction.getId()), delay, TimeUnit.MILLISECONDS);
+        System.out.println("Đã lên lịch tự động đóng phiên " + auction.getId() +
+                " sau " + delay / 1000 + " giây");
     }
 
     // 2. Đặt giá — synchronized để tránh race condition khi nhiều người bid cùng lúc
@@ -82,8 +105,6 @@ public class AuctionService {
 
         int bidderId = Integer.parseInt(account.getId());
 
-        // Gộp insertBid + updateCurrentPrice vào 1 transaction
-        // → đảm bảo không có trạng thái nửa vời nếu một trong 2 lệnh lỗi
         BidTransaction bid = new BidTransaction();
         bid.setAuctionId(auctionId);
         bid.setBidderId(bidderId);
@@ -104,7 +125,7 @@ public class AuctionService {
         if (closed) {
             String newItemStatus = auction.getWinnerId() != null ? "SOLD" : "AVAILABLE";
             itemDAO.updateStatus(auction.getItemId(), newItemStatus);
-            System.out.println("Phiên đấu giá đã kết thúc!");
+            System.out.println("Phiên đấu giá " + auctionId + " đã kết thúc!");
         }
         return closed;
     }
