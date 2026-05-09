@@ -22,7 +22,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-// THÊM: implements AuctionSubject để hỗ trợ Observer Pattern
 public class AuctionService implements AuctionSubject {
 
     private final AuctionDAO auctionDAO = new AuctionDAO();
@@ -31,19 +30,13 @@ public class AuctionService implements AuctionSubject {
     private final AccountDAO accountDAO = new AccountDAO();
 
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
-
-    // THÊM: danh sách observer đang lắng nghe
     private final List<AuctionObserver> observers = new ArrayList<>();
 
     @Override
-    public void addObserver(AuctionObserver observer) {
-        observers.add(observer);
-    }
+    public void addObserver(AuctionObserver observer) { observers.add(observer); }
 
     @Override
-    public void removeObserver(AuctionObserver observer) {
-        observers.remove(observer);
-    }
+    public void removeObserver(AuctionObserver observer) { observers.remove(observer); }
 
     @Override
     public void notifyObservers(int auctionId, double newPrice) {
@@ -69,22 +62,40 @@ public class AuctionService implements AuctionSubject {
             return false;
         }
 
+        // THÊM: validate thời gian hợp lệ
+        if (!auction.getStartTime().isBefore(auction.getEndTime())) {
+            System.err.println("Thời gian bắt đầu phải trước thời gian kết thúc!");
+            return false;
+        }
+
         boolean created = auctionDAO.insertAuction(auction);
         if (created) {
             itemDAO.updateStatus(auction.getItemId(), "IN_AUCTION");
-            scheduleAutoClose(auction);
+            scheduleAuction(auction);
         }
         return created;
     }
 
-    // Tự động đóng phiên khi hết giờ
-    private void scheduleAutoClose(Auction auction) {
-        long delay = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
-        if (delay <= 0) {
-            closeAuction(auction.getId());
-            return;
+    // Lên lịch tự động OPEN→RUNNING và RUNNING→FINISHED
+    private void scheduleAuction(Auction auction) {
+        long startDelay = Duration.between(LocalDateTime.now(), auction.getStartTime()).toMillis();
+        long endDelay   = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMillis();
+
+        // THÊM: tự động chuyển OPEN → RUNNING khi đến start_time
+        if (startDelay > 0) {
+            scheduler.schedule(() ->
+                            auctionDAO.updateStatus(auction.getId(), AuctionStatus.RUNNING),
+                    startDelay, TimeUnit.MILLISECONDS);
+        } else {
+            auctionDAO.updateStatus(auction.getId(), AuctionStatus.RUNNING);
         }
-        scheduler.schedule(() -> closeAuction(auction.getId()), delay, TimeUnit.MILLISECONDS);
+
+        // Tự động đóng phiên khi hết end_time
+        if (endDelay > 0) {
+            scheduler.schedule(() -> closeAuction(auction.getId()), endDelay, TimeUnit.MILLISECONDS);
+        } else {
+            closeAuction(auction.getId());
+        }
     }
 
     // 2. Đặt giá — synchronized để tránh race condition
@@ -127,8 +138,11 @@ public class AuctionService implements AuctionSubject {
 
         boolean success = auctionDAO.placeBidTransaction(bid, amount, bidderId);
 
-        // THÊM: thông báo cho tất cả observer khi bid thành công
+        // THÊM: trừ tiền bidder sau khi đặt giá thành công
         if (success) {
+            double newBalance = user.getBalance() - amount;
+            accountDAO.updateBalance(bidderId, newBalance);
+            user.setBalance(newBalance);
             notifyObservers(auctionId, amount);
         }
 
@@ -147,9 +161,50 @@ public class AuctionService implements AuctionSubject {
         if (closed) {
             String newItemStatus = auction.getWinnerId() != null ? "SOLD" : "AVAILABLE";
             itemDAO.updateStatus(auction.getItemId(), newItemStatus);
+
+            // THÊM: hoàn tiền nếu không có winner
+            if (auction.getWinnerId() == null) {
+                refundBidders(auctionId);
+            }
+
             System.out.println("Phiên đấu giá " + auctionId + " đã kết thúc!");
         }
         return closed;
+    }
+
+    // THÊM: hủy phiên (chỉ hủy được khi chưa có bid nào)
+    public boolean cancelAuction(int auctionId, Account account) {
+        Auction auction = auctionDAO.getAuctionById(auctionId);
+        if (auction == null) {
+            System.err.println("Phiên đấu giá không tồn tại!");
+            return false;
+        }
+        if (auction.getSellerId() != Integer.parseInt(account.getId())) {
+            System.err.println("Chỉ Seller tạo phiên mới được hủy!");
+            return false;
+        }
+        if (bidDAO.getHighestBid(auctionId) != null) {
+            System.err.println("Không thể hủy phiên đã có người đặt giá!");
+            return false;
+        }
+
+        boolean canceled = auctionDAO.updateStatus(auctionId, AuctionStatus.CANCELED);
+        if (canceled) {
+            itemDAO.updateStatus(auction.getItemId(), "AVAILABLE");
+        }
+        return canceled;
+    }
+
+    // THÊM: hoàn tiền cho tất cả bidder khi phiên không có winner
+    private void refundBidders(int auctionId) {
+        List<BidTransaction> bids = bidDAO.getBidsByAuction(auctionId);
+        for (BidTransaction bid : bids) {
+            Account bidder = accountDAO.getAccountById(bid.getBidderId());
+            if (bidder instanceof User) {
+                double refunded = ((User) bidder).getBalance() + bid.getBidAmount();
+                accountDAO.updateBalance(bid.getBidderId(), refunded);
+            }
+        }
     }
 
     // 4. Lấy danh sách phiên đấu giá đang chạy
