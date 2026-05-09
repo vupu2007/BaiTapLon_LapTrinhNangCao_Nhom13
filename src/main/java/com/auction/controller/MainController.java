@@ -82,29 +82,23 @@ public class MainController {
 
     @FXML
     private void handleLogout(ActionEvent event) {
+        // 0. Gọi hàm logOut từ class CurrentUser để xóa dữ liệu người dùng hiện tại
+        CurrentUser.logOut();
+
         try {
             // 1. Tải file FXML của màn hình Đăng nhập
-            // Đảm bảo đường dẫn tới login.fxml là chính xác
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/auction/view/login.fxml"));
             Parent loginRoot = loader.load();
 
-            // 2. Lấy Stage hiện tại từ sự kiện nhấn nút
+            // 2. Lấy Stage hiện tại và chuyển Scene (như code cũ của bạn)
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
-
-            // 3. Tạo Scene mới với màn hình Login
             Scene scene = new Scene(loginRoot);
-
-            // Nếu bạn có file CSS riêng cho Login, hãy thêm vào đây
-            // scene.getStylesheets().add(getClass().getResource("/com/auction/css/style.css").toExternalForm());
-
-            // 4. Đặt Scene vào Stage và hiển thị
             stage.setScene(scene);
-            stage.centerOnScreen(); // Đưa cửa sổ ra giữa màn hình
+            stage.centerOnScreen();
             stage.show();
 
         } catch (IOException e) {
             e.printStackTrace();
-            System.err.println("Không thể chuyển hướng về màn hình đăng nhập!");
         }
     }
 
