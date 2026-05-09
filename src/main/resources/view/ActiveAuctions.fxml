@@ -6,67 +6,66 @@
 <?import javafx.scene.text.*?>
 <?import javafx.scene.shape.SVGPath?>
 
-<VBox spacing="25.0" style="-fx-background-color: #F0F9FF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.ActiveAuctionsController">
-    <padding>
-        <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
-    </padding>
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.ActiveAuctionsController">
+    <content>
+        <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
+            <padding>
+                <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
+            </padding>
 
-    <!-- 1. Header Card: Tiêu đề trang -->
-    <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
-        <children>
-            <Label text="Phiên đấu giá của tôi" textFill="#1a73e8">
-                <font>
-                    <Font name="System Bold" size="28.0" />
-                </font>
-            </Label>
-            <Label text="Quản lý các phiên đấu giá bạn đang tham gia trực tiếp" textFill="#64748b">
-                <font>
-                    <Font size="14.0" />
-                </font>
-            </Label>
-        </children>
-    </VBox>
-
-    <!-- 2. Vùng nội dung chính (Placeholder khi trống) -->
-    <StackPane VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
-        <children>
-            <!-- Giao diện khi chưa có dữ liệu (như trong ảnh bạn gửi) -->
-            <VBox alignment="CENTER" spacing="20.0" fx:id="emptyStateBox">
+            <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                 <children>
-                    <!-- Icon búa đấu giá bằng SVG -->
-                    <SVGPath content="M14.7 9l-4.2-4.2L2.6 12.7c-.8.8-.8 2.1 0 2.9l1.4 1.4c.8.8 2.1.8 2.9 0L14.7 9z M15.4 11.1l4.2 4.2c.8.8.8 2.1 0 2.9l-1.4 1.4c-.8.8-2.1.8-2.9 0l-4.2-4.2"
-                             fill="#CBD5E1" scaleX="4.0" scaleY="4.0" />
-
-                    <Label text="Bạn chưa tham gia phiên đấu giá nào" textFill="#94a3b8">
+                    <Label text="Phiên đấu giá của tôi" textFill="#1a73e8">
                         <font>
-                            <Font size="18.0" />
+                            <Font name="System Bold" size="28.0" />
                         </font>
-                        <VBox.margin>
-                            <Insets top="20.0" />
-                        </VBox.margin>
                     </Label>
-
-                    <Button mnemonicParsing="false" onAction="#openHome"
-                            style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7);
-                                   -fx-text-fill: white; -fx-background-radius: 30;
-                                   -fx-padding: 12 35; -fx-font-weight: bold; -fx-cursor: hand;"
-                            text="Khám phá ngay">
+                    <Label text="Quản lý các phiên đấu giá bạn đang tham gia trực tiếp" textFill="#64748b">
                         <font>
-                            <Font size="15.0" />
+                            <Font size="14.0" />
                         </font>
-                    </Button>
+                    </Label>
                 </children>
             </VBox>
 
-            <!-- TableView (Ẩn đi, sẽ hiện khi có dữ liệu từ DB) -->
-            <TableView fx:id="activeAuctionsTable" visible="false" managed="false" style="-fx-background-color: transparent; -fx-padding: 10;">
-                <columns>
-                    <TableColumn text="Sản phẩm" prefWidth="300" />
-                    <TableColumn text="Giá cao nhất" prefWidth="150" />
-                    <TableColumn text="Thời gian còn lại" prefWidth="150" />
-                    <TableColumn text="Trạng thái" prefWidth="120" />
-                </columns>
-            </TableView>
-        </children>
-    </StackPane>
-</VBox>
+            <StackPane VBox.vgrow="ALWAYS" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
+                <children>
+                    <VBox alignment="CENTER" spacing="20.0" fx:id="emptyStateBox">
+                        <children>
+                            <SVGPath content="M14.7 9l-4.2-4.2L2.6 12.7c-.8.8-.8 2.1 0 2.9l1.4 1.4c.8.8 2.1.8 2.9 0L14.7 9z M15.4 11.1l4.2 4.2c.8.8.8 2.1 0 2.9l-1.4 1.4c-.8.8-2.1.8-2.9 0l-4.2-4.2"
+                                     fill="#CBD5E1" scaleX="4.0" scaleY="4.0" />
+
+                            <Label text="Bạn chưa tham gia phiên đấu giá nào" textFill="#94a3b8">
+                                <font>
+                                    <Font size="18.0" />
+                                </font>
+                                <VBox.margin>
+                                    <Insets top="20.0" />
+                                </VBox.margin>
+                            </Label>
+
+                            <Button mnemonicParsing="false" onAction="#openHome"
+                                    style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7);
+                                           -fx-text-fill: white; -fx-background-radius: 30;
+                                           -fx-padding: 12 35; -fx-font-weight: bold; -fx-cursor: hand;"
+                                    text="Khám phá ngay">
+                                <font>
+                                    <Font size="15.0" />
+                                </font>
+                            </Button>
+                        </children>
+                    </VBox>
+
+                    <TableView fx:id="activeAuctionsTable" visible="false" managed="false" style="-fx-background-color: transparent; -fx-padding: 10;">
+                        <columns>
+                            <TableColumn text="Sản phẩm" prefWidth="300" />
+                            <TableColumn text="Giá cao nhất" prefWidth="150" />
+                            <TableColumn text="Thời gian còn lại" prefWidth="150" />
+                            <TableColumn text="Trạng thái" prefWidth="120" />
+                        </columns>
+                    </TableView>
+                </children>
+            </StackPane>
+        </VBox>
+    </content>
+</ScrollPane>

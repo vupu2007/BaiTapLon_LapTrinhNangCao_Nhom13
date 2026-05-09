@@ -12,17 +12,15 @@
 
 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.SettingController">
     <content>
-        <VBox spacing="25.0" style="-fx-background-color: #F0F9FF;">
+        <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
             <padding>
-                <Insets bottom="25.0" left="15.0" right="25.0" top="25.0" />
+                <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
             </padding>
             <children>
-                <VBox spacing="5.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
-                    <padding>
-                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
-                    </padding>
+
+                <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label text="Quản lý tài khoản" textFill="#0284c7">
+                        <Label text="Quản lý tài khoản" textFill="#1a73e8">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
@@ -31,9 +29,6 @@
                             <font>
                                 <Font size="14.0" />
                             </font>
-                            <VBox.margin>
-                                <Insets top="5.0" />
-                            </VBox.margin>
                         </Label>
                     </children>
                 </VBox>
@@ -42,10 +37,7 @@
                     <children>
                         <VBox spacing="25.0" HBox.hgrow="ALWAYS">
                             <children>
-                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
-                                    <padding>
-                                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
-                                    </padding>
+                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
                                     <children>
                                         <Label text="Thông tin cá nhân" textFill="#1e293b">
                                             <font>
@@ -83,10 +75,7 @@
                                     </children>
                                 </VBox>
 
-                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
-                                    <padding>
-                                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
-                                    </padding>
+                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
                                     <children>
                                         <Label text="Đổi mật khẩu" textFill="#1e293b">
                                             <font>

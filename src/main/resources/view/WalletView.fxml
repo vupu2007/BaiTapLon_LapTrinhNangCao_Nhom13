@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
+
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
@@ -6,9 +7,12 @@
 <?import javafx.scene.shape.Circle?>
 
 <ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.WalletController">
-    <VBox spacing="25.0" style="-fx-padding: 30;">
+    <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
 
-        <!-- 1. HEADER CARD: Tách riêng ra card trắng cho đồng bộ với trang Lịch sử -->
+        <padding>
+            <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
+        </padding>
+
         <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
             <children>
                 <Label text="Quản lý ví tiền" textFill="#1a73e8">
@@ -24,7 +28,6 @@
             </children>
         </VBox>
 
-        <!-- 2. WALLET CARD: Nâng cấp Gradient và Shadow chuyên nghiệp -->
         <VBox spacing="25" style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #0d47a1); -fx-background-radius: 20; -fx-padding: 30; -fx-effect: dropshadow(three-pass-box, rgba(26,115,232,0.3), 20, 0, 0, 10);">
             <children>
                 <HBox alignment="CENTER_LEFT" spacing="20">
@@ -52,23 +55,21 @@
             </children>
         </VBox>
 
-        <!-- 3. ACTIONS: Thẻ Nạp/Rút -->
         <HBox spacing="25">
-            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);" HBox.hgrow="ALWAYS">
+            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
                 <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↗ Nạp tiền" textFill="#059669" />
                 <TextField fx:id="txtDeposit" prefHeight="45" promptText="Nhập số tiền nạp..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
                 <Button maxWidth="Infinity" onAction="#handleDeposit" prefHeight="45" style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="Nạp tiền ngay" />
             </VBox>
 
-            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);" HBox.hgrow="ALWAYS">
+            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
                 <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↘ Rút tiền" textFill="#dc2626" />
                 <TextField fx:id="txtWithdraw" prefHeight="45" promptText="Nhập số tiền rút..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
                 <Button maxWidth="Infinity" onAction="#handleWithdraw" prefHeight="45" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="Rút tiền" />
             </VBox>
         </HBox>
 
-        <!-- 4. TRANSACTION HISTORY -->
-        <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
+        <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
             <Label style="-fx-font-weight: bold; -fx-font-size: 20;" text="Lịch sử giao dịch" textFill="#1e293b" />
 
             <VBox spacing="10" fx:id="transactionContainer">
@@ -81,7 +82,6 @@
                     <Region HBox.hgrow="ALWAYS" />
                     <Label style="-fx-font-weight: bold; -fx-font-size: 16;" text="+5.000.000 đ" textFill="#059669" />
                 </HBox>
-                <!-- Thêm các dòng lịch sử khác ở đây -->
             </VBox>
         </VBox>
 
