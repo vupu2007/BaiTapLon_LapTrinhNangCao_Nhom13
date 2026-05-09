@@ -10,6 +10,7 @@ import javafx.scene.control.TextField;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.control.ToggleButton;
 import javafx.stage.Stage;
 import java.io.IOException;
 
@@ -75,4 +76,46 @@ public class RegisterController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    @FXML private PasswordField passwordField;
+    @FXML private TextField passwordTextField;
+    @FXML private ToggleButton togglePasswordBtn;
+
+    @FXML private PasswordField confirmPasswordField;
+    @FXML private TextField confirmPasswordTextField;
+    @FXML private ToggleButton toggleConfirmPasswordBtn;
+
+    @FXML
+    public void initialize() {
+        // Đồng bộ nội dung giữa 2 ô Mật khẩu
+        passwordTextField.textProperty().bindBidirectional(passwordField.textProperty());
+        // Đồng bộ nội dung giữa 2 ô Xác nhận mật khẩu
+        confirmPasswordTextField.textProperty().bindBidirectional(confirmPasswordField.textProperty());
+    }
+
+    @FXML
+    private void togglePasswordVisibility() {
+        if (togglePasswordBtn.isSelected()) {
+            passwordTextField.setVisible(true);
+            passwordField.setVisible(false);
+            togglePasswordBtn.setText("👁‍🗨");
+        } else {
+            passwordTextField.setVisible(false);
+            passwordField.setVisible(true);
+            togglePasswordBtn.setText("👁");
+        }
+    }
+
+    @FXML
+    private void toggleConfirmPasswordVisibility() {
+        if (toggleConfirmPasswordBtn.isSelected()) {
+            confirmPasswordTextField.setVisible(true);
+            confirmPasswordField.setVisible(false);
+            toggleConfirmPasswordBtn.setText("👁‍🗨");
+        } else {
+            confirmPasswordTextField.setVisible(false);
+            confirmPasswordField.setVisible(true);
+            toggleConfirmPasswordBtn.setText("👁");
+        }
+    }
+
 }
