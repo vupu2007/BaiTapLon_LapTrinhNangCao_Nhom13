@@ -11,23 +11,46 @@ import com.auction.model.BidTransaction;
 import com.auction.model.Item;
 import com.auction.model.Seller;
 import com.auction.model.User;
+import com.auction.observer.AuctionObserver;
+import com.auction.observer.AuctionSubject;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 
-public class AuctionService {
+// THÊM: implements AuctionSubject để hỗ trợ Observer Pattern
+public class AuctionService implements AuctionSubject {
 
     private final AuctionDAO auctionDAO = new AuctionDAO();
     private final BidDAO     bidDAO     = new BidDAO();
     private final ItemDAO    itemDAO    = new ItemDAO();
     private final AccountDAO accountDAO = new AccountDAO();
 
-    // Scheduler dùng chung để lên lịch tự động đóng phiên
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(5);
+
+    // THÊM: danh sách observer đang lắng nghe
+    private final List<AuctionObserver> observers = new ArrayList<>();
+
+    @Override
+    public void addObserver(AuctionObserver observer) {
+        observers.add(observer);
+    }
+
+    @Override
+    public void removeObserver(AuctionObserver observer) {
+        observers.remove(observer);
+    }
+
+    @Override
+    public void notifyObservers(int auctionId, double newPrice) {
+        for (AuctionObserver observer : observers) {
+            observer.onBidPlaced(auctionId, newPrice);
+        }
+    }
 
     // 1. Tạo phiên đấu giá mới (chỉ Seller mới tạo được)
     public boolean createAuction(Auction auction, Account account) {
@@ -49,8 +72,6 @@ public class AuctionService {
         boolean created = auctionDAO.insertAuction(auction);
         if (created) {
             itemDAO.updateStatus(auction.getItemId(), "IN_AUCTION");
-
-            // THÊM: lên lịch tự động đóng phiên khi hết end_time
             scheduleAutoClose(auction);
         }
         return created;
@@ -64,11 +85,9 @@ public class AuctionService {
             return;
         }
         scheduler.schedule(() -> closeAuction(auction.getId()), delay, TimeUnit.MILLISECONDS);
-        System.out.println("Đã lên lịch tự động đóng phiên " + auction.getId() +
-                " sau " + delay / 1000 + " giây");
     }
 
-    // 2. Đặt giá — synchronized để tránh race condition khi nhiều người bid cùng lúc
+    // 2. Đặt giá — synchronized để tránh race condition
     public synchronized boolean placeBid(int auctionId, double amount, Account account) {
         if (!(account instanceof User)) {
             System.err.println("Admin không được phép đặt giá!");
@@ -77,27 +96,23 @@ public class AuctionService {
 
         User user = (User) account;
 
-        // Luôn đọc lại từ DB để có giá mới nhất, tránh lost update
         Auction auction = auctionDAO.getAuctionById(auctionId);
         if (auction == null || !auction.isActive()) {
             System.err.println("Phiên đấu giá không tồn tại hoặc đã kết thúc!");
             return false;
         }
 
-        // Không cho tự đấu giá sản phẩm của mình
         if (auction.getSellerId() == Integer.parseInt(account.getId())) {
             System.err.println("Không thể đấu giá sản phẩm của chính mình!");
             return false;
         }
 
-        // Kiểm tra giá đặt phải cao hơn giá hiện tại + bước giá tối thiểu
         double minValidBid = auction.getCurrentPrice() + auction.getMinIncrement();
         if (amount < minValidBid) {
             System.err.println("Giá đặt phải lớn hơn " + minValidBid);
             return false;
         }
 
-        // Kiểm tra số dư ví
         if (user.getBalance() < amount) {
             System.err.println("Số dư không đủ!");
             return false;
@@ -110,7 +125,14 @@ public class AuctionService {
         bid.setBidderId(bidderId);
         bid.setBidAmount(amount);
 
-        return auctionDAO.placeBidTransaction(bid, amount, bidderId);
+        boolean success = auctionDAO.placeBidTransaction(bid, amount, bidderId);
+
+        // THÊM: thông báo cho tất cả observer khi bid thành công
+        if (success) {
+            notifyObservers(auctionId, amount);
+        }
+
+        return success;
     }
 
     // 3. Đóng phiên đấu giá (RUNNING → FINISHED)
