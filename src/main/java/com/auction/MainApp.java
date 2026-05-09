@@ -13,7 +13,7 @@ public class MainApp {
         @Override
         public void start(Stage primaryStage) throws Exception {
             // Sửa đường dẫn trỏ thẳng vào màn hình Đăng nhập
-            URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
+            URL fxmlLocation = getClass().getResource("/view/MainLayout.fxml");
 
             if (fxmlLocation == null) {
                 System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
@@ -27,9 +27,7 @@ public class MainApp {
             primaryStage.setTitle("Đăng nhập - Hệ thống đấu giá trực tuyến");
             primaryStage.setScene(scene);
 
-            // Tắt phóng to toàn màn hình và khóa resize để form đăng nhập không bị vỡ layout
-            primaryStage.setResizable(false);
-
+            primaryStage.setMaximized(true);
             // Hoặc nếu bạn muốn đặt kích thước cố định cho cửa sổ Login thì dùng:
             // primaryStage.setWidth(600);
             // primaryStage.setHeight(400);
