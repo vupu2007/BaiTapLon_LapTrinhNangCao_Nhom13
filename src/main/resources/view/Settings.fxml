@@ -4,85 +4,200 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.PasswordField?>
+<?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextField?>
-<?import javafx.scene.layout.BorderPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<BorderPane prefHeight="720.0" prefWidth="1280.0" style="-fx-background-color: #f1f5f9;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.SettingController">
-
-    <center>
-        <VBox spacing="20.0">
-            <padding><Insets bottom="30.0" left="30.0" right="30.0" top="20.0" /></padding>
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.SettingController">
+    <content>
+        <VBox spacing="25.0" style="-fx-background-color: #F0F9FF;">
+            <padding>
+                <Insets bottom="25.0" left="15.0" right="25.0" top="25.0" />
+            </padding>
             <children>
-                <VBox spacing="5.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
-                    <Label text="Quản lý tài khoản" textFill="#1a73e8">
-                        <font><Font name="System Bold" size="28.0" /></font>
-                    </Label>
-                    <Label text="Cập nhật thông tin cá nhân và bảo mật" textFill="#64748b" />
+                <VBox spacing="5.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                    <padding>
+                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                    </padding>
+                    <children>
+                        <Label text="Quản lý tài khoản" textFill="#0284c7">
+                            <font>
+                                <Font name="System Bold" size="28.0" />
+                            </font>
+                        </Label>
+                        <Label text="Cập nhật thông tin cá nhân và bảo mật" textFill="#64748b">
+                            <font>
+                                <Font size="14.0" />
+                            </font>
+                            <VBox.margin>
+                                <Insets top="5.0" />
+                            </VBox.margin>
+                        </Label>
+                    </children>
                 </VBox>
 
                 <HBox spacing="25.0" VBox.vgrow="ALWAYS">
                     <children>
-                        <VBox spacing="20.0" HBox.hgrow="ALWAYS">
+                        <VBox spacing="25.0" HBox.hgrow="ALWAYS">
                             <children>
-                                <VBox spacing="15.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
-                                    <Label text="Thông tin cá nhân" textFill="#1e293b">
-                                        <font><Font name="System Bold" size="18.0" /></font>
-                                    </Label>
-                                    <VBox spacing="5.0">
-                                        <Label text="👤 Tên đăng nhập" textFill="#475569" />
-                                        <TextField fx:id="txtFullName" promptText="Nhập tên của bạn" style="-fx-background-radius: 8; -fx-padding: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 8;" />
-                                    </VBox>
-                                    <VBox spacing="5.0">
-                                        <Label text="✉ Email" textFill="#475569" />
-                                        <TextField fx:id="txtEmail" promptText="example@gmail.com" style="-fx-background-radius: 8; -fx-padding: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 8;" />
-                                    </VBox>
-                                    <Button onAction="#handleSaveInfo" style="-fx-background-color: #1a73e8; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10 25; -fx-font-weight: bold; -fx-cursor: hand;" text="💾 Lưu thay đổi" />
+                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                                    <padding>
+                                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                                    </padding>
+                                    <children>
+                                        <Label text="Thông tin cá nhân" textFill="#1e293b">
+                                            <font>
+                                                <Font name="System Bold" size="22.0" />
+                                            </font>
+                                            <VBox.margin>
+                                                <Insets bottom="5.0" />
+                                            </VBox.margin>
+                                        </Label>
+                                        <VBox spacing="8.0">
+                                            <Label text="👤  Tên đăng nhập" textFill="#475569">
+                                                <font><Font name="System Bold" size="13.0" /></font>
+                                            </Label>
+                                            <TextField fx:id="txtFullName" prefHeight="45.0" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                                <font><Font size="14.0" /></font>
+                                            </TextField>
+                                        </VBox>
+                                        <VBox spacing="8.0">
+                                            <Label text="✉  Email" textFill="#475569">
+                                                <font><Font name="System Bold" size="13.0" /></font>
+                                            </Label>
+                                            <TextField fx:id="txtEmail" prefHeight="45.0" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                                <font><Font size="14.0" /></font>
+                                            </TextField>
+                                        </VBox>
+                                        <Button onAction="#handleSaveInfo" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="💾  Lưu thay đổi">
+                                            <padding>
+                                                <Insets left="20.0" right="20.0" />
+                                            </padding>
+                                            <font><Font name="System Bold" size="14.0" /></font>
+                                            <VBox.margin>
+                                                <Insets top="10.0" />
+                                            </VBox.margin>
+                                        </Button>
+                                    </children>
                                 </VBox>
 
-                                <VBox spacing="15.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
-                                    <Label text="Đổi mật khẩu" textFill="#1e293b">
-                                        <font><Font name="System Bold" size="18.0" /></font>
-                                    </Label>
-                                    <VBox spacing="5.0">
-                                        <Label text="🔒 Mật khẩu hiện tại" textFill="#475569" />
-                                        <PasswordField fx:id="txtCurrentPass" style="-fx-background-radius: 8; -fx-padding: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 8;" />
-                                    </VBox>
-                                    <VBox spacing="5.0">
-                                        <Label text="🔑 Mật khẩu mới" textFill="#475569" />
-                                        <PasswordField fx:id="txtNewPass" promptText="Tối thiểu 6 ký tự" style="-fx-background-radius: 8; -fx-padding: 10; -fx-border-color: #e2e8f0; -fx-border-radius: 8;" />
-                                    </VBox>
-                                    <Button onAction="#handleChangePassword" style="-fx-background-color: #1491a3; -fx-text-fill: white; -fx-background-radius: 8; -fx-padding: 10 25; -fx-font-weight: bold; -fx-cursor: hand;" text="Đổi mật khẩu" />
+                                <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
+                                    <padding>
+                                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
+                                    </padding>
+                                    <children>
+                                        <Label text="Đổi mật khẩu" textFill="#1e293b">
+                                            <font>
+                                                <Font name="System Bold" size="22.0" />
+                                            </font>
+                                            <VBox.margin>
+                                                <Insets bottom="5.0" />
+                                            </VBox.margin>
+                                        </Label>
+                                        <VBox spacing="8.0">
+                                            <Label text="🔓  Mật khẩu hiện tại" textFill="#475569">
+                                                <font><Font name="System Bold" size="13.0" /></font>
+                                            </Label>
+                                            <PasswordField fx:id="txtCurrentPass" prefHeight="45.0" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                                <font><Font size="14.0" /></font>
+                                            </PasswordField>
+                                        </VBox>
+                                        <VBox spacing="8.0">
+                                            <Label text="🔓  Mật khẩu mới" textFill="#475569">
+                                                <font><Font name="System Bold" size="13.0" /></font>
+                                            </Label>
+                                            <PasswordField fx:id="txtNewPass" prefHeight="45.0" promptText="Tối thiểu 6 ký tự" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                                <font><Font size="14.0" /></font>
+                                            </PasswordField>
+                                        </VBox>
+                                        <VBox spacing="8.0">
+                                            <Label text="🔓  Xác nhận mật khẩu mới" textFill="#475569">
+                                                <font><Font name="System Bold" size="13.0" /></font>
+                                            </Label>
+                                            <PasswordField fx:id="txtConfirmPass" prefHeight="45.0" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
+                                                <font><Font size="14.0" /></font>
+                                            </PasswordField>
+                                        </VBox>
+                                        <Button onAction="#handleChangePassword" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="🔓  Đổi mật khẩu">
+                                            <padding>
+                                                <Insets left="20.0" right="20.0" />
+                                            </padding>
+                                            <font><Font name="System Bold" size="14.0" /></font>
+                                            <VBox.margin>
+                                                <Insets top="10.0" />
+                                            </VBox.margin>
+                                        </Button>
+                                    </children>
                                 </VBox>
                             </children>
                         </VBox>
 
-                        <VBox prefWidth="320.0" spacing="20.0">
+                        <VBox maxWidth="350.0" prefWidth="350.0">
                             <children>
-                                <VBox spacing="15.0" style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #1491a3); -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
+                                <VBox spacing="18.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
+                                    <padding>
+                                        <Insets bottom="30.0" left="25.0" right="25.0" top="30.0" />
+                                    </padding>
                                     <children>
                                         <Label text="Thông tin tài khoản" textFill="WHITE">
-                                            <font><Font name="System Bold" size="18.0" /></font>
+                                            <font>
+                                                <Font name="System Bold" size="20.0" />
+                                            </font>
+                                            <VBox.margin>
+                                                <Insets bottom="5.0" />
+                                            </VBox.margin>
                                         </Label>
-                                        <VBox spacing="5.0" style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10; -fx-background-radius: 10;">
-                                            <Label text="Tên đăng nhập" textFill="#e2e8f0" />
-                                            <Label text="tran_thi_b" textFill="WHITE">
-                                                <font><Font name="System Bold" size="14.0" /></font>
-                                            </Label>
+
+                                        <VBox alignment="CENTER_LEFT" prefHeight="45.0" style="-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;">
+                                            <padding>
+                                                <Insets left="15.0" right="15.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="Tên đăng nhập" textFill="#f0f9ff">
+                                                    <font><Font size="14.0" /></font>
+                                                </Label>
+                                            </children>
                                         </VBox>
-                                        <VBox spacing="5.0" style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10; -fx-background-radius: 10;">
-                                            <Label text="Vai trò" textFill="#e2e8f0" />
-                                            <Label text="Người dùng" textFill="WHITE">
-                                                <font><Font name="System Bold" size="14.0" /></font>
-                                            </Label>
+
+                                        <VBox alignment="CENTER_LEFT" prefHeight="45.0" style="-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;">
+                                            <padding>
+                                                <Insets left="15.0" right="15.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="Email" textFill="#f0f9ff">
+                                                    <font><Font size="14.0" /></font>
+                                                </Label>
+                                            </children>
                                         </VBox>
-                                        <VBox spacing="5.0" style="-fx-background-color: rgba(255,255,255,0.1); -fx-padding: 10; -fx-background-radius: 10;">
-                                            <Label text="Số dư ví" textFill="#e2e8f0" />
-                                            <Label text="10.000.000 đ" textFill="WHITE">
-                                                <font><Font name="System Bold" size="20.0" /></font>
-                                            </Label>
+
+                                        <VBox prefHeight="65.0" spacing="2.0" style="-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;">
+                                            <padding>
+                                                <Insets bottom="10.0" left="15.0" right="15.0" top="10.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="Vai trò" textFill="#e0f2fe">
+                                                    <font><Font size="13.0" /></font>
+                                                </Label>
+                                                <Label text="Người dùng" textFill="WHITE">
+                                                    <font><Font name="System Bold" size="16.0" /></font>
+                                                </Label>
+                                            </children>
+                                        </VBox>
+
+                                        <VBox prefHeight="65.0" spacing="2.0" style="-fx-background-color: rgba(255,255,255,0.15); -fx-background-radius: 8;">
+                                            <padding>
+                                                <Insets bottom="10.0" left="15.0" right="15.0" top="10.0" />
+                                            </padding>
+                                            <children>
+                                                <Label text="Số dư ví" textFill="#e0f2fe">
+                                                    <font><Font size="13.0" /></font>
+                                                </Label>
+                                                <Label text="đ" textFill="WHITE">
+                                                    <font><Font name="System Bold" size="16.0" /></font>
+                                                </Label>
+                                            </children>
                                         </VBox>
                                     </children>
                                 </VBox>
@@ -92,5 +207,5 @@
                 </HBox>
             </children>
         </VBox>
-    </center>
-</BorderPane>
+    </content>
+</ScrollPane>
