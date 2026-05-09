@@ -12,27 +12,21 @@
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
             <padding>
-                <Insets bottom="25.0" left="15.0" right="25.0" top="25.0" />
+                <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
             </padding>
             <children>
 
-                <VBox spacing="5.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);">
-                    <padding>
-                        <Insets bottom="30.0" left="30.0" right="30.0" top="30.0" />
-                    </padding>
+                <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label text="Sản phẩm đang bán" textFill="#0284c7">
+                        <Label text="Sản phẩm đang bán" textFill="#1a73e8">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
                         </Label>
-                        <Label text="Quản lý các phiên đấu giá của bạn" textFill="#64748b">
+                        <Label text="Quản lý các sản phẩm bạn đang đăng bán trên hệ thống" textFill="#64748b">
                             <font>
                                 <Font size="14.0" />
                             </font>
-                            <VBox.margin>
-                                <Insets top="5.0" />
-                            </VBox.margin>
                         </Label>
                     </children>
                 </VBox>
@@ -115,13 +109,13 @@
                             </VBox.margin>
                         </Label>
 
-                        <Label text="Bạn chưa tạo phiên đấu giá nào" textFill="#64748b">
+                        <Label text="Bạn chưa có sản phẩm nào đang bán" textFill="#64748b">
                             <font>
                                 <Font size="16.0" />
                             </font>
                         </Label>
 
-                        <Button mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo phiên mới" textFill="WHITE">
+                        <Button mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo sản phẩm ngay" textFill="WHITE">
                             <font>
                                 <Font name="System Bold" size="15.0" />
                             </font>

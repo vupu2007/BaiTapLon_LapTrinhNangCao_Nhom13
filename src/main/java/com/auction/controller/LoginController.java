@@ -3,7 +3,7 @@ package com.auction.controller;
 import com.auction.model.Account;
 import com.auction.model.Admin;
 import com.auction.service.AccountService;
-import com.auction.util.CurrentUser;
+import com.auction.util.CurrentAccount;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -30,7 +30,7 @@ public class LoginController {
         Account loggedIn = accountService.login(username, password);
 
         if (loggedIn != null) {
-            CurrentUser.setUser(loggedIn);
+            CurrentAccount.setAccount(loggedIn);
 
             if (loggedIn instanceof Admin) {
                 switchScene(event, "/view/AdminView.fxml", "Quản trị hệ thống");

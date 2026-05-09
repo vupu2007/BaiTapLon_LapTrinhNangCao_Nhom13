@@ -15,12 +15,12 @@
 
             <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                 <children>
-                    <Label text="Phiên đấu giá của tôi" textFill="#1a73e8">
+                    <Label text="Sản phẩm đang bán" textFill="#1a73e8">
                         <font>
                             <Font name="System Bold" size="28.0" />
                         </font>
                     </Label>
-                    <Label text="Quản lý các phiên đấu giá bạn đang tham gia trực tiếp" textFill="#64748b">
+                    <Label text="Quản lý các sản phẩm bạn đang đăng bán trên hệ thống" textFill="#64748b">
                         <font>
                             <Font size="14.0" />
                         </font>
@@ -35,7 +35,7 @@
                             <SVGPath content="M14.7 9l-4.2-4.2L2.6 12.7c-.8.8-.8 2.1 0 2.9l1.4 1.4c.8.8 2.1.8 2.9 0L14.7 9z M15.4 11.1l4.2 4.2c.8.8.8 2.1 0 2.9l-1.4 1.4c-.8.8-2.1.8-2.9 0l-4.2-4.2"
                                      fill="#CBD5E1" scaleX="4.0" scaleY="4.0" />
 
-                            <Label text="Bạn chưa tham gia phiên đấu giá nào" textFill="#94a3b8">
+                            <Label text="Bạn chưa có sản phẩm nào đang bán" textFill="#94a3b8">
                                 <font>
                                     <Font size="18.0" />
                                 </font>
@@ -48,7 +48,7 @@
                                     style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7);
                                            -fx-text-fill: white; -fx-background-radius: 30;
                                            -fx-padding: 12 35; -fx-font-weight: bold; -fx-cursor: hand;"
-                                    text="Khám phá ngay">
+                                    text="Tạo sản phẩm ngay">
                                 <font>
                                     <Font size="15.0" />
                                 </font>
