@@ -12,7 +12,6 @@ import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
-import javafx.scene.control.ToggleButton;
 import javafx.stage.Stage;
 import java.io.IOException;
 
@@ -65,30 +64,5 @@ public class LoginController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
-    }
-    @FXML
-    private TextField passwordTextField;
-    @FXML
-    private ToggleButton togglePasswordBtn;
-
-    @FXML
-    public void initialize() {
-        // Ràng buộc (bind) nội dung của 2 ô này với nhau để khi gõ ô này, ô kia cũng tự cập nhật
-        passwordTextField.textProperty().bindBidirectional(passwordField.textProperty());
-    }
-
-    @FXML
-    private void togglePasswordVisibility() {
-        if (togglePasswordBtn.isSelected()) {
-            // Hiện mật khẩu
-            passwordTextField.setVisible(true);
-            passwordField.setVisible(false);
-            togglePasswordBtn.setText("👁‍🗨"); // Có thể đổi icon khác khi đang mở
-        } else {
-            // Ẩn mật khẩu
-            passwordTextField.setVisible(false);
-            passwordField.setVisible(true);
-            togglePasswordBtn.setText("👁");
-        }
     }
 }

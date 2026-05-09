@@ -21,7 +21,7 @@ public class RegisterController {
     @FXML private PasswordField txtConfirmPassword;
 
     // Khai báo Service để dùng
-    private AccountService userService = new AccountService();
+    private AccountService accountService = new AccountService();
 
     @FXML
     void handleRegister(ActionEvent event) {
@@ -42,7 +42,7 @@ public class RegisterController {
 
         // 2. GỌI DATABASE THAY VÌ USERSTORE
         // Mình truyền 3 tham số: Username, Password, và Role (mặc định là USER)
-        boolean success = userService.register(username, password, "USER");
+        boolean success = accountService.register(username, password, "USER");
 
         if (success) {
             showAlert(AlertType.INFORMATION, "Thành công", "Đăng ký thành công vào Database!");
