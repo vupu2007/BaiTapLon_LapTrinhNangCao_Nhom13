@@ -35,7 +35,7 @@ public class LoginController {
             if (loggedIn instanceof Admin) {
                 switchScene(event, "/view/AdminView.fxml", "Quản trị hệ thống");
             } else {
-                switchScene(event, "/view/MainView.fxml", "Hệ thống đấu giá");
+                switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá");
             }
         } else {
             showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", "Sai tài khoản hoặc mật khẩu!");
