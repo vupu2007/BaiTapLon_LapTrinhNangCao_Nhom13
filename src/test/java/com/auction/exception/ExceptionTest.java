@@ -6,9 +6,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Test cho 3 custom Exception của hệ thống đấu giá.
- */
+//Test cho 3 custom Exception của hệ thống đấu giá.
+
 @DisplayName("Custom Exception Tests")
 class ExceptionTest {
 
