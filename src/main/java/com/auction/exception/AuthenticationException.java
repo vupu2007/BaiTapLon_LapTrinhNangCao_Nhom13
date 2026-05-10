@@ -1,6 +1,7 @@
 package com.auction.exception;
 
-/* Ném ra khi xác thực người dùng thất bại:
+/**
+ * Ném ra khi xác thực người dùng thất bại:
  * - Sai username hoặc password
  * - Tài khoản không tồn tại
  * - Không đủ quyền thực hiện thao tác

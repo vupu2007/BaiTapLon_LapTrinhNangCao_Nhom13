@@ -3,7 +3,7 @@ package com.auction.exception;
 /**
  * Ném ra khi người dùng đặt giá không hợp lệ:
  * - Giá đặt thấp hơn hoặc bằng giá hiện tại
- * - Giá đặt không đủ bước tăng tối thiểu (minIncrement)
+ * - Giá đặt không đủ bước tăng tối thiểu
  * - Giá đặt âm hoặc bằng 0
  */
 public class InvalidBidException extends Exception {
