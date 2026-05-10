@@ -53,21 +53,22 @@ public class SettingController {
 
         Account current = CurrentAccount.getAccount();
         if (current != null) {
-            // Cập nhật Database trước
             AccountDAO dao = new AccountDAO();
-            // Bạn cần thêm hàm updateProfile này vào AccountDAO như đã thảo luận
-            if (dao.updatePassword(current.getId(), current.getPassword())) {
+            // Truyền vào: ID, Tên mới, Email mới
+            if (dao.updateProfile(current.getId(), name, email)) {
+                // Chỉ khi DB thành công mới cập nhật Session
                 current.setUsername(name);
                 current.setEmail(email);
-
+                // Cập nhật hiển thị khung bên phải
                 if (lblDisplayUsername != null) lblDisplayUsername.setText(name);
                 if (lblDisplayEmail != null) lblDisplayEmail.setText(email);
 
-                showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân!");
+                showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân vào Database!");
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lưu dữ liệu. Hãy kiểm tra lại AccountDAO!");
             }
         }
     }
-
     @FXML
     private void handleChangePassword() {
         // 1. Lấy dữ liệu từ giao diện
