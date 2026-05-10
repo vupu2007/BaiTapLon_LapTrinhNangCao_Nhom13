@@ -65,4 +65,37 @@ public class LoginController {
         alert.setContentText(message);
         alert.showAndWait();
     }
+    // TextField để hiện password
+    @FXML private TextField visiblePasswordField;
+    // Trạng thái hiện / ẩn password
+    private boolean isPasswordVisible = false;
+    @FXML
+    private void togglePasswordVisibility(ActionEvent event) {
+
+        if (isPasswordVisible) {
+
+            // Chuyển từ hiện → ẩn
+            passwordField.setText(
+                    visiblePasswordField.getText()
+            );
+            passwordField.setVisible(true);
+            passwordField.setManaged(true);
+
+            visiblePasswordField.setVisible(false);
+            visiblePasswordField.setManaged(false);
+        } else {
+
+            // Chuyển từ ẩn → hiện
+            visiblePasswordField.setText(
+                    passwordField.getText()
+            );
+            visiblePasswordField.setVisible(true);
+            visiblePasswordField.setManaged(true);
+
+            passwordField.setVisible(false);
+            passwordField.setManaged(false);
+        }
+        isPasswordVisible = !isPasswordVisible;
+    }
+
 }
