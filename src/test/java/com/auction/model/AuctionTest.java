@@ -84,7 +84,7 @@ class AuctionTest {
     // ───────── isActive() ─────────
 
     @Test
-    @DisplayName("isActive() = true khi RUNNING và endTime trong tương lai")
+    @DisplayName("isActive() = true khi RUNNING và endTime chưa đến")
     void testIsActive_WhenRunningAndNotExpired() {
         auction.setStatus(Auction.AuctionStatus.RUNNING);
         auction.setEndTime(FUTURE);
