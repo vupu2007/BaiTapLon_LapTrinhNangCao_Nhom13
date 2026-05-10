@@ -19,38 +19,22 @@ import java.io.IOException;
 
 public class MainLayoutController {
 
-    @FXML
-    private StackPane contentArea;
-    @FXML
-    private VBox buyerMenu;
-    @FXML
-    private VBox sellerMenu;
-    @FXML
-    private VBox roleBox;
-    @FXML
-    private Label lblRoleSidebar;
-    @FXML
-    private MenuButton roleMenuButton;
-
+    @FXML private StackPane contentArea;
+    @FXML private VBox buyerMenu;
+    @FXML private VBox sellerMenu;
+    @FXML private VBox roleBox;
+    @FXML private Label lblRoleSidebar;
+    @FXML private MenuButton roleMenuButton;
     // ================= BUTTON MENU =================
-    @FXML
-    private Button btnHome;
-    @FXML
-    private Button btnWallet;
-    @FXML
-    private Button btnAuction;
-    @FXML
-    private Button btnSelling;
-    @FXML
-    private Button btnCreateAuction;
-    @FXML
-    private Button btnHistory;
-    @FXML
-    private Button btnSettings;
-
+    @FXML private Button btnHome;
+    @FXML private Button btnWallet;
+    @FXML private Button btnAuction;
+    @FXML private Button btnSelling;
+    @FXML private Button btnCreateAuction;
+    @FXML private Button btnHistory;
+    @FXML private Button btnSettings;
     // ================= INIT =================
-    @FXML
-    private Label nameLabel;
+    @FXML private Label nameLabel;
 
     @FXML
     public void initialize() {

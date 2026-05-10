@@ -106,7 +106,6 @@
             </VBox>
         </VBox>
     </left>
-
     <!-- ================= CONTENT AREA ================= -->
     <center>
         <!-- Thêm các thuộc tính ép giãn cho StackPane -->
@@ -116,5 +115,4 @@
                    maxWidth="1.7976931348623157E308"
                    BorderPane.alignment="CENTER" />
     </center>
-
 </BorderPane>
