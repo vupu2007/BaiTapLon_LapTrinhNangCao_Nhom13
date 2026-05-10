@@ -26,12 +26,10 @@ public class LoginController {
     void handleLogin(ActionEvent event) {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
-
         Account loggedIn = accountService.login(username, password);
 
         if (loggedIn != null) {
             CurrentAccount.setAccount(loggedIn);
-
             if (loggedIn instanceof Admin) {
                 switchScene(event, "/view/AdminView.fxml", "Quản trị hệ thống");
             } else {
@@ -71,9 +69,7 @@ public class LoginController {
     private boolean isPasswordVisible = false;
     @FXML
     private void togglePasswordVisibility(ActionEvent event) {
-
         if (isPasswordVisible) {
-
             // Chuyển từ hiện → ẩn
             passwordField.setText(
                     visiblePasswordField.getText()
@@ -84,7 +80,6 @@ public class LoginController {
             visiblePasswordField.setVisible(false);
             visiblePasswordField.setManaged(false);
         } else {
-
             // Chuyển từ ẩn → hiện
             visiblePasswordField.setText(
                     passwordField.getText()
