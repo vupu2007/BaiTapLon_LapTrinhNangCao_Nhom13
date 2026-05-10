@@ -9,14 +9,8 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test cho ItemService — kiểm tra validation logic thuần túy (không cần DB).
- *
- * CÁCH DÙNG: Vì ItemService gọi ItemDAO (cần DB), nhóm có 2 lựa chọn:
- *   1. Dùng Mockito (khuyến nghị): mock ItemDAO để test thuần túy.
- *   2. Dùng test DB riêng (H2 in-memory): nếu nhóm chưa có Mockito.
- *
- * File này test trực tiếp validation logic của ItemService
- * bằng cách tạo subclass override itemDAO — không cần thư viện mock.
+ * Test cho ItemService
+ * Test trực tiếp validation logic của ItemService bằng cách tạo subclass override itemDAO
  */
 @DisplayName("ItemService Validation Tests")
 class ItemServiceTest {
