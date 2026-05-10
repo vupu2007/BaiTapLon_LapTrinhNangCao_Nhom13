@@ -9,20 +9,15 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test validation logic của AccountService — phần không cần DB.
- *
+ * Test validation logic của AccountService
  * AccountService.register() và .deposit() có nhiều validation thuần túy
  * (null check, length check, amount > 0) có thể test trực tiếp.
- *
- * Các method cần DB (login, switchRole) → cần Mockito hoặc test DB riêng.
  */
 @DisplayName("AccountService — Validation Logic Tests")
 class AccountServiceTest {
 
-    // ═══════════════════════════════════════════
     //  register() — Validation Logic (tái hiện từ AccountService)
     //  Test trực tiếp các điều kiện if bên trong AccountService
-    // ═══════════════════════════════════════════
 
     @Test
     @DisplayName("username null → register validation fail")
@@ -74,9 +69,7 @@ class AccountServiceTest {
         assertTrue(valid);
     }
 
-    // ═══════════════════════════════════════════
     //  deposit() — Validation Logic
-    // ═══════════════════════════════════════════
 
     @Test
     @DisplayName("Nạp tiền amount <= 0 → deposit validation fail")
@@ -126,9 +119,7 @@ class AccountServiceTest {
         assertEquals("SELLER", seller.getRole());
     }
 
-    // ═══════════════════════════════════════════
     //  switchRole() — Logic xác định role mới
-    // ═══════════════════════════════════════════
 
     @Test
     @DisplayName("Bidder đổi role → role mới phải là SELLER")
