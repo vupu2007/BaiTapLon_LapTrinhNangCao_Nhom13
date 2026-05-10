@@ -7,10 +7,8 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-/**
- * Test cho RegisterService và LoginService.
- * Hai service này dùng UserStore (in-memory) nên KHÔNG cần database — test thuần túy.
- */
+//Test cho RegisterService và LoginService.
+
 @DisplayName("RegisterService & LoginService Tests")
 class AuthServiceTest {
 
