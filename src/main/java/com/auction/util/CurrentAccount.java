@@ -15,6 +15,8 @@ public class CurrentAccount {
         //  Gán vào biến 'account' ở trên, không gán vào tên Class 'CurrentAccount'
         account = loggedInAccount;
     }
+    private CurrentAccount() {
+    }
 
     // Khi cần lấy thông tin, gọi hàm này
     public static Account getAccount() {

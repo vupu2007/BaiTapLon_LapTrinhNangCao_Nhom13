@@ -127,4 +127,33 @@ public class AccountDAO {
             default:       return new Bidder(id, username, password, email, balance);
         }
     }
+    //---Hàm đổi mật khẩu--
+    public boolean updatePassword(String userId, String newPassword) {
+        String sql = "UPDATE Accounts SET password = ? WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newPassword);
+            pstmt.setInt(2, Integer.parseInt(userId));
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException | NumberFormatException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    //-- Hàm đổi profile--
+    public boolean updateProfile(String userId, String newUsername, String newEmail) {
+        String sql = "UPDATE Accounts SET username = ?, email = ? WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, newUsername);
+            pstmt.setString(2, newEmail);
+            pstmt.setInt(3, Integer.parseInt(userId));
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException | NumberFormatException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

@@ -37,10 +37,9 @@
             </VBox>
 
             <Region HBox.hgrow="ALWAYS"/>
-
-            <Label text="👤 minh huyền"
+            <Label fx:id="nameLabel"
+                   text="👤 test"
                    style="-fx-background-color: #f1f5f9; -fx-padding: 8 15; -fx-background-radius: 10;"/>
-
             <MenuButton fx:id="roleMenuButton"
                         text="🔄 Người mua"
                         textFill="WHITE"
@@ -54,7 +53,9 @@
                 </font>
             </MenuButton>
 
-            <Button text="🚪 Đăng xuất" styleClass="btn-logout" />
+            <Button text="🚪 Đăng xuất"
+                    styleClass="btn-logout"
+                    onAction="#handleLogout"/>
         </HBox>
     </top>
 

@@ -144,7 +144,7 @@
                                                 <Insets left="15.0" right="15.0" />
                                             </padding>
                                             <children>
-                                                <Label text="Tên đăng nhập" textFill="#f0f9ff">
+                                                <Label fx:id="lblDisplayUsername" text="Tên đăng nhập" textFill="#f0f9ff">
                                                     <font><Font size="14.0" /></font>
                                                 </Label>
                                             </children>
@@ -155,7 +155,7 @@
                                                 <Insets left="15.0" right="15.0" />
                                             </padding>
                                             <children>
-                                                <Label text="Email" textFill="#f0f9ff">
+                                                <Label fx:id="lblDisplayEmail" text="Email" textFill="#f0f9ff">
                                                     <font><Font size="14.0" /></font>
                                                 </Label>
                                             </children>
@@ -169,7 +169,7 @@
                                                 <Label text="Vai trò" textFill="#e0f2fe">
                                                     <font><Font size="13.0" /></font>
                                                 </Label>
-                                                <Label text="Người dùng" textFill="WHITE">
+                                                <Label fx:id="lblDisplayRole" text="Người dùng" textFill="WHITE">
                                                     <font><Font name="System Bold" size="16.0" /></font>
                                                 </Label>
                                             </children>
@@ -183,7 +183,7 @@
                                                 <Label text="Số dư ví" textFill="#e0f2fe">
                                                     <font><Font size="13.0" /></font>
                                                 </Label>
-                                                <Label text="đ" textFill="WHITE">
+                                                <Label fx:id="lblDisplayBalance" text="đ" textFill="WHITE">
                                                     <font><Font name="System Bold" size="16.0" /></font>
                                                 </Label>
                                             </children>
