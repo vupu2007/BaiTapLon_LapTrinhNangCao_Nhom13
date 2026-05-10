@@ -10,25 +10,21 @@ public class DatabaseConnection {
     private static final String USER     = "root";
     private static final String PASSWORD = "";
 
-    // Singleton instance
+    // Singleton — chỉ 1 instance của class này tồn tại
     private static DatabaseConnection instance;
-    private Connection connection;
 
-    // Private constructor — bên ngoài không thể new DatabaseConnection()
-    private DatabaseConnection() throws SQLException {
-        this.connection = DriverManager.getConnection(URL, USER, PASSWORD);
-    }
+    private DatabaseConnection() {}
 
-    // Chỉ tạo instance nếu chưa có hoặc connection đã đóng
-    public static synchronized DatabaseConnection getInstance() throws SQLException {
-        if (instance == null || instance.connection.isClosed()) {
+    public static DatabaseConnection getInstance() {
+        if (instance == null) {
             instance = new DatabaseConnection();
         }
         return instance;
     }
 
-    // Các DAO gọi hàm này như cũ — không cần sửa gì ở nơi khác
+    // Mỗi lần gọi trả về connection MỚI — không cache connection
+    // vì DAO dùng try-with-resources sẽ close() sau mỗi lần dùng
     public static Connection getConnection() throws SQLException {
-        return getInstance().connection;
+        return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }
