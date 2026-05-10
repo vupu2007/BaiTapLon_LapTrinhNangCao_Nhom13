@@ -1,0 +1,140 @@
+package com.auction.model;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+import static org.junit.jupiter.api.Assertions.*;
+
+/**
+ * Test class cho Electronics (subclass của Item).
+ * Bao gồm: constructor, getter/setter, kế thừa, printInfo(), trạng thái.
+ */
+@DisplayName("Electronics (Item) Tests")
+class ElectronicsTest {
+
+    private Electronics electronics;
+
+    @BeforeEach
+    void setUp() {
+        electronics = new Electronics(
+                "ITEM_001",
+                "Laptop Dell XPS",
+                "Laptop cao cấp",
+                15_000_000,
+                5,        // ownerId
+                1,        // categoryId
+                "AVAILABLE",
+                "Dell",
+                24
+        );
+    }
+
+    // ───────── Constructor & Getter ─────────
+
+    @Test
+    @DisplayName("Constructor đầy đủ khởi tạo đúng tất cả field")
+    void testConstructorAndGetters() {
+        assertEquals("ITEM_001", electronics.getItemId());
+        assertEquals("Laptop Dell XPS", electronics.getName());
+        assertEquals("Laptop cao cấp", electronics.getDescription());
+        assertEquals(15_000_000, electronics.getStartingPrice());
+        assertEquals(5, electronics.getOwnerId());
+        assertEquals(1, electronics.getCategoryId());
+        assertEquals("AVAILABLE", electronics.getStatus());
+        assertEquals("Dell", electronics.getBrand());
+        assertEquals(24, electronics.getWarrantyMonths());
+    }
+
+    @Test
+    @DisplayName("Constructor rỗng tạo object không null")
+    void testEmptyConstructor() {
+        Electronics e = new Electronics();
+        assertNotNull(e);
+    }
+
+    // ───────── getId() từ Entity interface ─────────
+
+    @Test
+    @DisplayName("getId() trả về itemId (thực thi từ Entity interface)")
+    void testGetId() {
+        assertEquals("ITEM_001", electronics.getId());
+    }
+
+    // ───────── Setter ─────────
+
+    @Test
+    @DisplayName("setName() cập nhật tên đúng")
+    void testSetName() {
+        electronics.setName("MacBook Pro");
+        assertEquals("MacBook Pro", electronics.getName());
+    }
+
+    @Test
+    @DisplayName("setStartingPrice() cập nhật giá khởi điểm đúng")
+    void testSetStartingPrice() {
+        electronics.setStartingPrice(20_000_000);
+        assertEquals(20_000_000, electronics.getStartingPrice());
+    }
+
+    @Test
+    @DisplayName("setBrand() cập nhật thương hiệu đúng")
+    void testSetBrand() {
+        electronics.setBrand("Apple");
+        assertEquals("Apple", electronics.getBrand());
+    }
+
+    @Test
+    @DisplayName("setWarrantyMonths() cập nhật thời gian bảo hành đúng")
+    void testSetWarrantyMonths() {
+        electronics.setWarrantyMonths(12);
+        assertEquals(12, electronics.getWarrantyMonths());
+    }
+
+    // ───────── Trạng thái Item ─────────
+
+    @Test
+    @DisplayName("setStatus() chuyển sang IN_AUCTION đúng")
+    void testSetStatusInAuction() {
+        electronics.setStatus("IN_AUCTION");
+        assertEquals("IN_AUCTION", electronics.getStatus());
+    }
+
+    @Test
+    @DisplayName("setStatus() chuyển sang SOLD đúng")
+    void testSetStatusSold() {
+        electronics.setStatus("SOLD");
+        assertEquals("SOLD", electronics.getStatus());
+    }
+
+    // ───────── Kế thừa & Đa hình ─────────
+
+    @Test
+    @DisplayName("Electronics là instance của Item và Entity")
+    void testInheritance() {
+        assertInstanceOf(Item.class, electronics);
+        assertInstanceOf(Entity.class, electronics);
+    }
+
+    @Test
+    @DisplayName("printInfo() không ném exception")
+    void testPrintInfoDoesNotThrow() {
+        assertDoesNotThrow(() -> electronics.printInfo());
+    }
+
+    // ───────── Giá trị biên ─────────
+
+    @Test
+    @DisplayName("startingPrice = 0 vẫn set được (validation thuộc service)")
+    void testStartingPriceZero() {
+        electronics.setStartingPrice(0);
+        assertEquals(0, electronics.getStartingPrice());
+    }
+
+    @Test
+    @DisplayName("warrantyMonths = 0 là hợp lệ về model")
+    void testWarrantyMonthsZero() {
+        electronics.setWarrantyMonths(0);
+        assertEquals(0, electronics.getWarrantyMonths());
+    }
+}
