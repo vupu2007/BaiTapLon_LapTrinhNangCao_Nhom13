@@ -11,7 +11,7 @@
             style="-fx-background-color: #F0F9FF;"
             xmlns="http://javafx.com/javafx/17"
             xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.auction.controller.MainLayoutController">
+            fx:controller="com.auction.client.controller.MainLayoutController">
 
     <stylesheets>
         <URL value="@../css/style.css"/>

@@ -1,7 +1,7 @@
 package com.auction;
 
-import com.auction.model.Account;
-import com.auction.service.AccountService;
+import com.auction.shared.model.Account;
+import com.auction.server.service.AccountService;
 
 public class TestAuth {
     public static void main(String[] args) {

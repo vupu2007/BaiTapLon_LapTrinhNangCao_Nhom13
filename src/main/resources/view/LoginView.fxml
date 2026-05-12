@@ -12,7 +12,7 @@
            stylesheets="@../css/login.css"
            xmlns="http://javafx.com/javafx/17"
            xmlns:fx="http://javafx.com/fxml/1"
-           fx:controller="com.auction.controller.LoginController">
+           fx:controller="com.auction.client.controller.LoginController">
     <children>
         <VBox alignment="TOP_CENTER"
               maxHeight="-Infinity"
