@@ -1,12 +1,17 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
-<?import javafx.scene.control.*?>
-<?import javafx.scene.layout.*?>
-<?import javafx.scene.text.*?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
+<?import javafx.scene.layout.VBox?>
 <?import javafx.scene.shape.Circle?>
+<?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.WalletController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.WalletController">
     <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
 
         <padding>
@@ -35,20 +40,20 @@
                         <Label style="-fx-font-size: 24;" text="💳" />
                     </VBox>
                     <VBox>
-                        <Label text="Số dư khả dụng" textFill="#e3f2fd" style="-fx-font-size: 14;" />
+                        <Label style="-fx-font-size: 14;" text="Số dư khả dụng" textFill="#e3f2fd" />
                         <Label fx:id="lblBalance" style="-fx-font-size: 36; -fx-font-weight: bold;" text="10.000.000 đ" textFill="white" />
                     </VBox>
                     <Region HBox.hgrow="ALWAYS" />
-                    <Label style="-fx-background-color: rgba(255,255,255,0.15); -fx-padding: 8 15; -fx-background-radius: 10;" text="Tài khoản: Phan Thị Minh Huyền" textFill="white" />
+                    <Label style="-fx-background-color: rgba(255,255,255,0.15); -fx-padding: 8 15; -fx-background-radius: 10;" text="Tài khoản" textFill="white" />
                 </HBox>
 
                 <HBox spacing="60">
                     <VBox>
-                        <Label text="Tổng nạp trong tháng" textFill="#e3f2fd" style="-fx-font-size: 13;" />
+                        <Label style="-fx-font-size: 13;" text="Tổng nạp trong tháng" textFill="#e3f2fd" />
                         <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="15.000.000 đ" textFill="white" />
                     </VBox>
                     <VBox>
-                        <Label text="Tổng chi tiêu" textFill="#e3f2fd" style="-fx-font-size: 13;" />
+                        <Label style="-fx-font-size: 13;" text="Tổng chi tiêu" textFill="#e3f2fd" />
                         <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="2.500.000 đ" textFill="white" />
                     </VBox>
                 </HBox>
@@ -72,7 +77,7 @@
         <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
             <Label style="-fx-font-weight: bold; -fx-font-size: 20;" text="Lịch sử giao dịch" textFill="#1e293b" />
 
-            <VBox spacing="10" fx:id="transactionContainer">
+            <VBox fx:id="transactionContainer" spacing="10">
                 <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-border-color: #f1f5f9; -fx-border-width: 0 0 1 0; -fx-padding: 15 0;">
                     <Circle fill="#ecfdf5" radius="20" stroke="transparent" />
                     <VBox spacing="3">
