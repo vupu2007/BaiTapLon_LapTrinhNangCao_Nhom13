@@ -69,7 +69,7 @@ public class AuctionService {
     }
 
     // Hàm Notify cũng tìm theo auctionId để báo đúng người
-    private void notifyObservers(int auctionId, double newPrice, String username) {
+    public void notifyObservers(int auctionId, double newPrice, String username) {
         List<Observer> viewers = auctionObservers.get(auctionId);
         if (viewers != null) {
             for (Observer o : viewers) {
