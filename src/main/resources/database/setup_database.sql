@@ -61,3 +61,13 @@ CREATE TABLE Bids (
                       FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
                       FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id)
 );
+-- 7. Bảng AutoBids (Đấu giá tự động)
+CREATE TABLE IF NOT EXISTS AutoBids (
+                                        auto_bid_id INT AUTO_INCREMENT PRIMARY KEY,
+                                        auction_id  INT NOT NULL,
+                                        bidder_id   INT NOT NULL,
+                                        max_bid     DECIMAL(15,2) NOT NULL,
+                                        created_at  TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                                        FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
+                                        FOREIGN KEY (bidder_id)  REFERENCES Accounts(account_id)
+);
