@@ -14,7 +14,6 @@ import javafx.scene.control.PasswordField;
 import javafx.scene.control.TextField;
 import javafx.stage.Stage;
 import java.io.IOException;
-
 public class LoginController {
 
     @FXML private TextField usernameField;
@@ -27,7 +26,6 @@ public class LoginController {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
         Account loggedIn = accountService.login(username, password);
-
         if (loggedIn != null) {
             CurrentAccount.setAccount(loggedIn);
             if (loggedIn instanceof Admin) {
@@ -41,9 +39,9 @@ public class LoginController {
     }
     @FXML
     public void goToRegister(ActionEvent event) {
+
         switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
     }
-
     private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
             Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
