@@ -5,7 +5,6 @@ import com.auction.dao.BidDAO;
 import com.auction.dao.ItemDAO;
 import com.auction.model.*;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,10 +18,12 @@ public class AuctionService {
     private final ItemDAO itemDAO = new ItemDAO();
     private final ReentrantLock lock = new ReentrantLock();
 
+    private static final int SNIPE_WINDOW_SECONDS     = 30;
+    private static final int EXTEND_SECONDS           = 60;
+    private static final int MAX_TOTAL_EXTEND_SECONDS = 300;
 
     // 1. Seller tạo phiên đấu giá mới
     public boolean createAuction(Auction auction) {
-        // Kiểm tra item tồn tại và đang AVAILABLE
         Item item = itemDAO.getItemById(auction.getItemId());
         if (item == null) {
             System.err.println("Sản phẩm không tồn tại!");
@@ -32,14 +33,11 @@ public class AuctionService {
             System.err.println("Sản phẩm không ở trạng thái AVAILABLE!");
             return false;
         }
-
-        // Kiểm tra thời gian hợp lệ
         if (auction.getEndTime().isBefore(auction.getStartTime())) {
             System.err.println("Thời gian kết thúc phải sau thời gian bắt đầu!");
             return false;
         }
 
-        // Tạo phiên và cập nhật trạng thái item
         boolean created = auctionDAO.insertAuction(auction);
         if (created) {
             itemDAO.updateStatus(auction.getItemId(), "IN_AUCTION");
@@ -47,28 +45,25 @@ public class AuctionService {
         }
         return created;
     }
-    // Khai báo Map thay vì List
+
+    // Observer
     private Map<Integer, List<Observer>> auctionObservers = new ConcurrentHashMap<>();
 
-    // Hàm Add có thêm tham số auctionId
     public void addObserver(int auctionId, Observer observer) {
         auctionObservers.putIfAbsent(auctionId, new CopyOnWriteArrayList<>());
         auctionObservers.get(auctionId).add(observer);
     }
-    // Hàm Hủy đăng ký (Xóa màn hình khỏi danh sách)
+
     public void removeObserver(int auctionId, Observer observer) {
         List<Observer> viewers = auctionObservers.get(auctionId);
         if (viewers != null) {
             viewers.remove(observer);
-
-            // Tối ưu: Nếu phòng không còn ai xem thì xóa luôn cái list cho nhẹ RAM
             if (viewers.isEmpty()) {
                 auctionObservers.remove(auctionId);
             }
         }
     }
 
-    // Hàm Notify cũng tìm theo auctionId để báo đúng người
     public void notifyObservers(int auctionId, double newPrice, String username) {
         List<Observer> viewers = auctionObservers.get(auctionId);
         if (viewers != null) {
@@ -78,9 +73,8 @@ public class AuctionService {
         }
     }
 
-    // 2. Đặt giá — đây là chức năng cốt lõi
+    // 2. Đặt giá
     public boolean placeBid(int auctionId, double amount, Account account) {
-        // Chỉ User (Bidder/Seller) mới được đặt giá, không phải Admin
         lock.lock();
         try {
             if (!(account instanceof User)) {
@@ -90,64 +84,74 @@ public class AuctionService {
 
             User user = (User) account;
 
-            // Lấy thông tin phiên đấu giá
             Auction auction = auctionDAO.getAuctionById(auctionId);
             if (auction == null) {
                 System.err.println("Phiên đấu giá không tồn tại!");
                 return false;
             }
 
-            // Kiểm tra phiên còn đang chạy không
             if (!auction.isActive()) {
                 System.err.println("Phiên đấu giá đã kết thúc hoặc chưa bắt đầu!");
                 return false;
             }
 
-            // Không được tự đấu giá sản phẩm của chính mình
             if (auction.getSellerId() == Integer.parseInt(account.getId())) {
                 System.err.println("Không thể đấu giá sản phẩm của chính mình!");
                 return false;
             }
 
-            // Kiểm tra giá phải cao hơn giá hiện tại + bước giá tối thiểu
             double minValidBid = auction.getCurrentPrice() + auction.getMinIncrement();
             if (amount < minValidBid) {
                 System.err.println("Giá đặt phải ít nhất là: " + minValidBid);
                 return false;
             }
 
-            // Kiểm tra số dư ví
             if (user.getBalance() < amount) {
                 System.err.println("Số dư không đủ!");
                 return false;
             }
 
-            // Lưu bid vào DB
             BidTransaction bid = new BidTransaction();
             bid.setAuctionId(auctionId);
             bid.setBidderId(Integer.parseInt(account.getId()));
             bid.setBidAmount(amount);
 
             boolean transactionSuccess = auctionDAO.placeBidTransaction(bid, amount, Integer.parseInt(account.getId()));
-            // Nếu giao dịch DB thất bại (do có người nhanh tay hơn)
-            if (!transactionSuccess) {
-                return false;
-            }
+            if (!transactionSuccess) return false;
 
             System.out.println("Đặt giá thành công: " + amount);
 
-            // 2. THÊM VÀO ĐÂY: Phát tín hiệu cho các màn hình (Observers) cập nhật lại giá
-            // Giả sử bạn truyền giá mới và tên người đặt
+            // Anti-sniping: bid trong 30 giây cuối → gia hạn thêm 60 giây
+            applyAntiSniping(auction);
+
             notifyObservers(auctionId, amount, account.getUsername());
             return true;
+
         } finally {
             lock.unlock();
         }
     }
 
+    private void applyAntiSniping(Auction auction) {
+        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime endTime = auction.getEndTime();
 
+        // Nếu endTime còn hơn 5 phút so với now → đã gia hạn đủ rồi
+        if (endTime.isAfter(now.plusSeconds(MAX_TOTAL_EXTEND_SECONDS))) {
+            System.out.println("Phiên " + auction.getId() + " đã đạt giới hạn gia hạn 5 phút!");
+            return;
+        }
 
-    // 3. Đóng phiên đấu giá (khi hết giờ hoặc Admin kết thúc)
+        // Bid trong 30 giây cuối → gia hạn thêm 60 giây
+        if (now.isAfter(endTime.minusSeconds(SNIPE_WINDOW_SECONDS))) {
+            LocalDateTime newEndTime = endTime.plusSeconds(EXTEND_SECONDS);
+            auctionDAO.updateEndTime(auction.getId(), newEndTime);
+            System.out.println("Anti-sniping: gia hạn phiên " + auction.getId()
+                    + " đến " + newEndTime);
+        }
+    }
+
+    // 3. Đóng phiên
     public boolean closeAuction(int auctionId) {
         Auction auction = auctionDAO.getAuctionById(auctionId);
         if (auction == null) {
@@ -155,10 +159,8 @@ public class AuctionService {
             return false;
         }
 
-        // Chuyển trạng thái sang FINISHED
         boolean closed = auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
         if (closed) {
-            // Cập nhật trạng thái item: SOLD nếu có winner, AVAILABLE lại nếu không ai bid
             if (auction.getWinnerId() != null) {
                 itemDAO.updateStatus(auction.getItemId(), "SOLD");
             } else {

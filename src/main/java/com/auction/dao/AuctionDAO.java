@@ -177,6 +177,21 @@ public class AuctionDAO {
             return false;
         }
     }
+    // 7. Cập nhật thời gian kết thúc (Anti-sniping)
+    public boolean updateEndTime(int auctionId, LocalDateTime newEndTime) {
+        String sql = "UPDATE Auctions SET end_time = ? WHERE auction_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setObject(1, newEndTime);
+            pstmt.setInt(2, auctionId);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 
     // --- Helper: map ResultSet sang Auction object ---
     private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
