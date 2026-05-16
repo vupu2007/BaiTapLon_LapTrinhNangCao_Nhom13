@@ -9,7 +9,6 @@ import java.net.URL;
 import com.auction.service.AuctionScheduler;
 
 public class MainApp {
-
     public static class AppUI extends Application {
 
         @Override
@@ -19,13 +18,11 @@ public class MainApp {
             AuctionScheduler.getInstance().start();
 
             URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
-
             if (fxmlLocation == null) {
                 System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
                 System.err.println("Đường dẫn đang quét: src/main/resources/view/LoginView.fxml");
                 return;
             }
-
             Parent root = FXMLLoader.load(fxmlLocation);
             Scene scene = new Scene(root);
 
@@ -41,7 +38,6 @@ public class MainApp {
             AuctionScheduler.getInstance().stop();
         }
     }
-
     public static void main(String[] args) {
         Application.launch(AppUI.class, args);
     }
