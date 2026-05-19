@@ -122,7 +122,7 @@
                                         </Label>
                                         <HBox spacing="10.0">
                                             <children>
-                                                <DatePicker fx:id="startDatePicker" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                                <DatePicker fx:id="startDatePicker" maxWidth="Infinity" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" />
                                                 <ComboBox fx:id="startHourCombo" prefHeight="45.0" prefWidth="85.0" promptText="Giờ" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
                                                 <ComboBox fx:id="startMinuteCombo" prefHeight="45.0" prefWidth="85.0" promptText="Phút" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
                                             </children>
@@ -139,7 +139,7 @@
                                         </Label>
                                         <HBox spacing="10.0">
                                             <children>
-                                                <DatePicker fx:id="endDatePicker" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                                <DatePicker fx:id="endDatePicker" maxWidth="Infinity" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" />
                                                 <ComboBox fx:id="endHourCombo" prefHeight="45.0" prefWidth="85.0" promptText="Giờ" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
                                                 <ComboBox fx:id="endMinuteCombo" prefHeight="45.0" prefWidth="85.0" promptText="Phút" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
                                             </children>
@@ -154,7 +154,7 @@
                                 <Insets top="15.0" />
                             </padding>
                             <children>
-                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="200.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" text="Hủy" textFill="#475569">
+                                <Button fx:id="btnCancel" mnemonicParsing="false" onAction="#handleCancel" prefHeight="45.0" prefWidth="200.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" text="Hủy" textFill="#475569">
                                     <font>
                                         <Font name="System Bold" size="15.0" />
                                     </font>

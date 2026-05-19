@@ -98,4 +98,27 @@ public class CreateProductController {
         alert.setContentText("Tạo phiên đấu giá mô phỏng cho sản phẩm [" + name + "] thành công!");
         alert.showAndWait();
     }
+    @FXML
+    private void handleCancel() {
+        // 1. Xóa rỗng các ô nhập văn bản
+        productNameField.clear();
+        descriptionArea.clear();
+        startPriceField.clear();
+
+        // 2. Đặt lại nhãn hình ảnh về trạng thái ban đầu
+        lblImagePath.setText("Chưa chọn tệp nào");
+
+        // 3. Đặt lại Ngày về mặc định (Ngày hôm nay và ngày mai)
+        startDatePicker.setValue(LocalDate.now());
+        endDatePicker.setValue(LocalDate.now().plusDays(1));
+
+        // 4. Đặt lại Giờ và Phút về giá trị mặc định ban đầu
+        startHourCombo.setValue("08");
+        startMinuteCombo.setValue("00");
+
+        endHourCombo.setValue("21");
+        endMinuteCombo.setValue("00");
+
+        System.out.println("Đã xóa toàn bộ form và đặt lại về mặc định!");
+    }
 }
