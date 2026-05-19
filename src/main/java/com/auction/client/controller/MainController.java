@@ -16,7 +16,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.layout.FlowPane; // ĐỔI THÀNH FLOWPANE
+import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -245,6 +245,30 @@ public class MainController {
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.getScene().setRoot(root);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    public void showAuctionDetail(Object productData) {
+        try {
+            // Tải file FXML chi tiết (tên file bạn đặt cho trang chi tiết)
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/AuctionDetail.fxml"));
+            Parent detailView = loader.load();
+
+            // Lấy Controller của trang chi tiết
+            AuctionDetailController controller = loader.getController();
+
+            // Truyền dữ liệu vào (cần tạo hàm loadProductDetail trong AuctionDetailController)
+            if (productData instanceof Item) {
+                controller.loadProductDetail((Item) productData);
+            } else if (productData instanceof Auction) {
+                controller.loadProductDetail((Auction) productData);
+            }
+
+            // Thay thế nội dung bằng cách lấy parent của flowPane
+            // Lưu ý: Nếu bạn có root VBox, hãy dùng root.getChildren().setAll(detailView);
+            flowPane.getParent().getScene().setRoot(detailView);
+
         } catch (IOException e) {
             e.printStackTrace();
         }
