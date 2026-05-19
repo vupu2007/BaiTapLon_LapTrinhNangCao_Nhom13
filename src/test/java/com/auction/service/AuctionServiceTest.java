@@ -3,7 +3,7 @@ package com.auction.service;
 import com.auction.exception.AuctionClosedException;
 import com.auction.exception.AuthenticationException;
 import com.auction.exception.InvalidBidException;
-import com.auction.model.*;
+import com.auction.shared.model.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

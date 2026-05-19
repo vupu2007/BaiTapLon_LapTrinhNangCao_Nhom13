@@ -1,4 +1,4 @@
-package com.auction.model;
+package com.auction.shared.model;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

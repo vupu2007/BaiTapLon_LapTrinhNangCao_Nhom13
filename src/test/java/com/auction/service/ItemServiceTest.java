@@ -1,7 +1,8 @@
 package com.auction.service;
 
-import com.auction.model.Electronics;
-import com.auction.model.Item;
+import com.auction.server.service.ItemService;
+import com.auction.shared.model.Electronics;
+import com.auction.shared.model.Item;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

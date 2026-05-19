@@ -1,6 +1,7 @@
 package com.auction.service;
 
-import com.auction.model.UserStore;
+import com.auction.shared.model.UserStore;
+import com.auction.server.service.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

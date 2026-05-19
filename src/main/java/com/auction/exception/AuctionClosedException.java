@@ -1,6 +1,6 @@
 package com.auction.exception;
 
-import com.auction.model.Auction.AuctionStatus;
+import com.auction.shared.model.Auction.AuctionStatus;
 
 // Khi người dùng cố đặt giá vào phiên đấu giá không còn ở trạng thái RUNNING (đã đóng, đã kết thúc, bị hủy...)
 public class AuctionClosedException extends Exception {

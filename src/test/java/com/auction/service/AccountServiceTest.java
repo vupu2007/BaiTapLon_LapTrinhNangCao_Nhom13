@@ -1,8 +1,8 @@
 package com.auction.service;
 
-import com.auction.model.Admin;
-import com.auction.model.Bidder;
-import com.auction.model.Seller;
+import com.auction.shared.model.Admin;
+import com.auction.shared.model.Bidder;
+import com.auction.shared.model.Seller;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
