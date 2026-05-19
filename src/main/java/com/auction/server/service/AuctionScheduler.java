@@ -1,12 +1,12 @@
-package com.auction.service;
+package com.auction.server.service;
 
-import com.auction.dao.AccountDAO;
-import com.auction.dao.AuctionDAO;
-import com.auction.dao.ItemDAO;
-import com.auction.model.Account;
-import com.auction.model.Auction;
-import com.auction.model.Bidder;
-import com.auction.model.Seller;
+import com.auction.server.dao.AccountDAO;
+import com.auction.server.dao.AuctionDAO;
+import com.auction.server.dao.ItemDAO;
+import com.auction.shared.model.Account;
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.Bidder;
+import com.auction.shared.model.Seller;
 
 import java.time.LocalDateTime;
 import java.util.List;

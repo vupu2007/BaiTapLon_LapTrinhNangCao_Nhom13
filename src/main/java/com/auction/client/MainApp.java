@@ -6,7 +6,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.net.URL;
-import com.auction.service.AuctionScheduler;
+
+import com.auction.server.service.AuctionScheduler;
 
 public class MainApp {
     public static class AppUI extends Application {
