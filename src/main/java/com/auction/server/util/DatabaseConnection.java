@@ -6,9 +6,9 @@ import java.sql.SQLException;
 
 public class DatabaseConnection {
 
-    private static final String URL      = "jdbc:mysql://sql7.freesqldatabase.com:3306/sql7826046";
-    private static final String USER     = "sql7826046";
-    private static final String PASSWORD = "UdU6CGM3MX";
+    private static final String URL      = "jdbc:mariadb://localhost:3306/online_auction_db";
+    private static final String USER     = "root";
+    private static final String PASSWORD = "";
 
     // Singleton — chỉ 1 instance của class này tồn tại
     private static DatabaseConnection instance;
