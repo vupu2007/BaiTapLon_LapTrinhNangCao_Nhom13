@@ -18,8 +18,7 @@ public class MainApp {
             // Khởi động scheduler ngay khi app bắt đầu
             AuctionScheduler.getInstance().start();
 
-            URL fxmlLocation = getClass().getResource("/view/MainLayout.fxml");
-             if (fxmlLocation == null) {
+            URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");             if (fxmlLocation == null) {
                 System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
                 System.err.println("Đường dẫn đang quét: src/main/resources/view/LoginView.fxml");
                 return;
