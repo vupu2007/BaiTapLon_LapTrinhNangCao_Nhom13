@@ -6,9 +6,15 @@ import java.sql.SQLException;
 
 public class DatabaseConnection {
 
-    private static final String URL      = "jdbc:mysql://localhost:3306/online_auction_db?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
-    private static final String USER     = "root";
-    private static final String PASSWORD = "";
+    // Paste các thông tin bạn vừa copy từ web vào đây
+    private static final String HOST = "bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com";
+    private static final String PORT = "3306";
+    private static final String DB_NAME = "bvfa8t3qtuhyhyzm2cns";
+    private static final String USER = "uvx5jzbzu6h6egtv";
+    private static final String PASSWORD = "gxvNiCizwruEPSZnfwud";
+
+    // Giữ nguyên chuỗi URL tự động ráp này để chạy
+    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
 
     // Singleton — chỉ 1 instance của class này tồn tại
     private static DatabaseConnection instance;
