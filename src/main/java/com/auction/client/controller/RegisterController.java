@@ -12,7 +12,6 @@ import javafx.stage.Stage;
 import java.io.IOException;
 
 public class RegisterController {
-
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private TextField passwordTextField;
@@ -37,7 +36,6 @@ public class RegisterController {
     }
     @FXML
     void handleRegister(ActionEvent event) {
-
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
         String confirm = confirmPasswordField.getText();
@@ -115,11 +113,9 @@ public class RegisterController {
                              String fxmlPath,
                              String title) {
         try {
-
             Parent root =
                     FXMLLoader.load(
                             getClass().getResource(fxmlPath));
-
             Stage stage =
                     (Stage) ((Node) event.getSource())
                             .getScene()
