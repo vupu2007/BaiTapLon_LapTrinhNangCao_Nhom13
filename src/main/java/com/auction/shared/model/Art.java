@@ -1,4 +1,4 @@
-package com.auction.model;
+package com.auction.shared.model;
 
 public class Art extends Item {
     private String artist;  // Tên nghệ sĩ

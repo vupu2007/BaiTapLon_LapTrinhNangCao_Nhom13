@@ -1,4 +1,4 @@
-package com.auction.model;
+package com.auction.shared.model;
 
 public class Vehicle extends Item {
     private String brand;       // Hãng xe

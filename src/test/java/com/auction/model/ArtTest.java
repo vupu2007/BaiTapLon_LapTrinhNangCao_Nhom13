@@ -1,5 +1,7 @@
 package com.auction.model;
 
+import com.auction.shared.model.Art;
+import com.auction.shared.model.Item;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
