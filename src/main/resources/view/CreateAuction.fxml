@@ -2,6 +2,8 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.ComboBox?>
+<?import javafx.scene.control.DatePicker?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.control.TextArea?>
@@ -10,7 +12,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/26" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.CreateProductController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
 
@@ -26,7 +28,7 @@
                                 <Font name="System Bold" size="28.0" />
                             </font>
                         </Label>
-                        <Label text="Đăng bán sản phẩm của bạn" textFill="#64748b">
+                        <Label text="Đăng bán sản phẩm của bạn vào hệ thống đấu giá" textFill="#64748b">
                             <font>
                                 <Font size="14.0" />
                             </font>
@@ -59,7 +61,7 @@
                                         <Font name="System Bold" size="14.0" />
                                     </font>
                                 </Label>
-                                <TextArea fx:id="descriptionArea" prefHeight="120.0" promptText="Mô tả chi tiết về sản phẩm..." style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;" wrapText="true">
+                                <TextArea fx:id="descriptionArea" prefHeight="100.0" promptText="Mô tả chi tiết về tình trạng sản phẩm..." style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;" wrapText="true">
                                     <font>
                                         <Font size="14.0" />
                                     </font>
@@ -84,20 +86,32 @@
 
                         <VBox spacing="8.0">
                             <children>
-                                <Label text="🖼️  URL hình ảnh" textFill="#1e293b">
+                                <Label text="🖼️  Hình ảnh sản phẩm" textFill="#1e293b">
                                     <font>
                                         <Font name="System Bold" size="14.0" />
                                     </font>
                                 </Label>
-                                <TextField fx:id="imageUrlField" prefHeight="45.0" promptText="https://example.com/image.jpg" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
-                                    <font>
-                                        <Font size="14.0" />
-                                    </font>
-                                </TextField>
+                                <HBox alignment="CENTER_LEFT" spacing="15.0">
+                                    <children>
+                                        <Button fx:id="btnUploadImage" mnemonicParsing="false" onAction="#handleUploadImage" prefHeight="45.0" style="-fx-background-color: #f1f5f9; -fx-border-color: #cbd5e1; -fx-border-radius: 8; -fx-background-radius: 8; -fx-cursor: hand;" text="📁 Chọn hình ảnh..." textFill="#334155">
+                                            <font>
+                                                <Font name="System Bold" size="13.0" />
+                                            </font>
+                                            <padding>
+                                                <Insets left="20.0" right="20.0" />
+                                            </padding>
+                                        </Button>
+                                        <Label fx:id="lblImagePath" text="Chưa chọn tệp nào" textFill="#64748b">
+                                            <font>
+                                                <Font size="13.0" />
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </HBox>
                             </children>
                         </VBox>
 
-                        <HBox spacing="20.0">
+                        <HBox spacing="25.0">
                             <children>
                                 <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                     <children>
@@ -106,25 +120,30 @@
                                                 <Font name="System Bold" size="14.0" />
                                             </font>
                                         </Label>
-                                        <TextField fx:id="startTimeField" prefHeight="45.0" promptText="dd/mm/yyyy --:-- --" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
-                                            <font>
-                                                <Font size="14.0" />
-                                            </font>
-                                        </TextField>
+                                        <HBox spacing="10.0">
+                                            <children>
+                                                <DatePicker fx:id="startDatePicker" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                                <ComboBox fx:id="startHourCombo" prefHeight="45.0" prefWidth="85.0" promptText="Giờ" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
+                                                <ComboBox fx:id="startMinuteCombo" prefHeight="45.0" prefWidth="85.0" promptText="Phút" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
+                                            </children>
+                                        </HBox>
                                     </children>
                                 </VBox>
+
                                 <VBox spacing="8.0" HBox.hgrow="ALWAYS">
                                     <children>
-                                        <Label text="📅  Thời gian kết thúc" textFill="#1e293b">
+                                        <Label text="⏳  Thời gian kết thúc" textFill="#1e293b">
                                             <font>
                                                 <Font name="System Bold" size="14.0" />
                                             </font>
                                         </Label>
-                                        <TextField fx:id="endTimeField" prefHeight="45.0" promptText="dd/mm/yyyy --:-- --" style="-fx-background-radius: 8; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-color: white;">
-                                            <font>
-                                                <Font size="14.0" />
-                                            </font>
-                                        </TextField>
+                                        <HBox spacing="10.0">
+                                            <children>
+                                                <DatePicker fx:id="endDatePicker" prefHeight="45.0" promptText="Chọn ngày" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
+                                                <ComboBox fx:id="endHourCombo" prefHeight="45.0" prefWidth="85.0" promptText="Giờ" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
+                                                <ComboBox fx:id="endMinuteCombo" prefHeight="45.0" prefWidth="85.0" promptText="Phút" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-radius: 8; -fx-background-radius: 8;" />
+                                            </children>
+                                        </HBox>
                                     </children>
                                 </VBox>
                             </children>
@@ -135,12 +154,12 @@
                                 <Insets top="15.0" />
                             </padding>
                             <children>
-                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="250.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" text="Hủy" textFill="#475569" HBox.hgrow="SOMETIMES">
+                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="200.0" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" text="Hủy" textFill="#475569">
                                     <font>
                                         <Font name="System Bold" size="15.0" />
                                     </font>
                                 </Button>
-                                <Button mnemonicParsing="false" prefHeight="45.0" prefWidth="600.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo phiên đấu giá" textFill="WHITE" HBox.hgrow="ALWAYS">
+                                <Button mnemonicParsing="false" onAction="#handleCreateAuction" prefHeight="45.0" prefWidth="400.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo phiên đấu giá" textFill="WHITE" HBox.hgrow="ALWAYS">
                                     <font>
                                         <Font name="System Bold" size="15.0" />
                                     </font>
