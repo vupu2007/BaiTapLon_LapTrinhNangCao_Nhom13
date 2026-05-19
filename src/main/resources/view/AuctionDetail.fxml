@@ -16,14 +16,13 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" stylesheets="@style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.controller.AuctionDetailController">
+<ScrollPane fitToWidth="true" stylesheets="@/css/style.css" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.AuctionDetailController">
     <content>
         <VBox spacing="20.0" style="-fx-background-color: #f0f4f8;">
             <padding>
                 <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />
             </padding>
             <children>
-
                 <HBox alignment="CENTER_LEFT" style="-fx-background-color: #007bff; -fx-background-radius: 10;" VBox.vgrow="NEVER">
                     <padding>
                         <Insets bottom="15.0" left="20.0" right="20.0" top="15.0" />
@@ -65,10 +64,9 @@
                         <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                     <children>
-
                         <VBox spacing="20.0" GridPane.columnIndex="0">
                             <children>
-                                <VBox alignment="CENTER" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e0e0e0; -fx-border-radius: 10; -fx-overflow-piece: hidden;">
+                                <VBox alignment="CENTER" style="-fx-background-color: white; -fx-background-radius: 10; -fx-border-color: #e0e0e0; -fx-border-radius: 10;">
                                     <children>
                                         <ImageView fx:id="imgProduct" fitHeight="350.0" fitWidth="500.0" pickOnBounds="true" preserveRatio="true" />
                                     </children>
@@ -99,26 +97,22 @@
                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
                                                 <RowConstraints minHeight="10.0" prefHeight="30.0" vgrow="SOMETIMES" />
-                                            </columnConstraints>
+                                            </rowConstraints>
                                             <children>
                                                 <Label text="Tên sản phẩm:" textFill="#757575" />
                                                 <Label fx:id="lblInfoName" text="Đang tải..." GridPane.columnIndex="1" />
-
                                                 <Label text="Mô tả:" textFill="#757575" GridPane.rowIndex="1" />
                                                 <Label fx:id="lblInfoDescription" text="Đang tải..." wrapText="true" GridPane.columnIndex="1" GridPane.rowIndex="1" />
-
                                                 <Label text="Giá khởi điểm:" textFill="#757575" GridPane.rowIndex="2" />
                                                 <Label fx:id="lblStartPrice" text="0 đ" textFill="#007bff" GridPane.columnIndex="1" GridPane.rowIndex="2">
                                                     <font>
                                                         <Font name="System Bold" size="14.0" />
-                                                    </font></Label>
-
+                                                    </font>
+                                                </Label>
                                                 <Label text="Người bán:" textFill="#757575" GridPane.rowIndex="3" />
                                                 <Label fx:id="lblSellerName" text="Đang tải..." GridPane.columnIndex="1" GridPane.rowIndex="3" />
-
                                                 <Label text="Thời gian bắt đầu:" textFill="#757575" GridPane.rowIndex="4" />
                                                 <Label fx:id="lblStartTime" text="--/--/---- --:--:--" GridPane.columnIndex="1" GridPane.rowIndex="4" />
-
                                                 <Label text="Thời gian kết thúc:" textFill="#757575" GridPane.rowIndex="5" />
                                                 <Label fx:id="lblEndTime" text="--/--/---- --:--:--" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                                             </children>
@@ -214,7 +208,7 @@
                                         <Insets bottom="15.0" left="20.0" right="20.0" top="15.0" />
                                     </padding>
                                     <children>
-                                        <Label text="⚡ Auto-bidding" HBox.hgrow="ALWAYS">
+                                        <Label text="⚡ Auto-bidding">
                                             <font>
                                                 <Font name="System Bold" size="14.0" />
                                             </font>
@@ -237,14 +231,11 @@
                                                 <Font name="System Bold" size="16.0" />
                                             </font>
                                         </Label>
-
-                                        <VBox fx:id="vboxBidHistoryContainer" spacing="10.0">
-                                        </VBox>
+                                        <VBox fx:id="vboxBidHistoryContainer" spacing="10.0" />
                                     </children>
                                 </VBox>
                             </children>
                         </VBox>
-
                     </children>
                 </GridPane>
             </children>
