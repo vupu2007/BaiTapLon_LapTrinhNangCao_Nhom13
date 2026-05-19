@@ -6,8 +6,7 @@ import java.sql.SQLException;
 
 public class DatabaseConnection {
 
-    // Paste các thông tin bạn vừa copy từ web vào đây
-    private static final String HOST = "bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com";
+     private static final String HOST = "bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com";
     private static final String PORT = "3306";
     private static final String DB_NAME = "bvfa8t3qtuhyhyzm2cns";
     private static final String USER = "uvx5jzbzu6h6egtv";
