@@ -1,4 +1,5 @@
 package com.auction.client.controller;
+
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -42,11 +43,11 @@ public class MainLayoutController {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
         }
         // TỰ ĐỘNG LOAD TRANG CHỦ KHI MỞ APP
-        // Phải gọi hàm này để danh sách sản phẩm hiện lên
         openHome();
     }
-    // ================= LOAD PAGE =================
-    private void loadPage(String fxmlPath) {
+
+    // ================= SỬA LẠI HÀM LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
+    private FXMLLoader loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Node page = loader.load();
@@ -61,11 +62,15 @@ public class MainLayoutController {
             }
             StackPane.setAlignment(page, Pos.TOP_CENTER);
             contentArea.getChildren().add(page);
+
+            return loader; // Trả loader về để lấy Controller khi cần
         } catch (Exception e) {
             System.err.println("Lỗi load file: " + fxmlPath);
             e.printStackTrace();
+            return null;
         }
     }
+
     // ================= ACTIVE BUTTON =================
     private void setActive(Button activeButton) {
         Button[] buttons = {
@@ -83,12 +88,24 @@ public class MainLayoutController {
             activeButton.getStyleClass().add("nav-button-active");
         }
     }
-    // ================= MENU ACTIONS =================
+
+    // ================= SỬA LẠI HÀM OPEN HOME ĐỂ AUTO REFRESH DỮ LIỆU =================
     @FXML
     private void openHome() {
-        loadPage("/view/MainView.fxml");
+        // 1. Load trang chủ lên màn hình như bình thường
+        FXMLLoader loader = loadPage("/view/MainView.fxml");
         setActive(btnHome);
+
+        // 2. Ép MainController chạy hàm quét lại Database ngay lập tức khi mở tab
+        if (loader != null) {
+            MainController mainController = loader.getController();
+            if (mainController != null) {
+                mainController.refreshDashboard();
+            }
+        }
     }
+
+    // ================= MENU ACTIONS (GIỮ NGUYÊN) =================
     @FXML
     private void openWallet() {
         loadPage("/view/WalletView.fxml");
@@ -119,7 +136,8 @@ public class MainLayoutController {
         loadPage("/view/Settings.fxml");
         setActive(btnSettings);
     }
-    // ================= ROLE SWITCHING =================
+
+    // ================= ROLE SWITCHING (GIỮ NGUYÊN) =================
     @FXML
     private void switchToBuyer() {
         lblRoleSidebar.setText("🛒 Người mua");
@@ -153,8 +171,7 @@ public class MainLayoutController {
         try {
             CurrentAccount.setAccount(null);
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
-            Stage stage =
-                    (Stage) ((Node) event.getSource()).getScene().getWindow();
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.getScene().setRoot(root);
             stage.setTitle("Đăng nhập");
         } catch (IOException e) {

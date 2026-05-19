@@ -1,40 +1,75 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<?import javafx.scene.control.*?>
-<?import javafx.scene.image.*?>
-<?import javafx.scene.layout.*?>
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.RowConstraints?>
+<?import javafx.scene.layout.StackPane?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
 
-<VBox prefWidth="300.0" spacing="10.0" styleClass="product-card" xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1">
+<VBox prefWidth="300.0" spacing="12.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 4);" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ProductCardController">
+    <padding>
+        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
+    </padding>
+
     <children>
-        <StackPane>
+        <StackPane style="-fx-background-color: #f8fafc; -fx-background-radius: 8;">
             <children>
-                <ImageView fx:id="productImage" fitHeight="200.0" fitWidth="300.0" pickOnBounds="true" preserveRatio="true" />
-                <Label fx:id="statusBadge" styleClass="status-badge" StackPane.alignment="TOP_RIGHT">
+                <ImageView fx:id="productImage" fitHeight="180.0" fitWidth="270.0" pickOnBounds="true" preserveRatio="true" />
+                <Label fx:id="statusBadge" style="-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 4; -fx-font-weight: bold;" text="Đang diễn ra" StackPane.alignment="TOP_RIGHT">
                     <padding>
-                        <Insets bottom="3.0" left="8.0" right="8.0" top="3.0" />
+                        <Insets bottom="4.0" left="8.0" right="8.0" top="4.0" />
                     </padding>
+                    <StackPane.margin>
+                        <Insets right="5.0" top="5.0" />
+                    </StackPane.margin>
                 </Label>
             </children>
         </StackPane>
 
-        <Label fx:id="productName" styleClass="field-label" text="Tên sản phẩm" wrapText="true" />
-        <Label fx:id="productDesc" styleClass="demo-text" text="Mô tả..." wrapText="true" />
+        <VBox spacing="4.0">
+            <Label fx:id="productName" text="Tên sản phẩm" wrapText="true">
+                <font>
+                    <Font name="System Bold" size="16.0" />
+                </font>
+            </Label>
+            <Label fx:id="productDesc" text="Mô tả ngắn về sản phẩm..." textFill="#64748b" wrapText="true" />
+        </VBox>
 
-        <HBox alignment="CENTER_LEFT">
+        <GridPane hgap="10.0" vgap="5.0">
+            <columnConstraints>
+                <ColumnConstraints hgrow="SOMETIMES" />
+                <ColumnConstraints hgrow="SOMETIMES" />
+            </columnConstraints>
+            <rowConstraints>
+                <RowConstraints vgrow="SOMETIMES" />
+                <RowConstraints vgrow="SOMETIMES" />
+            </rowConstraints>
             <children>
-                <Label text="Giá hiện tại: " />
-                <Label fx:id="currentPrice" styleClass="price" text="0 đ" />
+                <Label text="Giá hiện tại:" textFill="#64748b" />
+                <Label fx:id="currentPrice" text="0 đ" textFill="#0ea5e9" GridPane.rowIndex="1">
+                    <font>
+                        <Font name="System Bold" size="15.0" />
+                    </font>
+                </Label>
+                <Label text="Còn lại:" textFill="#64748b" GridPane.columnIndex="1" />
+                <Label fx:id="timeRemaining" text="00:00:00" textFill="#ef4444" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <font>
+                        <Font name="System Bold" size="14.0" />
+                    </font>
+                </Label>
             </children>
-        </HBox>
+        </GridPane>
 
-        <HBox alignment="CENTER" spacing="10.0">
-            <children>
-                <Button fx:id="actionButton" maxWidth="1.7976931348623157E308" mnemonicParsing="false" text="Hành động" HBox.hgrow="ALWAYS" />
-            </children>
-        </HBox>
+        <Button fx:id="actionButton" maxWidth="1.7976931348623157E308" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;" text="Đấu giá ngay">
+            <padding>
+                <Insets bottom="10.0" top="10.0" />
+            </padding>
+        </Button>
     </children>
-    <padding>
-        <Insets bottom="15.0" left="15.0" right="15.0" top="15.0" />
-    </padding>
 </VBox>

@@ -1,13 +1,15 @@
 package com.auction.client.controller;
-
+import com.auction.shared.model.Auction;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javafx.stage.FileChooser;
 import java.io.File;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 public class CreateProductController {
 
@@ -51,6 +53,7 @@ public class CreateProductController {
         // Đặt ngày mặc định cho bảng chọn ngày
         startDatePicker.setValue(LocalDate.now());
         endDatePicker.setValue(LocalDate.now().plusDays(1)); // Ngày kết thúc mặc định là ngày hôm sau
+
         // Đặt giờ/phút mặc định xuất hiện sẵn trên giao diện để tránh bị trống ô
         startHourCombo.setValue("08");
         startMinuteCombo.setValue("00");
@@ -83,21 +86,65 @@ public class CreateProductController {
     @FXML
     private void handleCreateAuction() {
         // Hàm này chạy khi bấm nút "Tạo phiên đấu giá"
-        String name = productNameField.getText();
-        LocalDate startDate = startDatePicker.getValue();
-        String hour = startHourCombo.getValue();
-        String minute = startMinuteCombo.getValue();
+        String name = productNameField.getText().trim();
+        String priceText = startPriceField.getText().trim();
 
-        System.out.println("Tạo phiên thành công (Dữ liệu tĩnh): " + name);
-        System.out.println("Thời gian bắt đầu xếp lịch: " + startDate + " lúc " + hour + ":" + minute);
+        // Kiểm tra validation cơ bản tránh rỗng hoặc lỗi số
+        if (name.isEmpty() || priceText.isEmpty()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Lỗi nhập liệu");
+            alert.setContentText("Vui lòng nhập đầy đủ Tên sản phẩm và Giá khởi điểm!");
+            alert.showAndWait();
+            return;
+        }
+
+        double startPrice = 0;
+        try {
+            startPrice = Double.parseDouble(priceText);
+        } catch (NumberFormatException e) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("Lỗi nhập liệu");
+            alert.setContentText("Giá khởi điểm phải là một số hợp lệ!");
+            alert.showAndWait();
+            return;
+        }
+
+        // Đọc dữ liệu ngày giờ từ giao diện phục vụ xử lý logic thời gian thực
+        LocalDate startDate = startDatePicker.getValue();
+        int startHour = Integer.parseInt(startHourCombo.getValue());
+        int startMinute = Integer.parseInt(startMinuteCombo.getValue());
+        LocalDateTime startTime = LocalDateTime.of(startDate, LocalTime.of(startHour, startMinute));
+
+        // 1. KHỞI TẠO VÀ ĐÓNG GÓI DỮ LIỆU THÀNH ĐỐI TƯỢNG AUCTION THẬT
+        Auction newAuction = new Auction();
+        newAuction.setItemId(name); // Lấy tên sản phẩm gán vào trường itemId
+        newAuction.setStartPrice(startPrice);
+        newAuction.setCurrentPrice(startPrice);
+        newAuction.setStartTime(startTime);
+        newAuction.setStatus(Auction.AuctionStatus.OPEN);
+
+        System.out.println("Tạo phiên thành công: " + name);
+        System.out.println("Thời gian bắt đầu xếp lịch: " + startTime);
+
+        // ====================================================================
+        // VỊ TRÍ CHUẨN XÁC: Gọi sang MainController để tự vẽ sản phẩm lên trang chủ ngay tức thì
+        // ====================================================================
+        if (MainController.getInstance() != null) {
+            MainController.getInstance().addAuctionToRealtimeUI(newAuction);
+        }
+        // ====================================================================
 
         // Hiện thông báo Popup ảo cho ra dáng ứng dụng thật
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("Thông báo");
         alert.setHeaderText(null);
-        alert.setContentText("Tạo phiên đấu giá mô phỏng cho sản phẩm [" + name + "] thành công!");
+        alert.setContentText("Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
         alert.showAndWait();
+
+        // Tạo xong thì tự động xóa trắng form nhập liệu hoặc đóng tab tùy logic nhóm
+        handleCancel();
     }
+
     @FXML
     private void handleCancel() {
         // 1. Xóa rỗng các ô nhập văn bản
