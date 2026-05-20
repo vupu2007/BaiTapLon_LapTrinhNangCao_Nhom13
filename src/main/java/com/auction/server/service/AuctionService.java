@@ -1,6 +1,7 @@
 package com.auction.server.service;
 
 import com.auction.server.dao.AuctionDAO;
+import com.auction.server.dao.AutoBidDAO;
 import com.auction.server.dao.BidDAO;
 import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.*;
@@ -17,6 +18,7 @@ public class AuctionService {
     private final BidDAO bidDAO = new BidDAO();
     private final ItemDAO itemDAO = new ItemDAO();
     private final ReentrantLock lock = new ReentrantLock();
+    private final AutoBidDAO autoBidDAO = new AutoBidDAO();
 
     private static final int SNIPE_WINDOW_SECONDS     = 30;
     private static final int EXTEND_SECONDS           = 60;
@@ -44,6 +46,19 @@ public class AuctionService {
             System.out.println("Tạo phiên đấu giá thành công!");
         }
         return created;
+    }
+
+    public boolean registerAutoBid(int auctionId, int bidderId, double maxBid) {
+        Auction auction = auctionDAO.getAuctionById(auctionId);
+        if (auction == null || !auction.isActive()) {
+            System.err.println("Phiên không tồn tại hoặc đã kết thúc!");
+            return false;
+        }
+        if (maxBid <= auction.getCurrentPrice()) {
+            System.err.println("maxBid phải lớn hơn giá hiện tại!");
+            return false;
+        }
+        return autoBidDAO.registerAutoBid(auctionId, bidderId, maxBid);
     }
 
     // Observer
@@ -125,6 +140,9 @@ public class AuctionService {
             applyAntiSniping(auction);
 
             notifyObservers(auctionId, amount, account.getUsername());
+
+            processAutoBids(auctionId, Integer.parseInt(account.getId()));
+
             return true;
 
         } finally {
@@ -148,6 +166,34 @@ public class AuctionService {
             auctionDAO.updateEndTime(auction.getId(), newEndTime);
             System.out.println("Anti-sniping: gia hạn phiên " + auction.getId()
                     + " đến " + newEndTime);
+        }
+    }
+
+    private void processAutoBids(int auctionId, int lastBidderId) {
+        Auction auction = auctionDAO.getAuctionById(auctionId);
+        if (auction == null || !auction.isActive()) return;
+
+        List<int[]> autoBids = autoBidDAO.getAutoBidsByAuction(auctionId);
+        for (int[] autoBid : autoBids) {
+            int bidderId  = autoBid[0];
+            double maxBid = autoBid[1] / 100.0;
+
+            if (bidderId == lastBidderId) continue;
+
+            double nextBid = auction.getCurrentPrice() + auction.getMinIncrement();
+            if (maxBid >= nextBid) {
+                BidTransaction bid = new BidTransaction();
+                bid.setAuctionId(auctionId);
+                bid.setBidderId(bidderId);
+                bid.setBidAmount(nextBid);
+
+                boolean success = auctionDAO.placeBidTransaction(bid, nextBid, bidderId);
+                if (success) {
+                    System.out.println("Auto-bid: bidder " + bidderId + " tự động đặt " + nextBid);
+                    notifyObservers(auctionId, nextBid, "Auto-bid");
+                }
+                break;
+            }
         }
     }
 
