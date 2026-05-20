@@ -19,12 +19,15 @@ import java.io.IOException;
 
 public class MainLayoutController {
 
+    private static MainLayoutController instance;
+
     @FXML private StackPane contentArea;
     @FXML private VBox buyerMenu;
     @FXML private VBox sellerMenu;
     @FXML private VBox roleBox;
     @FXML private Label lblRoleSidebar;
     @FXML private MenuButton roleMenuButton;
+
     // ================= BUTTON MENU =================
     @FXML private Button btnHome;
     @FXML private Button btnWallet;
@@ -33,11 +36,15 @@ public class MainLayoutController {
     @FXML private Button btnCreateAuction;
     @FXML private Button btnHistory;
     @FXML private Button btnSettings;
+
     // ================= INIT =================
     @FXML private Label nameLabel;
 
     @FXML
     public void initialize() {
+        // CỐ ĐỊNH LỖI: Gán instance bằng chính object này khi JavaFX khởi tạo layout
+        instance = this;
+
         // 1. Cập nhật tên người dùng
         if (CurrentAccount.getAccount() != null) {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
@@ -46,12 +53,17 @@ public class MainLayoutController {
         openHome();
     }
 
+    public static MainLayoutController getInstance() {
+        return instance;
+    }
+
     // ================= SỬA LẠI HÀM LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
     private FXMLLoader loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Node page = loader.load();
             contentArea.getChildren().clear();
+
             // Kiểm tra và ép giãn trang con
             if (page instanceof Region) {
                 Region region = (Region) page;
@@ -78,20 +90,41 @@ public class MainLayoutController {
                 btnCreateAuction, btnHistory, btnSettings
         };
         for (Button btn : buttons) {
-            btn.getStyleClass().remove("nav-button-active");
-            if (!btn.getStyleClass().contains("nav-button")) {
-                btn.getStyleClass().add("nav-button");
+            if (btn != null) {
+                btn.getStyleClass().remove("nav-button-active");
+                if (!btn.getStyleClass().contains("nav-button")) {
+                    btn.getStyleClass().add("nav-button");
+                }
             }
         }
-        activeButton.getStyleClass().remove("nav-button");
-        if (!activeButton.getStyleClass().contains("nav-button-active")) {
-            activeButton.getStyleClass().add("nav-button-active");
+        if (activeButton != null) {
+            activeButton.getStyleClass().remove("nav-button");
+            if (!activeButton.getStyleClass().contains("nav-button-active")) {
+                activeButton.getStyleClass().add("nav-button-active");
+            }
+        }
+    }
+
+    // ================= CẬP NHẬT: HÀM MỞ CHI TIẾT ĐẤU GIÁ TỪ THẺ SẢN PHẨM =================
+    public void openAuctionDetail(String name, String price) {
+        // 1. Nạp file FXML chi tiết đấu giá vào vùng giữa
+        FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
+
+        // 2. Chuyển trạng thái sáng nút sang "Đang đấu giá" trên thanh điều hướng
+        setActive(btnAuction);
+
+        // 3. Đổ dữ liệu động sang controller của trang chi tiết
+        if (loader != null) {
+            AuctionDetailController detailController = loader.getController();
+            if (detailController != null) {
+                detailController.initData(name, price);
+            }
         }
     }
 
     // ================= SỬA LẠI HÀM OPEN HOME ĐỂ AUTO REFRESH DỮ LIỆU =================
     @FXML
-    private void openHome() {
+    public void openHome() {
         // 1. Load trang chủ lên màn hình như bình thường
         FXMLLoader loader = loadPage("/view/MainView.fxml");
         setActive(btnHome);
@@ -105,7 +138,7 @@ public class MainLayoutController {
         }
     }
 
-    // ================= MENU ACTIONS (GIỮ NGUYÊN) =================
+    // ================= MENU ACTIONS =================
     @FXML
     private void openWallet() {
         loadPage("/view/WalletView.fxml");
@@ -137,7 +170,7 @@ public class MainLayoutController {
         setActive(btnSettings);
     }
 
-    // ================= ROLE SWITCHING (GIỮ NGUYÊN) =================
+    // ================= ROLE SWITCHING =================
     @FXML
     private void switchToBuyer() {
         lblRoleSidebar.setText("🛒 Người mua");
@@ -151,7 +184,10 @@ public class MainLayoutController {
         buyerMenu.setManaged(true);
         sellerMenu.setVisible(false);
         sellerMenu.setManaged(false);
+
+        openHome(); // Tự quay về trang chủ người mua khi đổi vai trò
     }
+
     @FXML
     private void switchToSeller() {
         lblRoleSidebar.setText("🏪 Người bán");
@@ -165,7 +201,10 @@ public class MainLayoutController {
         sellerMenu.setManaged(true);
         buyerMenu.setVisible(false);
         buyerMenu.setManaged(false);
+
+        openSelling(); // Tự chuyển sang trang sản phẩm đang bán khi đổi vai trò
     }
+
     @FXML
     private void handleLogout(ActionEvent event) {
         try {
@@ -177,5 +216,9 @@ public class MainLayoutController {
         } catch (IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void setContent(Node content) {
+        contentArea.getChildren().setAll(content);
     }
 }

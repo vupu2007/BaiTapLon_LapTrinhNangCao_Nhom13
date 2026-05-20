@@ -9,7 +9,6 @@
 <?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.Region?>
-<?import javafx.scene.layout.StackPane?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
@@ -57,9 +56,12 @@
                                     </font>
                                 </TextField>
                                 <Region HBox.hgrow="ALWAYS" />
-                                <Button prefHeight="40.0" prefWidth="90.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Tất cả" />
-                                <Button prefHeight="40.0" prefWidth="110.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Đang diễn ra" />
-                                <Button prefHeight="40.0" prefWidth="110.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold;" text="Sắp diễn ra" />
+
+                                <Button fx:id="btnFilterAll" mnemonicParsing="false" onAction="#handleFilterAll" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Tất cả" />
+
+                                <Button fx:id="btnFilterActive" mnemonicParsing="false" onAction="#handleFilterActive" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Đang diễn ra" />
+
+                                <Button fx:id="btnFilterUpcoming" mnemonicParsing="false" onAction="#handleFilterUpcoming" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Sắp diễn ra" />
                             </children>
                         </HBox>
 
