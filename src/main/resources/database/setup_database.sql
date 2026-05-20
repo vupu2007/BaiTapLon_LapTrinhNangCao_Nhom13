@@ -61,3 +61,5 @@ CREATE TABLE Bids (
                       FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
                       FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id)
 );
+INSERT INTO Accounts (username, password, email, role, balance)
+VALUES ('admin', 'admin123', 'admin@code.com', 'ADMIN', 0.0);

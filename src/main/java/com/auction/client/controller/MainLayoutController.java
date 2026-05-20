@@ -185,7 +185,8 @@ public class MainLayoutController {
         sellerMenu.setVisible(false);
         sellerMenu.setManaged(false);
 
-        openHome(); // Tự quay về trang chủ người mua khi đổi vai trò
+        // Quay về trang chủ khi chọn Người mua
+        openHome();
     }
 
     @FXML
@@ -202,7 +203,8 @@ public class MainLayoutController {
         buyerMenu.setVisible(false);
         buyerMenu.setManaged(false);
 
-        openSelling(); // Tự chuyển sang trang sản phẩm đang bán khi đổi vai trò
+        // SỬA TẠI ĐÂY: Thay thế openSelling() bằng openHome() để Người bán cũng về trang chủ
+        openHome();
     }
 
     @FXML
