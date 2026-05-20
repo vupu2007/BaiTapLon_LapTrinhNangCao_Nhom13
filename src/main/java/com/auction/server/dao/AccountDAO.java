@@ -9,31 +9,6 @@ import java.sql.*;
 
 public class AccountDAO {
 
-    // 🔥 HÀM KHỞI TẠO TỰ ĐỘNG (CONSTRUCTOR): Ép MySQL tự động thêm 2 cột nếu chưa có, tránh lỗi sập app vĩnh viễn
-    public AccountDAO() {
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement()) {
-
-            // Ép MySQL tạo cột total_deposit nếu bảng Accounts chưa có
-            try {
-                stmt.executeUpdate("ALTER TABLE Accounts ADD COLUMN total_deposit DECIMAL(15,2) DEFAULT 0.0");
-                System.out.println("✅ [DATABASE] Đã tự động kiểm tra/thêm cột total_deposit thành công.");
-            } catch (SQLException e) {
-                // Nếu cột đã tồn tại từ trước, MySQL báo lỗi trùng -> Java chủ động bỏ qua tại đây (An toàn)
-            }
-
-            // Ép MySQL tạo cột total_withdraw nếu bảng Accounts chưa có
-            try {
-                stmt.executeUpdate("ALTER TABLE Accounts ADD COLUMN total_withdraw DECIMAL(15,2) DEFAULT 0.0");
-                System.out.println("✅ [DATABASE] Đã tự động kiểm tra/thêm cột total_withdraw thành công.");
-            } catch (SQLException e) {
-                // Nếu cột đã tồn tại từ trước, Java chủ động bỏ qua
-            }
-
-        } catch (SQLException e) {
-            System.err.println("⚠️ Cảnh báo khởi tạo cấu trúc DB: " + e.getMessage());
-        }
-    }
 
     // 1. Đăng ký tài khoản mới (mặc định role = BIDDER)
     public boolean register(String username, String password, String email) {
