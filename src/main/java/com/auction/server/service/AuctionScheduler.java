@@ -97,11 +97,11 @@ public class AuctionScheduler {
         auctionService.notifyObservers(auctionId, auction.getCurrentPrice(), "SYSTEM");
     }
 
-    // Trừ tiền winner + cộng tiền seller
+    /// Trừ tiền winner + cộng tiền seller
     private void settlePayment(Auction auction) {
         double price = auction.getCurrentPrice();
 
-        // Lấy thông tin winner
+        // 1. Lấy thông tin winner và cập nhật số dư
         Account winner = accountDAO.getAccountById(auction.getWinnerId());
         if (winner instanceof Bidder) {
             double newBalance = ((Bidder) winner).getBalance() - price;
@@ -109,15 +109,27 @@ public class AuctionScheduler {
                 System.err.println("Winner không đủ tiền — cần xử lý thủ công!");
                 return;
             }
-            accountDAO.updateBalance(auction.getWinnerId(), newBalance);
+
+            // Vì người mua (Winner) vừa chi tiền trúng đấu giá, ta tăng Tổng chi tiêu (total_withdraw) của họ lên bằng chính giá trị món hàng.
+            // Giữ nguyên tổng nạp bằng 0.0 hoặc giá trị mặc định để tránh lỗi biên dịch.
+            double currentTotalDeposit = 0.0;
+            double newTotalWithdraw = price;
+
+            // Gọi hàm DAO truyền đủ 4 tham số
+            accountDAO.updateBalance(auction.getWinnerId(), newBalance, currentTotalDeposit, newTotalWithdraw);
             System.out.println("Trừ " + price + " từ winner ID: " + auction.getWinnerId());
         }
 
-        // Lấy thông tin seller
+        // 2. Lấy thông tin seller và cập nhật số dư
         Account seller = accountDAO.getAccountById(auction.getSellerId());
         if (seller instanceof Seller) {
             double newBalance = ((Seller) seller).getBalance() + price;
-            accountDAO.updateBalance(auction.getSellerId(), newBalance);
+            // Người bán (Seller) vừa nhận được tiền bán hàng, ta tính số tiền này vào Tổng doanh thu/Tổng nạp của họ.
+            double newTotalDeposit = price;
+            double currentTotalWithdraw = 0.0;
+
+            // Gọi hàm DAO truyền đủ 4 tham số
+            accountDAO.updateBalance(auction.getSellerId(), newBalance, newTotalDeposit, currentTotalWithdraw);
             System.out.println("Cộng " + price + " cho seller ID: " + auction.getSellerId());
         }
     }

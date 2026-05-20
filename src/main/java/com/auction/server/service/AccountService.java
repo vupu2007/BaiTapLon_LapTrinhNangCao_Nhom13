@@ -76,11 +76,28 @@ public class AccountService {
             return false;
         }
 
-        int accountId   = Integer.parseInt(account.getId());
-        double newBalance = accountDAO.getAccountById(accountId) instanceof Bidder
-                ? ((Bidder) accountDAO.getAccountById(accountId)).getBalance() + amount
-                : ((Seller) accountDAO.getAccountById(accountId)).getBalance() + amount;
+        int accountId = Integer.parseInt(account.getId());
 
-        return accountDAO.updateBalance(accountId, newBalance);
+        // Lấy thông tin tài khoản mới nhất từ database để tránh sai số dư
+        Account dbAccount = accountDAO.getAccountById(accountId);
+        if (dbAccount == null) return false;
+
+        double currentBalance = 0.0;
+        double currentTotalDeposit = 0.0;
+        double currentTotalWithdraw = 0.0;
+
+        // Trích xuất dữ liệu tùy theo vai trò
+        if (dbAccount instanceof Bidder) {
+            currentBalance = ((Bidder) dbAccount).getBalance();
+        } else if (dbAccount instanceof Seller) {
+            currentBalance = ((Seller) dbAccount).getBalance();
+        }
+
+        // Tính toán số dư mới và cộng dồn vào tổng nạp
+        double newBalance = currentBalance + amount;
+        double newTotalDeposit = currentTotalDeposit + amount; // Cộng dồn số tiền nạp mới vào tổng nạp
+
+        // ĐÃ SỬA: Gọi hàm updateBalance với đầy đủ tham số để đồng bộ MySQL vĩnh viễn
+        return accountDAO.updateBalance(accountId, newBalance, newTotalDeposit, currentTotalWithdraw);
     }
 }

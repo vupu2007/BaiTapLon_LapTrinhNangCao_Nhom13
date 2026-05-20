@@ -61,5 +61,10 @@ CREATE TABLE Bids (
                       FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
                       FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id)
 );
-INSERT INTO Accounts (username, password, email, role, balance)
-VALUES ('admin', 'admin123', 'admin@code.com', 'ADMIN', 0.0);
+
+-- 1. Thêm 2 cột mới vào bảng Accounts một cách độc lập
+ALTER TABLE Accounts ADD COLUMN total_deposit DECIMAL(15, 2) DEFAULT 0.0;
+ALTER TABLE Accounts ADD COLUMN total_withdraw DECIMAL(15, 2) DEFAULT 0.0;
+
+-- 2. Cập nhật giá trị mặc định cho tài khoản 'mhuyen' để tránh bị lỗi NULL dữ liệu
+UPDATE Accounts SET total_deposit = 0.0, total_withdraw = 0.0 WHERE username = 'mhuyen';

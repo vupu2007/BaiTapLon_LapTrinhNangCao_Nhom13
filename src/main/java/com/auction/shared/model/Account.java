@@ -1,6 +1,5 @@
 package com.auction.shared.model;
 
-
 /**
  * Lớp trừu tượng Account đại diện cho tài khoản người dùng trong hệ thống đấu giá.
  */
@@ -10,14 +9,19 @@ public abstract class Account implements Entity {
     protected String password;
     protected String role;
     protected String email;
-    // Constructor
+    // BỔ SUNG: Thuộc tính số dư ví tiền dùng chung cho các tài khoản kế thừa
+    protected Double balance;
+
+    // Constructor (Cập nhật lại để gán mặc định balance = 0.0 khi khởi tạo)
     public Account(String id, String username, String password, String email, String role) {
         this.id = id;
         this.username = username;
         this.password = password;
         this.email = email;
         this.role = role;
+        this.balance = 0.0; // Mặc định ví bằng 0 khi tạo tài khoản
     }
+
     // --- GETTERS ---
     public String getId() { return id; }
     public String getUsername() { return username; }
@@ -25,9 +29,15 @@ public abstract class Account implements Entity {
     public String getRole() { return role; }
     public String getEmail() { return email; }
 
+    // BỔ SUNG: Sửa lỗi "cannot find symbol getBalance()"
+    public Double getBalance() { return balance; }
+
     // --- SETTERS  ---
+    // BỔ SUNG: Sửa lỗi cập nhật số dư khi nạp/rút tiền
+    public void setBalance(Double balance) { this.balance = balance; }
+
     public void setEmail(String email) {
-        this.email = email; // Gán giá trị tham số vào thuộc tính của object
+        this.email = email;
     }
     public void setUsername(String username) {
         this.username = username;
@@ -38,6 +48,7 @@ public abstract class Account implements Entity {
     public void setId(String id) {
         this.id = id;
     }
+
     // --- PHƯƠNG THỨC TRỪU TƯỢNG ---
     /**
      * Trả về chuỗi hiển thị vai trò (ví dụ: "Người mua", "Người bán")

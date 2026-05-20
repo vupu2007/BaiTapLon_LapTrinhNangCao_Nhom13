@@ -9,6 +9,32 @@ import java.sql.*;
 
 public class AccountDAO {
 
+    // 🔥 HÀM KHỞI TẠO TỰ ĐỘNG (CONSTRUCTOR): Ép MySQL tự động thêm 2 cột nếu chưa có, tránh lỗi sập app vĩnh viễn
+    public AccountDAO() {
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement()) {
+
+            // Ép MySQL tạo cột total_deposit nếu bảng Accounts chưa có
+            try {
+                stmt.executeUpdate("ALTER TABLE Accounts ADD COLUMN total_deposit DECIMAL(15,2) DEFAULT 0.0");
+                System.out.println("✅ [DATABASE] Đã tự động kiểm tra/thêm cột total_deposit thành công.");
+            } catch (SQLException e) {
+                // Nếu cột đã tồn tại từ trước, MySQL báo lỗi trùng -> Java chủ động bỏ qua tại đây (An toàn)
+            }
+
+            // Ép MySQL tạo cột total_withdraw nếu bảng Accounts chưa có
+            try {
+                stmt.executeUpdate("ALTER TABLE Accounts ADD COLUMN total_withdraw DECIMAL(15,2) DEFAULT 0.0");
+                System.out.println("✅ [DATABASE] Đã tự động kiểm tra/thêm cột total_withdraw thành công.");
+            } catch (SQLException e) {
+                // Nếu cột đã tồn tại từ trước, Java chủ động bỏ qua
+            }
+
+        } catch (SQLException e) {
+            System.err.println("⚠️ Cảnh báo khởi tạo cấu trúc DB: " + e.getMessage());
+        }
+    }
+
     // 1. Đăng ký tài khoản mới (mặc định role = BIDDER)
     public boolean register(String username, String password, String email) {
         String sql = "INSERT INTO Accounts (username, password, email, role) VALUES (?, ?, ?, 'BIDDER')";
@@ -81,13 +107,15 @@ public class AccountDAO {
     }
 
     // 5. Cập nhật số dư ví
-    public boolean updateBalance(int accountId, double newBalance) {
-        String sql = "UPDATE Accounts SET balance = ? WHERE account_id = ?";
+    public boolean updateBalance(int accountId, double newBalance, double totalDeposit, double totalWithdraw) {
+        String sql = "UPDATE Accounts SET balance = ?, total_deposit = ?, total_withdraw = ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setDouble(1, newBalance);
-            pstmt.setInt(2, accountId);
+            pstmt.setDouble(2, totalDeposit);
+            pstmt.setDouble(3, totalWithdraw);
+            pstmt.setInt(4, accountId);
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -112,7 +140,6 @@ public class AccountDAO {
         }
     }
 
-    // --- Helper: map ResultSet sang đúng loại Account theo role ---
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
         String id       = String.valueOf(rs.getInt("account_id"));
         String username = rs.getString("username");
@@ -121,12 +148,45 @@ public class AccountDAO {
         String role     = rs.getString("role");
         double balance  = rs.getDouble("balance");
 
-        switch (role) {
-            case "ADMIN":  return new Admin(id, username, password, email);
-            case "SELLER": return new Seller(id, username, password, email, balance);
-            default:       return new Bidder(id, username, password, email, balance);
+        // Khởi tạo giá trị an toàn mặc định
+        double totalDeposit = 0.0;
+        double totalWithdraw = 0.0;
+
+        // BỌC THỬ AN TOÀN: Đọc dữ liệu thực tế từ MySQL
+        try {
+            totalDeposit = rs.getDouble("total_deposit");
+            totalWithdraw = rs.getDouble("total_withdraw");
+        } catch (SQLException e) {
+            System.err.println("⚠️ CẢNH BÁO: Database MySQL hiện tại chưa được cập nhật cột total_deposit hoặc total_withdraw!");
         }
+
+        Account acc;
+        switch (role) {
+            case "ADMIN":
+                acc = new Admin(id, username, password, email);
+                break;
+
+            case "SELLER":
+                Seller seller = new Seller(id, username, password, email, balance);
+                seller.setTotalDeposit(totalDeposit);
+                seller.setTotalWithdraw(totalWithdraw);
+                acc = seller;
+                break;
+
+            default: // BIDDER
+                Bidder bidder = new Bidder(id, username, password, email, balance);
+                bidder.setTotalDeposit(totalDeposit);
+                bidder.setTotalWithdraw(totalWithdraw);
+                acc = bidder;
+                break;
+        }
+
+        if (acc != null) {
+            acc.setBalance(balance);
+        }
+        return acc;
     }
+
     //---Hàm đổi mật khẩu--
     public boolean updatePassword(String userId, String newPassword) {
         String sql = "UPDATE Accounts SET password = ? WHERE account_id = ?";
@@ -140,6 +200,7 @@ public class AccountDAO {
             return false;
         }
     }
+
     //-- Hàm đổi profile--
     public boolean updateProfile(String userId, String newUsername, String newEmail) {
         String sql = "UPDATE Accounts SET username = ?, email = ? WHERE account_id = ?";

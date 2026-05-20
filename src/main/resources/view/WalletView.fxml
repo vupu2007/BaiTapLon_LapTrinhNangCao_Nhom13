@@ -41,7 +41,7 @@
                     </VBox>
                     <VBox>
                         <Label style="-fx-font-size: 14;" text="Số dư khả dụng" textFill="#e3f2fd" />
-                        <Label fx:id="lblBalance" style="-fx-font-size: 36; -fx-font-weight: bold;" text="10.000.000 đ" textFill="white" />
+                        <Label fx:id="lblBalance" style="-fx-font-size: 36; -fx-font-weight: bold;" text="0 đ" textFill="white" />
                     </VBox>
                     <Region HBox.hgrow="ALWAYS" />
                     <Label style="-fx-background-color: rgba(255,255,255,0.15); -fx-padding: 8 15; -fx-background-radius: 10;" text="Tài khoản" textFill="white" />
@@ -50,11 +50,11 @@
                 <HBox spacing="60">
                     <VBox>
                         <Label style="-fx-font-size: 13;" text="Tổng nạp trong tháng" textFill="#e3f2fd" />
-                        <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="15.000.000 đ" textFill="white" />
+                        <Label fx:id="lblTotalDeposit" style="-fx-font-size: 18; -fx-font-weight: bold;" text="0 đ" textFill="white" />
                     </VBox>
                     <VBox>
                         <Label style="-fx-font-size: 13;" text="Tổng chi tiêu" textFill="#e3f2fd" />
-                        <Label style="-fx-font-size: 18; -fx-font-weight: bold;" text="2.500.000 đ" textFill="white" />
+                        <Label fx:id="lblTotalWithdraw" style="-fx-font-size: 18; -fx-font-weight: bold;" text="0 đ" textFill="white" />
                     </VBox>
                 </HBox>
             </children>
