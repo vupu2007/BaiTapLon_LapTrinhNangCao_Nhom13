@@ -2,6 +2,7 @@ package com.auction.server.service;
 
 import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.Item;
+import com.auction.shared.model.Electronics; // ✅ THÊM IMPORT LỚP CON
 
 import java.util.List;
 
@@ -20,7 +21,24 @@ public class ItemService {
             return false;
         }
 
-        return itemDAO.insertItem(item);
+        // 🟢 ĐÃ SỬA: Ép kiểu an toàn sang Electronics để khớp với hàm insertItem(Electronics item) trong DAO
+        if (item instanceof Electronics) {
+            return itemDAO.insertItem((Electronics) item);
+        } else {
+            // Trường hợp dự phòng nếu Client truyền Object Item gốc
+            // Tạo nhanh một bản sao Electronics để vận chuyển dữ liệu xuống DB không bị lỗi
+            Electronics elec = new Electronics();
+            elec.setItemId(item.getItemId());
+            elec.setName(item.getName());
+            elec.setDescription(item.getDescription());
+            elec.setStartingPrice(item.getStartingPrice());
+            elec.setCategoryId(item.getCategoryId());
+            elec.setOwnerId(item.getOwnerId());
+            elec.setStatus(item.getStatus());
+            elec.setBrand("default.png"); // Tên ảnh mặc định nếu không có thuộc tính brand
+
+            return itemDAO.insertItem(elec);
+        }
     }
 
     // 2. Seller cập nhật thông tin sản phẩm

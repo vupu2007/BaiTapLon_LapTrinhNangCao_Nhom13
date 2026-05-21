@@ -13,7 +13,7 @@ public class DatabaseConnection {
     private static final String PASSWORD = "gxvNiCizwruEPSZnfwud";
 
     // Giữ nguyên chuỗi URL tự động ráp này để chạy
-    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC";
+    private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME + "?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Ho_Chi_Minh";
 
     // Singleton — chỉ 1 instance của class này tồn tại
     private static DatabaseConnection instance;

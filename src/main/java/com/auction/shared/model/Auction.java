@@ -7,6 +7,7 @@ import java.util.List;
 
 public class Auction implements Serializable  {
     private static final long serialVersionUID = 1L;
+    private String productName;
 
     // THAY ĐỔI: cập nhật enum khớp với DB
     public enum AuctionStatus {
@@ -79,10 +80,17 @@ public class Auction implements Serializable  {
 
     public AuctionStatus getStatus() { return status; }
     public void setStatus(AuctionStatus status) { this.status = status; }
+    public String getProductName() {
+        return productName;
+    }
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
 
     // Kiểm tra phiên đấu giá còn hiệu lực không
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
+
 
 }

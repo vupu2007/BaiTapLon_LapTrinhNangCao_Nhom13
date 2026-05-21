@@ -10,20 +10,26 @@ import java.util.List;
 public class ItemDAO {
 
     // 1. Thêm sản phẩm mới vào DB
-    public boolean insertItem(Item item) {
-        String sql = "INSERT INTO Items (item_id, name, description, starting_price, category_id, owner_id, status) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    public boolean insertItem(Electronics item) {
+        // CẬP NHẬT CÂU LỆNH SQL: Thêm cột attributes vào cuối cùng
+        String query = "INSERT INTO Items (item_id, name, description, starting_price, category_id, owner_id, status, attributes) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement stmt = conn.prepareStatement(query)) {
 
-            pstmt.setString(1, item.getItemId());
-            pstmt.setString(2, item.getName());
-            pstmt.setString(3, item.getDescription());
-            pstmt.setDouble(4, item.getStartingPrice());
-            pstmt.setInt(5, item.getCategoryId());
-            pstmt.setInt(6, item.getOwnerId());
-            pstmt.setString(7, item.getStatus());
+            stmt.setString(1, item.getItemId());
+            stmt.setString(2, item.getName());
+            stmt.setString(3, item.getDescription());
+            stmt.setDouble(4, item.getStartingPrice());
+            stmt.setInt(5, item.getCategoryId());
+            stmt.setInt(6, item.getOwnerId());
+            stmt.setString(7, item.getStatus());
 
-            return pstmt.executeUpdate() > 0;
+            // Lưu tên file ảnh thực tế vào cột attributes trong DB
+            stmt.setString(8, item.getBrand());
+
+            return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -144,5 +150,24 @@ public class ItemDAO {
         item.setOwnerId(rs.getInt("owner_id"));
         item.setStatus(rs.getString("status"));
         return item;
+    }
+    public boolean startAuction(String itemId, int sellerId, double startPrice, String startTime, String endTime) {
+        String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, start_time, end_time, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, 'RUNNING')";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, itemId);
+            pstmt.setInt(2, sellerId);
+            pstmt.setDouble(3, startPrice);
+            pstmt.setDouble(4, startPrice); // Ban đầu giá hiện tại = giá khởi điểm
+            pstmt.setString(5, startTime);
+            pstmt.setString(6, endTime);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
