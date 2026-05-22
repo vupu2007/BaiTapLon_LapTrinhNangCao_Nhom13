@@ -6,9 +6,10 @@
 <?import javafx.scene.control.ScrollPane?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.MyProductsController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
             <padding>
@@ -40,7 +41,7 @@
                                         <Font name="System Bold" size="16.0" />
                                     </font>
                                 </Label>
-                                <Label text="0" textFill="WHITE">
+                                <Label fx:id="lblTotalAuctions" text="0" textFill="WHITE">
                                     <font>
                                         <Font name="System Bold" size="36.0" />
                                     </font>
@@ -61,7 +62,7 @@
                                         <Font name="System Bold" size="16.0" />
                                     </font>
                                 </Label>
-                                <Label text="0" textFill="WHITE">
+                                <Label fx:id="lblActiveAuctions" text="0" textFill="WHITE">
                                     <font>
                                         <Font name="System Bold" size="36.0" />
                                     </font>
@@ -82,7 +83,7 @@
                                         <Font name="System Bold" size="16.0" />
                                     </font>
                                 </Label>
-                                <Label text="0 đ" textFill="WHITE">
+                                <Label fx:id="lblTotalValue" text="0 đ" textFill="WHITE">
                                     <font>
                                         <Font name="System Bold" size="36.0" />
                                     </font>
@@ -98,38 +99,38 @@
                     </children>
                 </HBox>
 
-                <VBox alignment="CENTER" prefHeight="400.0" spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" VBox.vgrow="ALWAYS">
-                    <children>
-                        <Label text="📦" textFill="#cbd5e1">
-                            <font>
-                                <Font size="80.0" />
-                            </font>
-                            <VBox.margin>
-                                <Insets bottom="-10.0" />
-                            </VBox.margin>
-                        </Label>
-
-                        <Label text="Bạn chưa có sản phẩm nào đang bán" textFill="#64748b">
-                            <font>
-                                <Font size="16.0" />
-                            </font>
-                        </Label>
-
-                        <Button mnemonicParsing="false" prefHeight="45.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo sản phẩm ngay" textFill="WHITE">
-                            <font>
-                                <Font name="System Bold" size="15.0" />
-                            </font>
-                            <padding>
-                                <Insets left="30.0" right="30.0" />
-                            </padding>
-                            <VBox.margin>
-                                <Insets top="10.0" />
-                            </VBox.margin>
-                        </Button>
-                    </children>
+                <VBox alignment="CENTER" minHeight="400.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 2);" VBox.vgrow="ALWAYS">
                     <padding>
-                        <Insets bottom="40.0" top="40.0" />
+                        <Insets bottom="25.0" left="25.0" right="25.0" top="25.0" />
                     </padding>
+                    <children>
+
+                        <VBox fx:id="emptyStateView" alignment="CENTER" spacing="20.0">
+                            <children>
+                                <Label text="📦" style="-fx-font-size: 80.0;" textFill="#cbd5e1">
+                                    <VBox.margin>
+                                        <Insets bottom="-10.0" />
+                                    </VBox.margin>
+                                </Label>
+                                <Label text="Bạn chưa có sản phẩm nào đang bán" textFill="#64748b">
+                                    <font>
+                                        <Font size="16.0" />
+                                    </font>
+                                </Label>
+                                <Button mnemonicParsing="false" onAction="#handleGoToCreateProduct" prefHeight="45.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo sản phẩm ngay" textFill="WHITE">
+                                    <font>
+                                        <Font name="System Bold" size="15.0" />
+                                    </font>
+                                    <padding>
+                                        <Insets left="30.0" right="30.0" />
+                                    </padding>
+                                </Button>
+                            </children>
+                        </VBox>
+
+                        <FlowPane fx:id="productsGrid" hgap="20.0" vgap="20.0" visible="false" managed="false" alignment="TOP_LEFT" />
+
+                    </children>
                 </VBox>
 
             </children>

@@ -21,7 +21,6 @@
         <URL value="@../css/style.css" />
     </stylesheets>
 
-    <!-- ================= TOP BAR ================= -->
     <top>
         <HBox alignment="CENTER_LEFT" prefHeight="70.0" spacing="20.0" style="-fx-background-color: white; -fx-border-color: #e2e8f0; -fx-border-width: 0 0 1 0;">
             <padding>
@@ -53,7 +52,6 @@
         </HBox>
     </top>
 
-    <!-- ================= SIDEBAR ================= -->
     <left>
         <VBox prefWidth="260.0" spacing="15.0">
             <padding>
@@ -68,6 +66,18 @@
                     </font>
                 </Label>
             </VBox>
+
+            <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: #e0f2fe; -fx-background-radius: 15; -fx-padding: 12 20;">
+                <Label text="⏰" style="-fx-font-size: 18;" />
+                <VBox alignment="CENTER_LEFT">
+                    <Label style="-fx-font-size: 9; -fx-font-weight: bold;" text="HỆ THỐNG REALTIME" textFill="#0369a1" />
+                    <Label fx:id="lblClock" text="00:00:00" textFill="#0284c7">
+                        <font>
+                            <Font name="System Bold" size="18.0" />
+                        </font>
+                    </Label>
+                </VBox>
+            </HBox>
 
             <VBox spacing="8.0" styleClass="shadow-pane" VBox.vgrow="ALWAYS">
                 <padding>
@@ -93,9 +103,7 @@
             </VBox>
         </VBox>
     </left>
-    <!-- ================= CONTENT AREA ================= -->
     <center>
-        <!-- Thêm các thuộc tính ép giãn cho StackPane -->
         <StackPane fx:id="contentArea" alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" BorderPane.alignment="CENTER" />
     </center>
 </BorderPane>

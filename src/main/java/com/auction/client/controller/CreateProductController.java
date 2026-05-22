@@ -6,13 +6,15 @@ import com.auction.shared.model.Auction;
 import com.auction.shared.model.Electronics;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.concurrent.Task;
+import javafx.animation.PauseTransition;
+import javafx.util.Duration;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 import javafx.stage.FileChooser;
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -24,10 +26,8 @@ public class CreateProductController {
     @FXML private TextField productNameField;
     @FXML private TextArea descriptionArea;
     @FXML private TextField startPriceField;
-    // Thuộc tính hình ảnh mới
     @FXML private Label lblImagePath;
 
-    // Thuộc tính thời gian dạng bảng chọn mới
     @FXML private DatePicker startDatePicker;
     @FXML private ComboBox<String> startHourCombo;
     @FXML private ComboBox<String> startMinuteCombo;
@@ -36,41 +36,31 @@ public class CreateProductController {
     @FXML private ComboBox<String> endHourCombo;
     @FXML private ComboBox<String> endMinuteCombo;
 
-    // 🟢 ĐÃ THÊM: Biến toàn cục để lưu vết file ảnh vật lý mà người dùng chọn
     private File productImgFile = null;
-
-    // Khởi tạo đối tượng DAO để làm việc với Database
     private final ItemDAO itemDAO = new ItemDAO();
 
     @FXML
     public void initialize() {
-        // 1. Khởi tạo danh sách giờ đầy đủ (00 -> 23)
         ObservableList<String> hours = FXCollections.observableArrayList();
         for (int i = 0; i < 24; i++) {
             hours.add(String.format("%02d", i));
         }
 
-        // 2. Khởi tạo danh sách phút ĐẦY ĐỦ từ 00 đến 59
         ObservableList<String> minutes = FXCollections.observableArrayList();
         for (int i = 0; i < 60; i++) {
             minutes.add(String.format("%02d", i));
         }
 
-        // Đổ dữ liệu vào các ComboBox trên giao diện
         startHourCombo.setItems(hours);
         endHourCombo.setItems(hours);
-
         startMinuteCombo.setItems(minutes);
         endMinuteCombo.setItems(minutes);
 
-        // Đặt ngày mặc định cho bảng chọn ngày
         startDatePicker.setValue(LocalDate.now());
-        endDatePicker.setValue(LocalDate.now().plusDays(1)); // Ngày kết thúc mặc định là ngày hôm sau
+        endDatePicker.setValue(LocalDate.now().plusDays(1));
 
-        // Đặt giờ/phút mặc định xuất hiện sẵn trên giao diện để tránh bị trống ô
         startHourCombo.setValue("08");
         startMinuteCombo.setValue("00");
-
         endHourCombo.setValue("21");
         endMinuteCombo.setValue("00");
     }
@@ -79,7 +69,6 @@ public class CreateProductController {
     private void handleUploadImage() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Chọn hình ảnh sản phẩm");
-
         fileChooser.getExtensionFilters().addAll(
                 new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
         );
@@ -88,7 +77,6 @@ public class CreateProductController {
         File selectedFile = fileChooser.showOpenDialog(stage);
 
         if (selectedFile != null) {
-            // 🟢 ĐÃ CẬP NHẬT: Lưu tệp tin vào biến toàn cục của Class để hàm tạo sản phẩm sử dụng sao chép
             this.productImgFile = selectedFile;
             lblImagePath.setText(selectedFile.getName());
             System.out.println("Đường dẫn file ảnh tĩnh để xử lý sau: " + selectedFile.getAbsolutePath());
@@ -97,12 +85,10 @@ public class CreateProductController {
 
     @FXML
     private void handleCreateAuction() {
-        // Hàm này chạy khi bấm nút "Tạo phiên đấu giá"
         String name = productNameField.getText().trim();
         String description = descriptionArea.getText().trim();
         String priceText = startPriceField.getText().trim();
 
-        // 1. Kiểm tra validation cơ bản tránh rỗng hoặc lỗi số
         if (name.isEmpty() || priceText.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ Tên sản phẩm và Giá khởi điểm!");
             return;
@@ -116,7 +102,6 @@ public class CreateProductController {
             return;
         }
 
-        // 2. Thu thập và định dạng chuỗi Thời gian chuẩn cho cơ sở dữ liệu (MySQL DATETIME)
         LocalDate startDate = startDatePicker.getValue();
         int startHour = Integer.parseInt(startHourCombo.getValue());
         int startMinute = Integer.parseInt(startMinuteCombo.getValue());
@@ -127,110 +112,116 @@ public class CreateProductController {
         int endMinute = Integer.parseInt(endMinuteCombo.getValue());
         LocalDateTime endTime = LocalDateTime.of(endDate, LocalTime.of(endHour, endMinute));
 
-        // Kiểm tra logic thời gian kết thúc phải sau thời gian bắt đầu
         if (endTime.isBefore(startTime)) {
             showAlert(Alert.AlertType.WARNING, "Lỗi thời gian", "Thời gian kết thúc phiên đấu giá phải diễn ra sau thời gian bắt đầu!");
             return;
         }
 
-        // Định dạng chuỗi ngày giờ TRƯỚC KHI gọi DAO để tránh lỗi "cannot find symbol"
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         String startTimeStr = startTime.format(formatter);
         String endTimeStr = endTime.format(formatter);
 
-        try {
-            // Tự động sinh ID duy nhất, ngẫu nhiên cho sản phẩm
-            String itemId = "ITEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
-            // Lấy ID của người dùng hiện tại đang đăng nhập hệ thống
-            int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
+        // Chuẩn bị dữ liệu ban đầu
+        String itemId = "ITEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
+        double finalStartPrice = startPrice;
+        String imageNameInitial = lblImagePath.getText().equals("Chưa chọn tệp nào") || lblImagePath.getText().isEmpty() ? null : lblImagePath.getText();
 
-            // 3. ĐÓNG GÓI DỮ LIỆU SẢN PHẨM (Có kèm tên hình ảnh động)
-            Electronics newItem = new Electronics();
-            newItem.setItemId(itemId);
-            newItem.setName(name);
-            newItem.setDescription(description);
-            newItem.setStartingPrice(startPrice);
-            newItem.setCategoryId(1);
-            newItem.setOwnerId(ownerId);
-            newItem.setStatus("IN_AUCTION");
+        // 🚀 TỐI ƯU ĐA LUỒNG: Đẩy việc đọc file ảnh nặng và ghi DB xuống luồng ngầm
+        Task<Boolean> databaseTask = new Task<>() {
+            @Override
+            protected Boolean call() throws Exception {
+                Electronics newItem = new Electronics();
+                newItem.setItemId(itemId);
+                newItem.setName(name);
+                newItem.setDescription(description);
+                newItem.setStartingPrice(finalStartPrice);
+                newItem.setCategoryId(1);
+                newItem.setOwnerId(ownerId);
+                newItem.setStatus("IN_AUCTION");
+                newItem.setBrand("");
 
-            // Lấy tên file ảnh từ Label giao diện gửi xuống DB qua trường Brand tạm thời
-            String imageName = lblImagePath.getText();
-
-            if (imageName.equals("Chưa chọn tệp nào") || imageName.isEmpty()) {
-                imageName = null;
-            }
-
-            if (productImgFile != null) {
-                try {
+                String finalImageName = imageNameInitial;
+                // Đọc dữ liệu ảnh và chuyển Base64 ngầm
+                if (productImgFile != null) {
                     byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
                     String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
-                    imageName = "base64:" + base64;
-                } catch (Exception e) {
-                    System.err.println("⚠️ Lỗi đọc file ảnh: " + e.getMessage());
+                    finalImageName = "base64:" + base64;
                 }
+                newItem.setImagePath(finalImageName);
+
+                // Ghi đồng thời vào Database qua tầng DAO
+                boolean isItemSaved = itemDAO.insertItem(newItem);
+                if (!isItemSaved) return false;
+
+                return itemDAO.startAuction(itemId, ownerId, finalStartPrice, startTimeStr, endTimeStr);
             }
-            newItem.setImagePath(imageName);
-            newItem.setBrand("");
+        };
 
-// 4. THỰC THI GHI VÀO DATABASE QUA TẦNG DAO
-            boolean isItemSaved = itemDAO.insertItem(newItem);
-            if (isItemSaved) {
+        // KHI LUỒNG NGẦM CHẠY XỬ LÝ DATABASE THÀNH CÔNG
+        databaseTask.setOnSucceeded(event -> {
+            boolean success = databaseTask.getValue();
+            if (success) {
+                // Đóng gói mô hình đẩy lên thời gian thực trang chủ
+                Auction newAuction = new Auction();
+                newAuction.setItemId(itemId);
+                newAuction.setStartPrice(finalStartPrice);
+                newAuction.setCurrentPrice(finalStartPrice);
+                newAuction.setStartTime(startTime);
+                newAuction.setStatus(Auction.AuctionStatus.OPEN);
 
-                // Kích hoạt phiên đấu giá tương ứng sang bảng Auctions (Lúc này đã nhận được startTimeStr and endTimeStr)
-                boolean isAuctionStarted = itemDAO.startAuction(itemId, ownerId, startPrice, startTimeStr, endTimeStr);
+                if (MainController.getInstance() != null) {
+                    MainController.getInstance().addAuctionToRealtimeUI(newAuction);
+                }
 
-                if (isAuctionStarted) {
-                    // 5. ĐÓNG GÓI THÀNH ĐỐI TƯỢNG AUCTION THẬT VÀ ĐẨY LÊN GIAO DIỆN REALTIME
-                    Auction newAuction = new Auction();
-                    newAuction.setItemId(itemId);
-                    newAuction.setStartPrice(startPrice);
-                    newAuction.setCurrentPrice(startPrice);
-                    newAuction.setStartTime(startTime);
-                    newAuction.setStatus(Auction.AuctionStatus.OPEN);
+                // Hiện Alert thông báo cho người dùng
+                showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công và đã được đưa lên sàn!");
 
-                    // Đồng bộ đẩy thông tin lên giao diện Trang chủ của MainController ngay tức thì
-                    if (MainController.getInstance() != null) {
-                        MainController.getInstance().addAuctionToRealtimeUI(newAuction);
+                // Reset trắng form nhập liệu
+                handleCancel();
+
+                // 🌟 CHÌA KHÓA VÀNG: Trì hoãn 300ms đợi DB commit hoàn chỉnh rồi mới chuyển trang nhảy số
+                PauseTransition pause = new PauseTransition(Duration.millis(300));
+                pause.setOnFinished(pEvent -> {
+                    if (MainLayoutController.getInstance() != null) {
+                        System.out.println("🔄 DB ổn định! Đang tự động nhảy sang tab Đang bán để refresh...");
+                        MainLayoutController.getInstance().openSelling();
                     }
+                });
+                pause.play();
 
-                    // Hiện thông báo thành công cho người dùng
-                    showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công và đã được đưa lên sàn!");
-
-                    // Xóa sạch form để sẵn sàng cho lần nhập tiếp theo
-                    handleCancel();
-                } else {
-                    showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên đấu giá trên sàn đấu giá!");
-                }
             } else {
-                showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", "Không thể lưu thông tin sản phẩm vào cơ sở dữ liệu!");
+                showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên đấu giá trên sàn đấu giá!");
             }
+        });
 
-        } catch (Exception e) {
+        // KHI LUỒNG NGẦM GẶP LỖI
+        databaseTask.setOnFailed(event -> {
+            Throwable e = databaseTask.getException();
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Lỗi không xác định", "Đã xảy ra lỗi trong quá trình xử lý: " + e.getMessage());
-        }
+            showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", "Đã xảy ra lỗi trong quá trình xử lý Database ngầm: " + e.getMessage());
+        });
+
+        // Kích hoạt chạy luồng ngầm tách biệt luồng UI
+        Thread thread = new Thread(databaseTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     @FXML
     private void handleCancel() {
-        // 1. Xóa rỗng các ô nhập văn bản
         productNameField.clear();
         descriptionArea.clear();
         startPriceField.clear();
 
-        // 2. Đặt lại nhãn hình ảnh về trạng thái ban đầu và xóa vết file cũ
         lblImagePath.setText("Chưa chọn tệp nào");
-        this.productImgFile = null; // Giải phóng bộ nhớ biến ảnh
+        this.productImgFile = null;
 
-        // 3. Đặt lại Ngày về mặc định (Ngày hôm nay và ngày mai)
         startDatePicker.setValue(LocalDate.now());
         endDatePicker.setValue(LocalDate.now().plusDays(1));
 
-        // 4. Đặt lại Giờ và Phút về giá trị mặc định ban đầu
         startHourCombo.setValue("08");
         startMinuteCombo.setValue("00");
-
         endHourCombo.setValue("21");
         endMinuteCombo.setValue("00");
 

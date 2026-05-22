@@ -11,7 +11,6 @@ public class ItemDAO {
 
     // 1. Thêm sản phẩm mới vào DB
     public boolean insertItem(Electronics item) {
-        // CẬP NHẬT CÂU LỆNH SQL: Thêm cột attributes vào cuối cùng
         String query = "INSERT INTO Items (item_id, name, description, starting_price, category_id, owner_id, status, attributes, image_path) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -75,17 +74,40 @@ public class ItemDAO {
         return list;
     }
 
-    // 4. Lấy danh sách sản phẩm theo chủ sở hữu (dành cho Seller)
+    // 4. 🚀 CẬP NHẬT REALTIME: Lấy danh sách kèm theo logic thời gian đấu giá cho Seller
     public List<Item> getItemsByOwner(int ownerId) {
         List<Item> list = new ArrayList<>();
-        String sql = "SELECT * FROM Items WHERE owner_id = ?";
+        // LEFT JOIN bảng Auctions để lấy thêm cột start_time và end_time của phiên đấu giá
+        String sql = "SELECT i.*, a.start_time, a.end_time " +
+                "FROM Items i " +
+                "LEFT JOIN Auctions a ON i.item_id = a.item_id " +
+                "WHERE i.owner_id = ? " +
+                "ORDER BY i.item_id DESC";
+
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, ownerId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToItem(rs));
+                    // Sử dụng chính hàm mapResultSetToItem gốc của nhóm má để tạo ra đối tượng Electronics (con của Item)
+                    Item item = mapResultSetToItem(rs);
+
+                    // Đọc dữ liệu thời gian trực tiếp từ ResultSet
+                    Timestamp start = rs.getTimestamp("start_time");
+                    Timestamp end = rs.getTimestamp("end_time");
+
+                    // Ép sang kiểu dữ liệu con Electronics để gán tạm thời gian vào trường brand/attributes nếu cần,
+                    // Hoặc an toàn nhất là má truyền chuỗi thời gian qua chính trường description (mô tả) tạm thời
+                    // hoặc trường attributes nếu lớp Electronics của má có set/get cho nó.
+                    // Để không lỗi, tui sẽ gán chuỗi thời gian vào thuộc tính Brand của Electronics luôn:
+                    if (item instanceof Electronics && start != null && end != null) {
+                        ((Electronics) item).setBrand(start.toString() + "|" + end.toString());
+                    } else if (item instanceof Electronics) {
+                        ((Electronics) item).setBrand("");
+                    }
+
+                    list.add(item);
                 }
             }
         } catch (SQLException e) {
@@ -94,7 +116,7 @@ public class ItemDAO {
         return list;
     }
 
-    // 5. Cập nhật trạng thái sản phẩm (AVAILABLE → IN_AUCTION → SOLD)
+    // 5. Cập nhật trạng thái sản phẩm
     public boolean updateStatus(String itemId, String newStatus) {
         String sql = "UPDATE Items SET status = ? WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -110,7 +132,7 @@ public class ItemDAO {
         }
     }
 
-    // 6. Cập nhật thông tin sản phẩm (dành cho Seller chỉnh sửa)
+    // 6. Cập nhật thông tin sản phẩm
     public boolean updateItem(Item item) {
         String sql = "UPDATE Items SET name = ?, description = ?, starting_price = ?, category_id = ?, image_path = ? WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -130,7 +152,7 @@ public class ItemDAO {
         }
     }
 
-    // 7. Xóa sản phẩm (chỉ xóa được khi status = AVAILABLE)
+    // 7. Xóa sản phẩm
     public boolean deleteItem(String itemId) {
         String sql = "DELETE FROM Items WHERE item_id = ? AND status = 'AVAILABLE'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -154,9 +176,11 @@ public class ItemDAO {
         item.setCategoryId(rs.getInt("category_id"));
         item.setOwnerId(rs.getInt("owner_id"));
         item.setStatus(rs.getString("status"));
-        item.setImagePath(rs.getString("image_path")); // ← thêm vào đây
+        item.setImagePath(rs.getString("image_path"));
+        item.setBrand(rs.getString("attributes")); // Đồng bộ lấy thêm cột attributes
         return item;
     }
+
     public boolean startAuction(String itemId, int sellerId, double startPrice, String startTime, String endTime) {
         String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, start_time, end_time, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, 'RUNNING')";
@@ -166,7 +190,7 @@ public class ItemDAO {
             pstmt.setString(1, itemId);
             pstmt.setInt(2, sellerId);
             pstmt.setDouble(3, startPrice);
-            pstmt.setDouble(4, startPrice); // Ban đầu giá hiện tại = giá khởi điểm
+            pstmt.setDouble(4, startPrice);
             pstmt.setString(5, startTime);
             pstmt.setString(6, endTime);
 

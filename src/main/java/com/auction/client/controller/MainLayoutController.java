@@ -1,5 +1,8 @@
 package com.auction.client.controller;
 
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -14,8 +17,11 @@ import com.auction.client.util.CurrentAccount;
 import javafx.event.ActionEvent;
 import javafx.scene.Parent;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class MainLayoutController {
 
@@ -27,6 +33,9 @@ public class MainLayoutController {
     @FXML private VBox roleBox;
     @FXML private Label lblRoleSidebar;
     @FXML private MenuButton roleMenuButton;
+
+    // 🕒 ĐÃ THÊM: Biến ánh xạ nhãn hiển thị đồng hồ thời gian thực từ FXML sang
+    @FXML private Label lblClock;
 
     // ================= BUTTON MENU =================
     @FXML private Button btnHome;
@@ -49,12 +58,36 @@ public class MainLayoutController {
         if (CurrentAccount.getAccount() != null) {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
         }
+
+        // 2. 🚀 ĐÃ THÊM: Kích hoạt kim giây đồng hồ chạy ngầm thời gian thực tế ngay khi nạp giao diện tổng
+        startRealtimeClock();
+
         // TỰ ĐỘNG LOAD TRANG CHỦ KHI MỞ APP
         openHome();
     }
 
     public static MainLayoutController getInstance() {
         return instance;
+    }
+
+    // 🕒 ĐÃ THÊM: Hàm xử lý chạy ngầm cập nhật đồng hồ mỗi giây một lần liên tục
+    private void startRealtimeClock() {
+        // Định dạng hiển thị Giờ:Phút:Giây (Ví dụ: 14:23:05)
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
+
+        // Tạo Timeline lặp lại vô hạn, cứ mỗi 1 giây (Duration.seconds(1)) sẽ lấy giờ máy tính nạp vào UI
+        Timeline clockTimeline = new Timeline(
+                new KeyFrame(Duration.seconds(1), event -> {
+                    String currentTime = LocalDateTime.now().format(formatter);
+                    if (lblClock != null) {
+                        lblClock.setText(currentTime); // Đổ chuỗi giờ thực tế lên Widget Sidebar
+                    }
+                })
+        );
+
+        // Đặt chế độ lặp vô hạn và bấm nút kích hoạt chạy
+        clockTimeline.setCycleCount(Animation.INDEFINITE);
+        clockTimeline.play();
     }
 
     // ================= SỬA LẠI HÀM LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
@@ -149,11 +182,21 @@ public class MainLayoutController {
         loadPage("/view/ActiveAuctions.fxml");
         setActive(btnAuction);
     }
+
+    // ✅ ĐÃ NÂNG CẤP: Ép trang "Đang bán" tự động refresh kéo dữ liệu cá nhân mới nhất khi bấm menu trái
     @FXML
-    private void openSelling() {
-        loadPage("/view/MyProducts.fxml");
+    public void openSelling() {
+        FXMLLoader loader = loadPage("/view/MyProducts.fxml");
         setActive(btnSelling);
+
+        if (loader != null) {
+            MyProductsController myProductsController = loader.getController();
+            if (myProductsController != null) {
+                myProductsController.loadMyProductsData();
+            }
+        }
     }
+
     @FXML
     private void openCreateAuction() {
         loadPage("/view/CreateAuction.fxml");
@@ -170,6 +213,11 @@ public class MainLayoutController {
         setActive(btnSettings);
     }
 
+    // ✅ THÊM HÀM MỚI: Khắc phục triệt để lỗi "Cannot resolve method 'showCreateProductView'" bên file MyProductsController nãy!
+    public void showCreateProductView() {
+        openCreateAuction();
+    }
+
     // ================= ROLE SWITCHING =================
     @FXML
     private void switchToBuyer() {
@@ -184,9 +232,6 @@ public class MainLayoutController {
         buyerMenu.setManaged(true);
         sellerMenu.setVisible(false);
         sellerMenu.setManaged(false);
-
-        // Quay về trang chủ khi chọn Người mua
-        //openHome();
     }
 
     @FXML
@@ -202,9 +247,6 @@ public class MainLayoutController {
         sellerMenu.setManaged(true);
         buyerMenu.setVisible(false);
         buyerMenu.setManaged(false);
-
-        // SỬA TẠI ĐÂY: Thay thế openSelling() bằng openHome() để Người bán cũng về trang chủ
-        //openHome();
     }
 
     @FXML
