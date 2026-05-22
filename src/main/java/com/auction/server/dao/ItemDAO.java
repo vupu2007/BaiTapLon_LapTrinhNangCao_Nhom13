@@ -12,8 +12,8 @@ public class ItemDAO {
     // 1. Thêm sản phẩm mới vào DB
     public boolean insertItem(Electronics item) {
         // CẬP NHẬT CÂU LỆNH SQL: Thêm cột attributes vào cuối cùng
-        String query = "INSERT INTO Items (item_id, name, description, starting_price, category_id, owner_id, status, attributes) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String query = "INSERT INTO Items (item_id, name, description, starting_price, category_id, owner_id, status, attributes, image_path) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
@@ -25,9 +25,8 @@ public class ItemDAO {
             stmt.setInt(5, item.getCategoryId());
             stmt.setInt(6, item.getOwnerId());
             stmt.setString(7, item.getStatus());
-
-            // Lưu tên file ảnh thực tế vào cột attributes trong DB
             stmt.setString(8, item.getBrand());
+            stmt.setString(9, item.getImagePath());
 
             return stmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -149,6 +148,7 @@ public class ItemDAO {
         item.setCategoryId(rs.getInt("category_id"));
         item.setOwnerId(rs.getInt("owner_id"));
         item.setStatus(rs.getString("status"));
+        item.setImagePath(rs.getString("image_path")); // ← thêm vào đây
         return item;
     }
     public boolean startAuction(String itemId, int sellerId, double startPrice, String startTime, String endTime) {

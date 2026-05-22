@@ -68,3 +68,5 @@ ALTER TABLE Accounts ADD COLUMN total_withdraw DECIMAL(15, 2) DEFAULT 0.0;
 
 -- 2. Cập nhật giá trị mặc định cho tài khoản 'mhuyen' để tránh bị lỗi NULL dữ liệu
 UPDATE Accounts SET total_deposit = 0.0, total_withdraw = 0.0 WHERE username = 'mhuyen';
+
+ALTER TABLE Items ADD COLUMN image_path VARCHAR(255);
