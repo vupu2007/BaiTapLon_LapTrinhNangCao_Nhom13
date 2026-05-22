@@ -11,36 +11,51 @@ import java.util.Base64;
 public class ProductCardController {
     @FXML private ImageView productImage;
     @FXML private Label productName, productDesc, currentPrice, timeRemaining, statusBadge;
-    @FXML private Button actionButton;
+    @FXML private Button actionButton; // Nút mặc định (Đấu giá ngay)
+
+    @FXML private Button btnEdit;
+    @FXML private Button btnDelete;
+
+    public void setSellerMode(Runnable onEditAction, Runnable onDeleteAction) {
+        if (actionButton != null) {
+            actionButton.setVisible(false);
+            actionButton.setManaged(false);
+        }
+
+        if (btnEdit != null && btnDelete != null) {
+            btnEdit.setVisible(true);
+            btnEdit.setManaged(true);
+            btnDelete.setVisible(true);
+            btnDelete.setManaged(true);
+
+            btnEdit.setOnAction(e -> { if (onEditAction != null) onEditAction.run(); });
+            btnDelete.setOnAction(e -> { if (onDeleteAction != null) onDeleteAction.run(); });
+        }
+    }
 
     public void setData(String name, String price, String time, String imageFileName) {
-        // 1. Gán các trường chữ trước (Chữ cực nhẹ, lên hình ngay lập tức không gây lag)
         productName.setText(name);
         currentPrice.setText(price);
         timeRemaining.setText(time);
 
-        // Kiểm tra nếu tên file rỗng
         if (imageFileName == null || imageFileName.trim().isEmpty()) {
             imageFileName = "default.png";
         }
 
         final String finalImageFileName = imageFileName;
 
-        // 2. 🚀 TỐI ƯU ĐA LUỒNG: Đẩy toàn bộ logic nạp và giải mã ảnh sang luồng ngầm (Background Thread)
+        // Tải ảnh đa luồng ngầm
         Thread imageLoadThread = new Thread(() -> {
             try {
                 Image img;
                 if (finalImageFileName.startsWith("http://") || finalImageFileName.startsWith("https://")) {
-                    img = new Image(finalImageFileName, true); // URL online bản thân nó đã hỗ trợ background load
+                    img = new Image(finalImageFileName, true);
                 }
-                // Xử lý giải mã ảnh Base64 từ Database
                 else if (finalImageFileName.startsWith("base64:")) {
                     String base64Data = finalImageFileName.substring(7);
-                    // Công đoạn tốn CPU nhất: Giải mã mảng byte (Chạy ngầm nên không lo lag app)
                     byte[] imageBytes = Base64.getDecoder().decode(base64Data);
                     img = new Image(new ByteArrayInputStream(imageBytes));
                 }
-                // Xử lý nạp ảnh tĩnh local
                 else {
                     String localPath = "/com/auction/client/images/" + finalImageFileName;
                     var stream = getClass().getResourceAsStream(localPath);
@@ -48,35 +63,52 @@ public class ProductCardController {
                     img = new Image(stream);
                 }
 
-                // 🌟 SAU KHI DỊCH ẢNH XONG: Dùng Platform.runLater để thảy ảnh lên giao diện an toàn
                 final Image finalImg = img;
                 Platform.runLater(() -> {
                     if (productImage != null) {
                         productImage.setImage(finalImg);
+
+                        // 🔥 ĐÃ SỬA: Tạo khuôn cắt ĐỘNG tự co giãn chuẩn khít theo ImageView thực tế
+                        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+                        clip.widthProperty().bind(productImage.fitWidthProperty());
+                        clip.heightProperty().bind(productImage.fitHeightProperty());
+
+                        // Đường kính bo góc là 24 (Tương đương bán kính radius 12px chuẩn trong file FXML)
+                        clip.setArcWidth(24);
+                        clip.setArcHeight(24);
+
+                        productImage.setClip(clip);
                     }
                 });
 
             } catch (Exception e) {
-                System.err.println("❌ Lỗi load ảnh ngầm cho sản phẩm [" + name + "]: " + e.getMessage());
-                // Nếu lỗi, nạp ảnh fallback mặc định an toàn
+                System.err.println("❌ Lỗi load ảnh sản phẩm [" + name + "]: " + e.getMessage());
                 Platform.runLater(() -> {
                     if (productImage != null) {
                         var fallback = getClass().getResourceAsStream("/com/auction/client/images/default.png");
                         productImage.setImage(fallback != null ? new Image(fallback) : null);
+
+                        // 🔥 ĐÃ SỬA: Áp dụng khuôn cắt động tương tự cho ảnh mặc định khi lỗi
+                        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
+                        clip.widthProperty().bind(productImage.fitWidthProperty());
+                        clip.heightProperty().bind(productImage.fitHeightProperty());
+                        clip.setArcWidth(24);
+                        clip.setArcHeight(24);
+
+                        productImage.setClip(clip);
                     }
                 });
             }
         });
 
-        // Thiết lập Daemon = true để luồng tự hủy khi tắt ứng dụng, tránh rò rỉ bộ nhớ (Memory Leak)
         imageLoadThread.setDaemon(true);
-        // Kích hoạt luồng chạy ngầm hoạt động
         imageLoadThread.start();
 
-        // Xử lý sự kiện bấm nút xem chi tiết
+        // 🔥 SỬA TẠI ĐÂY: Truyền cả Object ảnh trên UI kèm theo Chuỗi dữ liệu ảnh gốc (đề phòng ảnh UI chưa load xong)
         actionButton.setOnAction(e -> {
             if (MainLayoutController.getInstance() != null) {
-                MainLayoutController.getInstance().openAuctionDetail(name, price);
+                Image currentImg = (productImage != null) ? productImage.getImage() : null;
+                MainLayoutController.getInstance().openAuctionDetail(name, price, currentImg, finalImageFileName);
             }
         });
     }

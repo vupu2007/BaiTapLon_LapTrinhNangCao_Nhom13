@@ -18,6 +18,7 @@ import javafx.event.ActionEvent;
 import javafx.scene.Parent;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.scene.image.Image; // 🔥 Đã thêm import để nhận Object Image trực tiếp
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,7 +35,7 @@ public class MainLayoutController {
     @FXML private Label lblRoleSidebar;
     @FXML private MenuButton roleMenuButton;
 
-    // 🕒 ĐÃ THÊM: Biến ánh xạ nhãn hiển thị đồng hồ thời gian thực từ FXML sang
+    // 🕒 Biến ánh xạ nhãn hiển thị đồng hồ thời gian thực từ FXML sang
     @FXML private Label lblClock;
 
     // ================= BUTTON MENU =================
@@ -51,7 +52,7 @@ public class MainLayoutController {
 
     @FXML
     public void initialize() {
-        // CỐ ĐỊNH LỖI: Gán instance bằng chính object này khi JavaFX khởi tạo layout
+        // Gán instance bằng chính object này khi JavaFX khởi tạo layout
         instance = this;
 
         // 1. Cập nhật tên người dùng
@@ -59,7 +60,7 @@ public class MainLayoutController {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
         }
 
-        // 2. 🚀 ĐÃ THÊM: Kích hoạt kim giây đồng hồ chạy ngầm thời gian thực tế ngay khi nạp giao diện tổng
+        // 2. Kích hoạt kim giây đồng hồ chạy ngầm thời gian thực tế ngay khi nạp giao diện tổng
         startRealtimeClock();
 
         // TỰ ĐỘNG LOAD TRANG CHỦ KHI MỞ APP
@@ -70,7 +71,7 @@ public class MainLayoutController {
         return instance;
     }
 
-    // 🕒 ĐÃ THÊM: Hàm xử lý chạy ngầm cập nhật đồng hồ mỗi giây một lần liên tục
+    // 🕒 Hàm xử lý chạy ngầm cập nhật đồng hồ mỗi giây một lần liên tục
     private void startRealtimeClock() {
         // Định dạng hiển thị Giờ:Phút:Giây (Ví dụ: 14:23:05)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
@@ -90,7 +91,7 @@ public class MainLayoutController {
         clockTimeline.play();
     }
 
-    // ================= SỬA LẠI HÀM LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
+    // ================= LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
     private FXMLLoader loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -137,25 +138,25 @@ public class MainLayoutController {
             }
         }
     }
-
-    // ================= CẬP NHẬT: HÀM MỞ CHI TIẾT ĐẤU GIÁ TỪ THẺ SẢN PHẨM =================
-    public void openAuctionDetail(String name, String price) {
+    // ================= 🔥 HÀM MỞ CHI TIẾT ĐẤU GIÁ SONG LUỒNG AN TOÀN TUYỆT ĐỐI =================
+    public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName) {
         // 1. Nạp file FXML chi tiết đấu giá vào vùng giữa
         FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
 
         // 2. Chuyển trạng thái sáng nút sang "Đang đấu giá" trên thanh điều hướng
         setActive(btnAuction);
 
-        // 3. Đổ dữ liệu động sang controller của trang chi tiết
+        // 3. Đổ dữ liệu sang controller chi tiết với cơ chế cứu cánh thông minh
         if (loader != null) {
             AuctionDetailController detailController = loader.getController();
             if (detailController != null) {
-                detailController.initData(name, price);
+                // Truyền cả object ảnh và tên/chuỗi base64 gốc để sơ cua
+                detailController.initData(name, price, fxImage, imageFileName);
             }
         }
     }
 
-    // ================= SỬA LẠI HÀM OPEN HOME ĐỂ AUTO REFRESH DỮ LIỆU =================
+    // ================= OPEN HOME AUTO REFRESH DỮ LIỆU =================
     @FXML
     public void openHome() {
         // 1. Load trang chủ lên màn hình như bình thường
@@ -183,7 +184,7 @@ public class MainLayoutController {
         setActive(btnAuction);
     }
 
-    // ✅ ĐÃ NÂNG CẤP: Ép trang "Đang bán" tự động refresh kéo dữ liệu cá nhân mới nhất khi bấm menu trái
+    // Ép trang "Đang bán" tự động refresh kéo dữ liệu cá nhân mới nhất khi bấm menu trái
     @FXML
     public void openSelling() {
         FXMLLoader loader = loadPage("/view/MyProducts.fxml");
@@ -213,7 +214,6 @@ public class MainLayoutController {
         setActive(btnSettings);
     }
 
-    // ✅ THÊM HÀM MỚI: Khắc phục triệt để lỗi "Cannot resolve method 'showCreateProductView'" bên file MyProductsController nãy!
     public void showCreateProductView() {
         openCreateAuction();
     }

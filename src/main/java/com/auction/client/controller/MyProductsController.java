@@ -7,16 +7,18 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import java.util.List;
+import java.util.Optional;
 
 public class MyProductsController {
 
     private static MyProductsController instance;
 
-    // ✅ ĐÃ ĐỒNG BỘ CHUẨN TÊN BIẾN THEO FXML CỦA MÁ
     @FXML private Label lblTotalAuctions;   // Ô số "Tổng phiên"
     @FXML private Label lblActiveAuctions;  // Ô số "Đang diễn ra"
     @FXML private Label lblTotalValue;     // Ô số "Tổng giá trị"
@@ -93,8 +95,7 @@ public class MyProductsController {
                 }
 
                 try {
-                    // Nạp từng card sản phẩm lên giao diện FlowPane
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCardView.fxml"));
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
                     Node card = loader.load();
 
                     ProductCardController cardController = loader.getController();
@@ -102,7 +103,14 @@ public class MyProductsController {
                         String priceStr = String.format("%,.0f đ", item.getStartingPrice());
                         String statusStr = "IN_AUCTION".equalsIgnoreCase(item.getStatus()) ? "Đang diễn ra" : "Đã kết thúc";
 
+                        // Nạp dữ liệu chữ và ảnh như cũ
                         cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath());
+
+                        // 🔥 Kích hoạt phân quyền nút bấm Sửa / Xóa cho riêng màn hình quản lý này
+                        cardController.setSellerMode(
+                                () -> handleEditProduct(item),   // Hành động khi nhấn nút Sửa
+                                () -> handleDeleteProduct(item)  // Hành động khi nhấn nút Xóa
+                        );
                     }
 
                     // Thêm card sản phẩm vào lưới FlowPane
@@ -132,7 +140,78 @@ public class MyProductsController {
     }
 
     /**
-     * Sự kiện khi người dùng bấm nút "Tạo sản phẩm ngay" lúc màn hình trống
+     * 📝 XỬ LÝ KHI BẤM NÚT SỬA SẢN PHẨM (Đã fix lỗi cú pháp lặp hàm)
+     */
+    private void handleEditProduct(Item item) {
+        System.out.println("👉 Yêu cầu chỉnh sửa sản phẩm: " + item.getName());
+
+        try {
+            // 1. Nạp file FXML của cái Form Tạo/Sửa sản phẩm
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/CreateProduct.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            // 2. Lấy Controller của form đó ra (Tạm đóng đoạn điền data cũ cho tới khi má viết hàm setProductToEdit bên kia)
+            /*
+            CreateProductController formController = loader.getController();
+            if (formController != null) {
+                formController.setProductToEdit(item);
+            }
+            */
+
+            // 3. Khởi tạo một Stage mới làm Popup Modal chui lên giữa màn hình
+            javafx.stage.Stage popupStage = new javafx.stage.Stage();
+            popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
+
+            // Ngăn không cho click ra ngoài khi chưa tắt popup
+            popupStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            popupStage.initOwner(productsGrid.getScene().getWindow());
+
+            popupStage.setScene(new javafx.scene.Scene(root));
+
+            // 4. Khi người dùng đóng popup, tự động refresh lại lưới
+            popupStage.showAndWait();
+            loadMyProductsData();
+
+        } catch (Exception e) {
+            System.err.println("❌ Không mở được form sửa: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 🗑️ XỬ LÝ KHI BẤM NÚT XÓA SẢN PHẨM (Có xác nhận an toàn)
+     */
+    private void handleDeleteProduct(Item item) {
+        System.out.println("👉 Yêu cầu xóa sản phẩm: " + item.getName());
+
+        // Hiện hộp thoại xác nhận xóa cho chắc chắn, tránh bấm nhầm
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("Xác nhận xóa");
+        confirmAlert.setHeaderText("Bạn có chắc chắn muốn xóa sản phẩm này không?");
+        confirmAlert.setContentText("Sản phẩm: " + item.getName() + "\nHành động này không thể hoàn tác!");
+
+        Optional<ButtonType> result = confirmAlert.showAndWait();
+        if (result.isPresent() && result.get() == ButtonType.OK) {
+            // Thực hiện xóa ngầm dưới DB thông qua ItemDAO
+            try {
+                boolean isDeleted = itemDAO.deleteItem(item.getId());
+
+                if (isDeleted) {
+                    System.out.println("✅ Đã xóa sản phẩm thành công khỏi DB!");
+                    // Tự quét lại DB và vẽ lại giao diện mới tinh, không còn sản phẩm vừa xóa
+                    loadMyProductsData();
+                } else {
+                    System.err.println("❌ Xóa thất bại, có thể sản phẩm đã có người vào đấu giá.");
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi xảy ra khi xóa sản phẩm: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * Sự kiện khi người dùng bấm nút "Tạo sản phẩm ngay" lúc màn hình trống hoặc nút ở Header mới
      */
     @FXML
     private void handleGoToCreateProduct() {
