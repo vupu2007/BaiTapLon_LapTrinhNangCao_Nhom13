@@ -2,7 +2,6 @@ package com.auction.shared.model;
 
 
 public class Electronics extends Item  {
-    private String imagePath;
     private String brand;
     private int warrantyMonths;
 
@@ -32,7 +31,4 @@ public class Electronics extends Item  {
         System.out.println("ID: " + itemId + " | Tên: " + name + " | Giá khởi điểm: " + startingPrice);
         System.out.println("Thương hiệu: " + brand + " | Bảo hành: " + warrantyMonths + " tháng");
     }
-
-    public String getImagePath() { return imagePath; }
-    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 }

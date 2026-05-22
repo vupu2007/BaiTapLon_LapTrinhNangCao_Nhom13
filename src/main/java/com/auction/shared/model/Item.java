@@ -2,6 +2,7 @@ package com.auction.shared.model;
 
 // THAY ĐỔI: đổi thành abstract vì Electronics/Art/Vehicle mới là class cụ thể
 public abstract class Item implements Entity {
+    protected String imagePath;
     protected String itemId;
     protected String name;
     protected String description;
@@ -10,14 +11,12 @@ public abstract class Item implements Entity {
     protected int categoryId;   // THÊM: khớp với DB
     protected String status;    // THÊM: 'AVAILABLE', 'IN_AUCTION', 'SOLD'
 
-    // BỎ: currentPrice và endTime (thuộc về Auction, không phải Item)
-
     // 1. Constructor rỗng
     public Item() {}
 
     // 2. Constructor đầy đủ
     public Item(String itemId, String name, String description, double startingPrice,
-                int ownerId, int categoryId, String status) {
+                int ownerId, int categoryId, String status, String imagePath) {
         this.itemId = itemId;
         this.name = name;
         this.description = description;
@@ -25,6 +24,7 @@ public abstract class Item implements Entity {
         this.ownerId = ownerId;
         this.categoryId = categoryId;
         this.status = status;
+        this.imagePath = imagePath ;
     }
 
     @Override
@@ -38,6 +38,7 @@ public abstract class Item implements Entity {
     public void setOwnerId(int ownerId) { this.ownerId = ownerId; }
     public void setCategoryId(int categoryId) { this.categoryId = categoryId; }
     public void setStatus(String status) { this.status = status; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 
     // --- GETTERS ---
     public String getItemId() { return itemId; }
@@ -47,6 +48,7 @@ public abstract class Item implements Entity {
     public int getOwnerId() { return ownerId; }
     public int getCategoryId() { return categoryId; }
     public String getStatus() { return status; }
+    public String getImagePath() { return imagePath; }
 
     // abstract để buộc class con override
     public abstract void printInfo();
