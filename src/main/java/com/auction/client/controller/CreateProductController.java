@@ -169,18 +169,18 @@ public class CreateProductController {
             if (isItemSaved) {
 
                 // 🟢 ĐÃ THÊM: LUỒNG TỰ ĐỘNG SAO CHÉP FILE ẢNH VẬT LÝ VÀO HỆ THỐNG
-                if (productImgFile != null && !imageName.equals("default.png")) {
+                if (productImgFile != null) {
                     try {
-                        File uploadDir = new File("C:/uet_uploads/");
-                        if (!uploadDir.exists()) uploadDir.mkdirs();
-                        Files.copy(productImgFile.toPath(),
-                                new File(uploadDir, imageName).toPath(),
-                                StandardCopyOption.REPLACE_EXISTING);
-                        System.out.println("✅ Đã lưu ảnh: " + imageName);
-                    } catch (Exception imgEx) {
-                        System.err.println("⚠️ Lỗi lưu ảnh: " + imgEx.getMessage());
+                        byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
+                        String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
+                        imageName = "base64:" + base64;
+                    } catch (Exception e) {
+                        System.err.println("⚠️ Lỗi đọc file ảnh: " + e.getMessage());
                     }
                 }
+                newItem.setImagePath(imageName);
+                newItem.setBrand("");
+
                 // Kích hoạt phiên đấu giá tương ứng sang bảng Auctions (Lúc này đã nhận được startTimeStr and endTimeStr)
                 boolean isAuctionStarted = itemDAO.startAuction(itemId, ownerId, startPrice, startTimeStr, endTimeStr);
 

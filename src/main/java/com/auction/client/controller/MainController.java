@@ -69,6 +69,17 @@ public class MainController {
 
     // Tải ảnh ngắn gọn: Ưu tiên quét thư mục upload ngoài trước, lỗi thì về default hệ thống
     private void tryLoadImageToView(ImageView imgView, String preferredFileName) {
+
+        if (preferredFileName.startsWith("base64:")) {
+            try {
+                byte[] bytes = java.util.Base64.getDecoder().decode(preferredFileName.substring(7));
+                imgView.setImage(new Image(new java.io.ByteArrayInputStream(bytes)));
+                return;
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi decode Base64: " + e.getMessage());
+            }
+        }
+
         if (preferredFileName.startsWith("http://") || preferredFileName.startsWith("https://")) {
             try {
                 Image img = new Image(preferredFileName, true);
