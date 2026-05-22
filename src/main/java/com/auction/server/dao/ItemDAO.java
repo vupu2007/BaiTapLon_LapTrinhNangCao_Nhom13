@@ -107,7 +107,7 @@ public class ItemDAO {
 
     // 6. Cập nhật thông tin sản phẩm (dành cho Seller chỉnh sửa)
     public boolean updateItem(Item item) {
-        String sql = "UPDATE Items SET name = ?, description = ?, starting_price = ?, category_id = ? WHERE item_id = ?";
+        String sql = "UPDATE Items SET name = ?, description = ?, starting_price = ?, category_id = ?, image_path = ? WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -115,7 +115,8 @@ public class ItemDAO {
             pstmt.setString(2, item.getDescription());
             pstmt.setDouble(3, item.getStartingPrice());
             pstmt.setInt(4, item.getCategoryId());
-            pstmt.setString(5, item.getItemId());
+            pstmt.setString(5, item.getImagePath());
+            pstmt.setString(6, item.getItemId());
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {

@@ -15,7 +15,7 @@ public class Vehicle extends Item {
     public Vehicle(String itemId, String name, String description,
                    double startingPrice, int ownerId, int categoryId, String status,
                    String brand, String model, int year, int mileage) {
-        super(itemId, name, description, startingPrice, ownerId, categoryId, status);
+        super(itemId, name, description, startingPrice, ownerId, categoryId, status, null);
         this.brand   = brand;
         this.model   = model;
         this.year    = year;
