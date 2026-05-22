@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
+<?import javafx.scene.layout.FlowPane?>
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.ScrollPane?>
@@ -56,14 +57,10 @@
                         </children>
                     </VBox>
 
-                    <TableView fx:id="activeAuctionsTable" managed="false" style="-fx-background-color: transparent; -fx-padding: 10;" visible="false">
-                        <columns>
-                            <TableColumn prefWidth="300" text="Sản phẩm" />
-                            <TableColumn prefWidth="150" text="Giá cao nhất" />
-                            <TableColumn prefWidth="150" text="Thời gian còn lại" />
-                            <TableColumn prefWidth="120" text="Trạng thái" />
-                        </columns>
-                    </TableView>
+                    <FlowPane fx:id="cardsContainer"
+                              hgap="20" vgap="20"
+                              style="-fx-padding: 15;"
+                              managed="false" visible="false" />
                 </children>
             </StackPane>
         </VBox>

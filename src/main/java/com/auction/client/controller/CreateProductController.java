@@ -24,7 +24,6 @@ public class CreateProductController {
     @FXML private TextField productNameField;
     @FXML private TextArea descriptionArea;
     @FXML private TextField startPriceField;
-
     // Thuộc tính hình ảnh mới
     @FXML private Label lblImagePath;
 
@@ -157,10 +156,13 @@ public class CreateProductController {
 
             // Lấy tên file ảnh từ Label giao diện gửi xuống DB qua trường Brand tạm thời
             String imageName = lblImagePath.getText();
+
             if (imageName.equals("Chưa chọn tệp nào") || imageName.isEmpty()) {
-                imageName = "default.png";
+                imageName = null;
             }
-            newItem.setBrand(imageName);
+
+            newItem.setImagePath(imageName);
+            newItem.setBrand("");
 
             // 4. THỰC THI GHI VÀO DATABASE QUA TẦNG DAO
             boolean isItemSaved = itemDAO.insertItem(newItem);
@@ -169,24 +171,16 @@ public class CreateProductController {
                 // 🟢 ĐÃ THÊM: LUỒNG TỰ ĐỘNG SAO CHÉP FILE ẢNH VẬT LÝ VÀO HỆ THỐNG
                 if (productImgFile != null && !imageName.equals("default.png")) {
                     try {
-                        // Thư mục đích 1: Bản build tạm thời (target/classes) để giao diện Trang chủ quét thấy ngay tức thì
-                        File targetDir = new File("target/classes/com/auction/client/images/");
-                        if (!targetDir.exists()) targetDir.mkdirs();
-                        File targetDest = new File(targetDir, imageName);
-                        Files.copy(productImgFile.toPath(), targetDest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-
-                        // Thư mục đích 2: Mã nguồn gốc (src/main/resources) để lưu trữ file vĩnh viễn, không bị bay màu khi Clean Project
-                        File srcDir = new File("src/main/resources/com/auction/client/images/");
-                        if (srcDir.exists()) {
-                            File srcDest = new File(srcDir, imageName);
-                            Files.copy(productImgFile.toPath(), srcDest.toPath(), StandardCopyOption.REPLACE_EXISTING);
-                        }
-                        System.out.println("🚀 [Đồ họa] Đã đồng bộ thành công file ảnh: " + imageName + " vào hệ thống tài nguyên!");
+                        File uploadDir = new File("C:/uet_uploads/");
+                        if (!uploadDir.exists()) uploadDir.mkdirs();
+                        Files.copy(productImgFile.toPath(),
+                                new File(uploadDir, imageName).toPath(),
+                                StandardCopyOption.REPLACE_EXISTING);
+                        System.out.println("✅ Đã lưu ảnh: " + imageName);
                     } catch (Exception imgEx) {
-                        System.err.println("⚠️ Cảnh báo lỗi IO khi lưu ảnh: " + imgEx.getMessage());
+                        System.err.println("⚠️ Lỗi lưu ảnh: " + imgEx.getMessage());
                     }
                 }
-
                 // Kích hoạt phiên đấu giá tương ứng sang bảng Auctions (Lúc này đã nhận được startTimeStr and endTimeStr)
                 boolean isAuctionStarted = itemDAO.startAuction(itemId, ownerId, startPrice, startTimeStr, endTimeStr);
 

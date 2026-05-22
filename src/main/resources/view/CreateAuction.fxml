@@ -108,6 +108,9 @@
                                         </Label>
                                     </children>
                                 </HBox>
+                                <Label text="Hoặc nhập URL ảnh online" textFill="#64748b">
+                                    <font><Font size="13.0" /></font>
+                                </Label>
                             </children>
                         </VBox>
 

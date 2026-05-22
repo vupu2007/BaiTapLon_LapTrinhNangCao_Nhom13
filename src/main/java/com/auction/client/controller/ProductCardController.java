@@ -12,31 +12,34 @@ public class ProductCardController {
 
     // ✅ ĐÃ NÂNG CẤP: Nhận tên file ảnh động từ Database truyền sang
     public void setData(String name, String price, String time, String imageFileName) {
-        this.productName.setText(name);
-        this.currentPrice.setText(price);
-        this.timeRemaining.setText(time);
+        System.out.println("🖼️ setData called — name=" + name + " | image=" + imageFileName);
+        productName.setText(name);
+        currentPrice.setText(price);
+        timeRemaining.setText(time);
 
-        // Nếu trong DB cột ảnh bị null hoặc trống, tự động dùng ảnh mặc định
+        // Load ảnh
         if (imageFileName == null || imageFileName.trim().isEmpty()) {
             imageFileName = "default.png";
         }
 
-        // Tạo đường dẫn động quét trong thư mục resources
-        String imagePath = "/com/auction/client/images/" + imageFileName;
-
         try {
-            Image img = new Image(getClass().getResourceAsStream(imagePath));
-            productImage.setImage(img);
-        } catch (Exception e) {
-            System.err.println("❌ Không tìm thấy file ảnh: " + imageFileName + ", đổi về ảnh mặc định.");
-            try {
-                productImage.setImage(new Image(getClass().getResourceAsStream("/com/auction/client/images/default.png")));
-            } catch (Exception ex) {
-                productImage.setImage(null);
+            Image img;
+            if (imageFileName.startsWith("http://") || imageFileName.startsWith("https://")) {
+                img = new Image(imageFileName, true); // ✅ URL online
+            } else {
+                String localPath = "/com/auction/client/images/" + imageFileName;
+                var stream = getClass().getResourceAsStream(localPath);
+                if (stream == null) throw new Exception("Không tìm thấy file: " + localPath);
+                img = new Image(stream); // ✅ dùng localPath
             }
+            productImage.setImage(img);
+
+        } catch (Exception e) {
+            System.err.println("❌ Lỗi load ảnh: " + e.getMessage());
+            var fallback = getClass().getResourceAsStream("/com/auction/client/images/default.png");
+            productImage.setImage(fallback != null ? new Image(fallback) : null);
         }
 
-        // Logic xử lý nút bấm giữ nguyên
         actionButton.setOnAction(e -> {
             if (MainLayoutController.getInstance() != null) {
                 MainLayoutController.getInstance().openAuctionDetail(name, price);

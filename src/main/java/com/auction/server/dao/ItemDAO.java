@@ -41,7 +41,12 @@ public class ItemDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, itemId);
+            try {
+                pstmt.setInt(1, Integer.parseInt(itemId));
+            } catch (NumberFormatException e) {
+                System.err.println("❌ itemId không hợp lệ: " + itemId);
+                return null;
+            }
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToItem(rs);

@@ -69,6 +69,19 @@ public class MainController {
 
     // Tải ảnh ngắn gọn: Ưu tiên quét thư mục upload ngoài trước, lỗi thì về default hệ thống
     private void tryLoadImageToView(ImageView imgView, String preferredFileName) {
+        if (preferredFileName.startsWith("http://") || preferredFileName.startsWith("https://")) {
+            try {
+                Image img = new Image(preferredFileName, true);
+                img.errorProperty().addListener((obs, old, isError) -> {
+                    if (isError) System.err.println("❌ Lỗi load URL: " + img.getException().getMessage());
+                });
+                imgView.setImage(img);
+                return;
+            } catch (Exception e) {
+                System.err.println("❌ Load URL thất bại: " + e.getMessage());
+            }
+        }
+            // Phần còn lại giữ nguyên...
         if (preferredFileName == null || preferredFileName.trim().isEmpty()) {
             preferredFileName = "default.png";
         }
@@ -141,6 +154,7 @@ public class MainController {
 
     // ĐÃ SỬA: Ưu tiên lấy đường dẫn ảnh thực tế (image/imageUrl) của Item từ DB
     private VBox createItemCardWithStatus(Item item, String statusText) {
+
         VBox card = new VBox(); card.setPrefWidth(300);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;");
 
@@ -152,19 +166,7 @@ public class MainController {
 
         // ĐÃ SỬA: Kiểm tra xem model Item của bạn có hàm getImage() hay không.
         // Nếu không có, nó sẽ tự động dùng tiếp cơ chế fallback theo itemId thông minh.
-        String preferredName = null;
-        try {
-            // Thử gọi hàm lấy tên file ảnh thực tế nếu Model có trường này (ví dụ: "4-2-2048x1536.jpg")
-            java.lang.reflect.Method getImageMethod = item.getClass().getMethod("getImage");
-            preferredName = (String) getImageMethod.invoke(item);
-        } catch (Exception e) {
-            try {
-                java.lang.reflect.Method getImageUrlMethod = item.getClass().getMethod("getImageUrl");
-                preferredName = (String) getImageUrlMethod.invoke(item);
-            } catch (Exception ex) {
-                preferredName = item.getItemId();
-            }
-        }
+         String preferredName = item.getImagePath();
 
         if (preferredName == null || preferredName.trim().isEmpty()) {
             preferredName = "default.png";
