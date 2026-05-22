@@ -70,6 +70,8 @@ public class MainController {
     // Tải ảnh ngắn gọn: Ưu tiên quét thư mục upload ngoài trước, lỗi thì về default hệ thống
     private void tryLoadImageToView(ImageView imgView, String preferredFileName) {
 
+        System.out.println("🖼️ tryLoad: " + preferredFileName);
+
         if (preferredFileName.startsWith("base64:")) {
             try {
                 byte[] bytes = java.util.Base64.getDecoder().decode(preferredFileName.substring(7));

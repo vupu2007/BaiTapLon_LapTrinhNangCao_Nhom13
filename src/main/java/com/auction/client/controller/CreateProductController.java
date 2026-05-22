@@ -161,25 +161,21 @@ public class CreateProductController {
                 imageName = null;
             }
 
+            if (productImgFile != null) {
+                try {
+                    byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
+                    String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
+                    imageName = "base64:" + base64;
+                } catch (Exception e) {
+                    System.err.println("⚠️ Lỗi đọc file ảnh: " + e.getMessage());
+                }
+            }
             newItem.setImagePath(imageName);
             newItem.setBrand("");
 
-            // 4. THỰC THI GHI VÀO DATABASE QUA TẦNG DAO
+// 4. THỰC THI GHI VÀO DATABASE QUA TẦNG DAO
             boolean isItemSaved = itemDAO.insertItem(newItem);
             if (isItemSaved) {
-
-                // 🟢 ĐÃ THÊM: LUỒNG TỰ ĐỘNG SAO CHÉP FILE ẢNH VẬT LÝ VÀO HỆ THỐNG
-                if (productImgFile != null) {
-                    try {
-                        byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
-                        String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
-                        imageName = "base64:" + base64;
-                    } catch (Exception e) {
-                        System.err.println("⚠️ Lỗi đọc file ảnh: " + e.getMessage());
-                    }
-                }
-                newItem.setImagePath(imageName);
-                newItem.setBrand("");
 
                 // Kích hoạt phiên đấu giá tương ứng sang bảng Auctions (Lúc này đã nhận được startTimeStr and endTimeStr)
                 boolean isAuctionStarted = itemDAO.startAuction(itemId, ownerId, startPrice, startTimeStr, endTimeStr);
