@@ -70,9 +70,9 @@ public class MainController {
     // Tải ảnh ngắn gọn: Ưu tiên quét thư mục upload ngoài trước, lỗi thì về default hệ thống
     private void tryLoadImageToView(ImageView imgView, String preferredFileName) {
 
-        System.out.println("🖼️ tryLoad: " + preferredFileName);
-
-        if (preferredFileName.startsWith("base64:")) {
+        // CHỖ NÀY ĐÃ SỬA: Kiểm tra nếu là Base64 thì chỉ in độ dài chuỗi, cấm in text dài gây lag máy
+        if (preferredFileName != null && preferredFileName.startsWith("base64:")) {
+            System.out.println("🖼️ tryLoad: [Chuỗi Base64 ẩn] - Độ dài: " + preferredFileName.length());
             try {
                 byte[] bytes = java.util.Base64.getDecoder().decode(preferredFileName.substring(7));
                 imgView.setImage(new Image(new java.io.ByteArrayInputStream(bytes)));
@@ -80,9 +80,11 @@ public class MainController {
             } catch (Exception e) {
                 System.err.println("❌ Lỗi decode Base64: " + e.getMessage());
             }
+        } else {
+            System.out.println("🖼️ tryLoad: " + preferredFileName);
         }
 
-        if (preferredFileName.startsWith("http://") || preferredFileName.startsWith("https://")) {
+        if (preferredFileName != null && (preferredFileName.startsWith("http://") || preferredFileName.startsWith("https://"))) {
             try {
                 Image img = new Image(preferredFileName, true);
                 img.errorProperty().addListener((obs, old, isError) -> {
@@ -94,7 +96,7 @@ public class MainController {
                 System.err.println("❌ Load URL thất bại: " + e.getMessage());
             }
         }
-            // Phần còn lại giữ nguyên...
+
         if (preferredFileName == null || preferredFileName.trim().isEmpty()) {
             preferredFileName = "default.png";
         }
@@ -115,7 +117,8 @@ public class MainController {
             File extFile = new File(UPLOAD_DIR + fullFileName);
             if (extFile.exists()) {
                 imgView.setImage(new Image(extFile.toURI().toString()));
-                loaded = true; break;
+                loaded = true;
+                break;
             }
         }
 
@@ -126,7 +129,8 @@ public class MainController {
                 java.io.InputStream is = getClass().getResourceAsStream("/com/auction/client/images/" + fullFileName);
                 if (is != null) {
                     imgView.setImage(new Image(is));
-                    loaded = true; break;
+                    loaded = true;
+                    break;
                 }
             }
         }
@@ -140,8 +144,10 @@ public class MainController {
 
     @FXML
     private void handleFilterAll() {
-        currentFilter = "ALL"; setButtonActive(btnFilterAll);
-        if (flowPane == null) return; flowPane.getChildren().clear();
+        currentFilter = "ALL";
+        setButtonActive(btnFilterAll);
+        if (flowPane == null) return;
+        flowPane.getChildren().clear();
         for (Item item : mainService.getHotAuctions()) {
             flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
         }
@@ -149,8 +155,10 @@ public class MainController {
 
     @FXML
     private void handleFilterActive() {
-        currentFilter = "ACTIVE"; setButtonActive(btnFilterActive);
-        if (flowPane == null) return; flowPane.getChildren().clear();
+        currentFilter = "ACTIVE";
+        setButtonActive(btnFilterActive);
+        if (flowPane == null) return;
+        flowPane.getChildren().clear();
         for (Item item : mainService.getHotAuctions()) {
             flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
         }
@@ -158,28 +166,32 @@ public class MainController {
 
     @FXML
     private void handleFilterUpcoming() {
-        currentFilter = "UPCOMING"; setButtonActive(btnFilterUpcoming);
-        if (flowPane == null) return; flowPane.getChildren().clear();
+        currentFilter = "UPCOMING";
+        setButtonActive(btnFilterUpcoming);
+        if (flowPane == null) return;
+        flowPane.getChildren().clear();
         for (Item item : mainService.getHotAuctions()) {
             flowPane.getChildren().add(createItemCardWithStatus(item, "Sắp diễn ra"));
         }
     }
 
-    // ĐÃ SỬA: Ưu tiên lấy đường dẫn ảnh thực tế (image/imageUrl) của Item từ DB
     private VBox createItemCardWithStatus(Item item, String statusText) {
-
-        VBox card = new VBox(); card.setPrefWidth(300);
+        VBox card = new VBox();
+        card.setPrefWidth(300);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;");
 
-        StackPane imageHolder = new StackPane(); imageHolder.setPrefHeight(180);
-        Region bgRegion = new Region(); bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
+        StackPane imageHolder = new StackPane();
+        imageHolder.setPrefHeight(180);
+        Region bgRegion = new Region();
+        bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
         imageHolder.getChildren().add(bgRegion);
 
-        ImageView imgView = new ImageView(); imgView.setFitWidth(300); imgView.setFitHeight(180); imgView.setPreserveRatio(false);
+        ImageView imgView = new ImageView();
+        imgView.setFitWidth(300);
+        imgView.setFitHeight(180);
+        imgView.setPreserveRatio(false);
 
-        // ĐÃ SỬA: Kiểm tra xem model Item của bạn có hàm getImage() hay không.
-        // Nếu không có, nó sẽ tự động dùng tiếp cơ chế fallback theo itemId thông minh.
-         String preferredName = item.getImagePath();
+        String preferredName = item.getImagePath();
 
         if (preferredName == null || preferredName.trim().isEmpty()) {
             preferredName = "default.png";
@@ -191,7 +203,9 @@ public class MainController {
         tryLoadImageToView(imgView, preferredName);
 
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
-        clip.setArcWidth(15); clip.setArcHeight(15); imgView.setClip(clip);
+        clip.setArcWidth(15);
+        clip.setArcHeight(15);
+        imgView.setClip(clip);
         imageHolder.getChildren().add(imgView);
 
         Label statusLabel = new Label(statusText);
@@ -199,26 +213,38 @@ public class MainController {
                 "-fx-background-color: #dbeafe; -fx-text-fill: #2563eb; -fx-background-radius: 20; -fx-font-weight: bold;" :
                 "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
         statusLabel.setPadding(new Insets(5, 12, 5, 12));
-        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT); StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
+        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
+        StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
         imageHolder.getChildren().add(statusLabel);
 
-        VBox infoBox = new VBox(8); infoBox.setPadding(new Insets(15));
-        Label nameLabel = new Label(item.getName()); nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16)); nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
+        VBox infoBox = new VBox(8);
+        infoBox.setPadding(new Insets(15));
+        Label nameLabel = new Label(item.getName());
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
         Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "Sản phẩm chất lượng cao đang trong phiên đấu giá công khai.");
-        descLabel.setPrefHeight(40); descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b")); descLabel.setWrapText(true);
+        descLabel.setPrefHeight(40);
+        descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
+        descLabel.setWrapText(true);
 
-        Region spacer = new Region(); spacer.setPrefHeight(10);
-        HBox priceBox = new HBox(); priceBox.setAlignment(Pos.CENTER_LEFT);
-        Label priceTitle = new Label("Giá hiện tại:"); priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        Region priceSpacer = new Region(); HBox.setHgrow(priceSpacer, Priority.ALWAYS);
+        Region spacer = new Region();
+        spacer.setPrefHeight(10);
+        HBox priceBox = new HBox();
+        priceBox.setAlignment(Pos.CENTER_LEFT);
+        Label priceTitle = new Label("Giá hiện tại:");
+        priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
+        Region priceSpacer = new Region();
+        HBox.setHgrow(priceSpacer, Priority.ALWAYS);
         Label priceValue = new Label(String.format("%,.0f đ", item.getStartingPrice()));
-        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16)); priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
+        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
+        priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 
         Button bidButton = new Button(statusText.equals("Sắp diễn ra") ? "Xem chi tiết" : "Đấu giá ngay");
         bidButton.setMaxWidth(Double.MAX_VALUE);
         bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
-        bidButton.setPadding(new Insets(8, 0, 8, 0)); bidButton.setOnAction(e -> showAuctionDetail(item));
+        bidButton.setPadding(new Insets(8, 0, 8, 0));
+        bidButton.setOnAction(e -> showAuctionDetail(item));
 
         infoBox.getChildren().addAll(nameLabel, descLabel, spacer, priceBox, bidButton);
         card.getChildren().addAll(imageHolder, infoBox);
@@ -234,18 +260,22 @@ public class MainController {
         });
     }
 
-    // ĐÃ SỬA: Đồng bộ hóa luồng đọc ảnh Real-time tương tự từ Auction Model
     private VBox createCardFromAuction(Auction auction) {
-        VBox card = new VBox(); card.setPrefWidth(300);
+        VBox card = new VBox();
+        card.setPrefWidth(300);
         card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;");
 
-        StackPane imageHolder = new StackPane(); imageHolder.setPrefHeight(180);
-        Region bgRegion = new Region(); bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
+        StackPane imageHolder = new StackPane();
+        imageHolder.setPrefHeight(180);
+        Region bgRegion = new Region();
+        bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
         imageHolder.getChildren().add(bgRegion);
 
-        ImageView imgView = new ImageView(); imgView.setFitWidth(300); imgView.setFitHeight(180); imgView.setPreserveRatio(false);
+        ImageView imgView = new ImageView();
+        imgView.setFitWidth(300);
+        imgView.setFitHeight(180);
+        imgView.setPreserveRatio(false);
 
-        // ĐÃ SỬA: Ưu tiên tìm thuộc tính lưu ảnh thực tế của phiên đấu giá socket
         String preferredName = null;
         try {
             java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
@@ -265,33 +295,46 @@ public class MainController {
         tryLoadImageToView(imgView, preferredName);
 
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
-        clip.setArcWidth(15); clip.setArcHeight(15); imgView.setClip(clip);
+        clip.setArcWidth(15);
+        clip.setArcHeight(15);
+        imgView.setClip(clip);
         imageHolder.getChildren().add(imgView);
 
         Label statusLabel = new Label("Đang diễn ra");
-        statusLabel.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
+        statusLabel.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;" );
         statusLabel.setPadding(new Insets(5, 12, 5, 12));
-        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT); StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
+        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
+        StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
         imageHolder.getChildren().add(statusLabel);
 
-        VBox infoBox = new VBox(8); infoBox.setPadding(new Insets(15));
+        VBox infoBox = new VBox(8);
+        infoBox.setPadding(new Insets(15));
         Label nameLabel = new Label(auction.getProductName() != null ? auction.getProductName() : "Sản phẩm mới lên sàn");
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16)); nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
+        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
+        nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
         Label descLabel = new Label("Sản phẩm chất lượng cao đang trong phiên đấu giá công khai.");
-        descLabel.setPrefHeight(40); descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b")); descLabel.setWrapText(true);
+        descLabel.setPrefHeight(40);
+        descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
+        descLabel.setWrapText(true);
 
-        Region spacer = new Region(); spacer.setPrefHeight(10);
-        HBox priceBox = new HBox(); priceBox.setAlignment(Pos.CENTER_LEFT);
-        Label priceTitle = new Label("Giá hiện tại:"); priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        Region priceSpacer = new Region(); HBox.setHgrow(priceSpacer, Priority.ALWAYS);
+        Region spacer = new Region();
+        spacer.setPrefHeight(10);
+        HBox priceBox = new HBox();
+        priceBox.setAlignment(Pos.CENTER_LEFT);
+        Label priceTitle = new Label("Giá hiện tại:");
+        priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
+        Region priceSpacer = new Region();
+        HBox.setHgrow(priceSpacer, Priority.ALWAYS);
         Label priceValue = new Label(String.format("%,.0f đ", auction.getStartPrice()));
-        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16)); priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
+        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
+        priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 
         Button bidButton = new Button("Đấu giá ngay");
         bidButton.setMaxWidth(Double.MAX_VALUE);
         bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
-        bidButton.setPadding(new Insets(8, 0, 8, 0)); bidButton.setOnAction(e -> showAuctionDetail(auction));
+        bidButton.setPadding(new Insets(8, 0, 8, 0));
+        bidButton.setOnAction(e -> showAuctionDetail(auction));
 
         infoBox.getChildren().addAll(nameLabel, descLabel, spacer, priceBox, bidButton);
         card.getChildren().addAll(imageHolder, infoBox);
@@ -312,7 +355,9 @@ public class MainController {
         try {
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
             ((Stage) ((Node) event.getSource()).getScene().getWindow()).getScene().setRoot(root);
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public void showAuctionDetail(Object productData) {
@@ -333,6 +378,8 @@ public class MainController {
             if (MainLayoutController.getInstance() != null) {
                 MainLayoutController.getInstance().setContent(detailView);
             }
-        } catch (IOException e) { e.printStackTrace(); }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }
