@@ -4,8 +4,11 @@ import com.auction.shared.model.Account;
 import com.auction.shared.model.Admin;
 import com.auction.shared.model.Bidder;
 import com.auction.shared.model.Seller;
+import com.auction.shared.model.Transaction; // 🌟 ĐÃ THÊM IMPORT TRANSACTION MODEL
 import com.auction.server.util.DatabaseConnection;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AccountDAO {
 
@@ -191,5 +194,63 @@ public class AccountDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // =========================================================================
+    // 🚀 LẬP TRÌNH MẠNG: 2 HÀM XỬ LÝ LỊCH SỬ GIAO DỊCH TÍCH HỢP CHO VÍ TIỀN
+    // =========================================================================
+
+    /**
+     * Ghi một dòng lịch sử nạp/rút tiền thật vào bảng Transactions trong Database
+     */
+    public boolean insertTransaction(int accountId, String type, double amount, double balanceAfter) {
+        String sql = "INSERT INTO Transactions (account_id, type, amount, balance_after, created_at) VALUES (?, ?, ?, ?, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, accountId);
+            pstmt.setString(2, type);
+            pstmt.setDouble(3, amount);
+            pstmt.setDouble(4, balanceAfter);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * Lấy danh sách lịch sử giao dịch từ Database về để Client hiển thị lại
+     */
+    public List<Transaction> getTransactionHistory(int accountId) {
+        List<Transaction> list = new ArrayList<>();
+        String sql = "SELECT * FROM Transactions WHERE account_id = ? ORDER BY transaction_id DESC";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, accountId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Transaction t = new Transaction();
+                    t.setTransactionId(rs.getInt("transaction_id"));
+                    t.setAccountId(rs.getInt("account_id"));
+                    t.setType(rs.getString("type"));
+                    t.setAmount(rs.getDouble("amount"));
+                    t.setBalanceAfter(rs.getDouble("balance_after"));
+
+                    Timestamp ts = rs.getTimestamp("created_at");
+                    if (ts != null) {
+                        t.setCreatedAt(ts.toLocalDateTime());
+                    }
+                    list.add(t);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
     }
 }

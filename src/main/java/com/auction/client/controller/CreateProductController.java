@@ -20,7 +20,6 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
-import javafx.fxml.FXMLLoader;
 
 public class CreateProductController {
 
@@ -128,10 +127,9 @@ public class CreateProductController {
         double finalStartPrice = startPrice;
         String imageNameInitial = lblImagePath.getText().equals("Chưa chọn tệp nào") || lblImagePath.getText().isEmpty() ? null : lblImagePath.getText();
 
-        // Biến cục bộ để lưu giữ chuỗi dữ liệu ảnh Base64 đồng bộ sang trang chi tiết
         final String[] sharedImageHolder = {imageNameInitial};
 
-        // 🚀 TỐI ƯU ĐA LUỒNG: Đẩy việc đọc file ảnh nặng và ghi DB xuống luồng ngầm
+        // 🚀 Đẩy xử lý DB xuống luồng ngầm
         Task<Boolean> databaseTask = new Task<>() {
             @Override
             protected Boolean call() throws Exception {
@@ -145,7 +143,6 @@ public class CreateProductController {
                 newItem.setStatus("IN_AUCTION");
                 newItem.setBrand("");
 
-                // Đọc dữ liệu ảnh và chuyển Base64 ngầm
                 if (productImgFile != null) {
                     byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
                     String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
@@ -153,7 +150,6 @@ public class CreateProductController {
                 }
                 newItem.setImagePath(sharedImageHolder[0]);
 
-                // Ghi đồng thời vào Database qua tầng DAO
                 boolean isItemSaved = itemDAO.insertItem(newItem);
                 if (!isItemSaved) return false;
 
@@ -161,23 +157,20 @@ public class CreateProductController {
             }
         };
 
-        // KHI LUỒNG NGẦM CHẠY XỬ LÝ DATABASE THÀNH CÔNG
         databaseTask.setOnSucceeded(event -> {
             boolean success = databaseTask.getValue();
             if (success) {
-                // 🔥 ĐÓNG GÓI ĐẦY ĐỦ THÔNG TIN ĐỂ TRUYỀN SANG TRANG CHI TIẾT KHÔNG BỊ TRỐNG
                 Auction newAuction = new Auction();
                 newAuction.setItemId(itemId);
-                newAuction.setProductName(name); // Thêm tên SP
+                newAuction.setProductName(name);
                 newAuction.setStartPrice(finalStartPrice);
                 newAuction.setCurrentPrice(finalStartPrice);
                 newAuction.setStartTime(startTime);
-                newAuction.setEndTime(endTime); // Thêm thời gian kết thúc
+                newAuction.setEndTime(endTime);
                 newAuction.setSellerId(ownerId);
                 newAuction.setStatus(Auction.AuctionStatus.OPEN);
-                newAuction.setAccount(CurrentAccount.getAccount()); // Gán luôn account người bán để hiện tên chính xác
+                newAuction.setAccount(CurrentAccount.getAccount());
 
-                // Đồng bộ dùng mẹo qua Reflection hoặc thuộc tính động của ảnh nếu có thể
                 try {
                     java.lang.reflect.Method setImgMethod = newAuction.getClass().getMethod("setProductName", String.class);
                     setImgMethod.invoke(newAuction, name);
@@ -187,32 +180,22 @@ public class CreateProductController {
                     MainController.getInstance().addAuctionToRealtimeUI(newAuction);
                 }
 
-                // Hiện Alert thông báo cho người dùng thành công
-                showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công và đã được đưa lên sàn!");
+                showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
 
-                // Sao lưu lại object hoàn chỉnh trước khi clear Form nhập liệu
                 final Auction auctionToNavigate = newAuction;
                 final String finalProductImage = sharedImageHolder[0];
 
-                // Reset trắng form nhập liệu gốc
                 handleCancel();
 
-                // 🌟 CHÌA KHÓA VÀNG: Đợi 300ms cho DB ổn định rồi ép chuyển THẲNG sang tab Chi tiết sản phẩm
+                // Đợi 300ms rồi chuyển hướng trực tiếp
                 PauseTransition pause = new PauseTransition(Duration.millis(300));
                 pause.setOnFinished(pEvent -> {
                     if (MainLayoutController.getInstance() != null) {
-                        System.out.println("🔄 Đang chuyển hướng trực tiếp sang màn hình Chi tiết sản phẩm vừa tạo...");
-
-                        // Gọi hàm Object thông minh của MainLayoutController để lật trang và đẩy dữ liệu toàn vẹn
+                        System.out.println("🔄 Đang chuyển hướng trực tiếp sang màn hình Chi tiết sản phẩm...");
                         MainLayoutController.getInstance().openAuctionDetailWithObject(auctionToNavigate);
 
-                        // Đồng thời bồi thêm hàm nạp ảnh Base64 trực tiếp vào View để đảm bảo hình ảnh hiển thị ngay tắp lự
+                        // 🌟 ĐÃ SỬA: Gọi trực tiếp, dọn sạch đống FXMLLoader thừa thãi gây báo đỏ
                         try {
-                            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
-                            if (getClass().getResource("/view/AuctionDetailView.fxml") == null) {
-                                loader = new FXMLLoader(getClass().getResource("/view/AuctionDetail.fxml"));
-                            }
-                            // Truyền thủ công bằng chuỗi 8 tham số phòng hờ Realtime chưa kịp nạp luồng DB
                             MainLayoutController.getInstance().openAuctionDetail(
                                     name,
                                     String.format("%,.0f đ", finalStartPrice),
@@ -231,18 +214,16 @@ public class CreateProductController {
                 pause.play();
 
             } else {
-                showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên đấu giá trên sàn đấu giá!");
+                showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên đấu giá trên sàn!");
             }
         });
 
-        // KHI LUỒNG NGẦM GẶP LỖI
         databaseTask.setOnFailed(event -> {
             Throwable e = databaseTask.getException();
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", "Đã xảy ra lỗi trong quá trình xử lý Database ngầm: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", "Lỗi xử lý Database ngầm: " + e.getMessage());
         });
 
-        // Kích hoạt chạy luồng ngầm tách biệt luồng UI
         Thread thread = new Thread(databaseTask);
         thread.setDaemon(true);
         thread.start();
