@@ -1,8 +1,7 @@
 package com.auction.server.service;
 
 import com.auction.server.util.DatabaseConnection;
-import com.auction.shared.model.Item;
-import com.auction.shared.model.Electronics;
+import com.auction.shared.model.Auction;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -16,39 +15,38 @@ public class MainService {
     public int getOngoingCount() { return 0; }
     public int getWonCount() { return 0; }
 
-    public List<Item> getHotAuctions() {
-        List<Item> hotItems = new ArrayList<>();
-        String query = "SELECT * FROM Items ORDER BY created_at DESC";
+    public List<Auction> getHotAuctions() {
+        List<Auction> list = new ArrayList<>();
+        String query = "SELECT i.*, a.auction_id, a.start_time, a.end_time, a.current_price, a.seller_id, a.winner_id, a.status as auction_status " +
+                "FROM Items i JOIN Auctions a ON i.item_id = a.item_id " +
+                "WHERE a.status = 'RUNNING' ORDER BY a.start_time DESC";
 
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query);
              ResultSet rs = stmt.executeQuery()) {
 
             while (rs.next()) {
-                String imageFile = rs.getString("image_path"); // ✅ đọc thẳng image_path
-
-                Electronics item = new Electronics(
-                        rs.getString("item_id"),
-                        rs.getString("name"),
-                        rs.getString("description"),
-                        rs.getDouble("starting_price"),
-                        rs.getInt("owner_id"),
-                        rs.getInt("category_id"),
-                        rs.getString("status"),
-                        imageFile,
-                        12
-                );
-                hotItems.add(item);
+                Auction auction = new Auction();
+                auction.setId(rs.getInt("auction_id"));
+                auction.setItemId(rs.getString("item_id"));
+                auction.setSellerId(rs.getInt("seller_id"));
+                auction.setStartPrice(rs.getDouble("starting_price"));
+                auction.setCurrentPrice(rs.getDouble("current_price"));
+                auction.setStartTime(rs.getObject("start_time", java.time.LocalDateTime.class));
+                auction.setEndTime(rs.getObject("end_time", java.time.LocalDateTime.class));
+                auction.setStatus(Auction.AuctionStatus.valueOf(rs.getString("auction_status")));
+                auction.setProductName(rs.getString("name"));
+                auction.setImagePath(rs.getString("image_path"));
+                list.add(auction);
             }
 
-            System.out.println("[Server MainService] thành công từ DB lên " + hotItems.size() + " sản phẩm thật!");
+            System.out.println("[Server MainService] thành công từ DB lên " + list.size() + " sản phẩm thật!");
 
         } catch (SQLException e) {
-            System.err.println("Lỗi truy vấn bảng Items!");
+            System.err.println("Lỗi truy vấn!");
             e.printStackTrace();
         }
-
-        return hotItems;
+        return list;
     }
 
     public void logout() {

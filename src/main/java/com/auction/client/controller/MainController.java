@@ -151,9 +151,10 @@ public class MainController {
         setButtonActive(btnFilterAll);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Item item : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
+        for (Auction auction : mainService.getHotAuctions()) {
+            flowPane.getChildren().add(createCardFromAuction(auction));
         }
+
     }
 
     @FXML
@@ -162,9 +163,10 @@ public class MainController {
         setButtonActive(btnFilterActive);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Item item : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
+        for (Auction auction : mainService.getHotAuctions()) {
+            flowPane.getChildren().add(createCardFromAuction(auction));
         }
+
     }
 
     @FXML
@@ -173,8 +175,8 @@ public class MainController {
         setButtonActive(btnFilterUpcoming);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Item item : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Sắp diễn ra"));
+        for (Auction auction : mainService.getHotAuctions()) {
+            flowPane.getChildren().add(createCardFromAuction(auction));
         }
     }
 

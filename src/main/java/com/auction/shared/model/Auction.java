@@ -8,6 +8,9 @@ import java.util.List;
 public class Auction implements Serializable  {
     private static final long serialVersionUID = 1L;
     private String productName;
+    private String imagePath;
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 
     // THAY ĐỔI: cập nhật enum khớp với DB
     public enum AuctionStatus {
