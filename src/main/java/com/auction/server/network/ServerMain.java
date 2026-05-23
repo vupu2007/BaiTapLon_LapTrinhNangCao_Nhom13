@@ -18,7 +18,7 @@ public class ServerMain {
         try {
 
             ServerSocket serverSocket =
-                    new ServerSocket(9999);
+                    new ServerSocket(12345);
 
             System.out.println("Server started");
 
