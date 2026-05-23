@@ -33,10 +33,16 @@ public class ProductCardController {
         }
     }
 
-    public void setData(String name, String price, String time, String imageFileName) {
+    // 🔥 ĐÃ NÂNG CẤP: Nhận đầy đủ thông tin chi tiết của sản phẩm từ tầng nạp dữ liệu
+    public void setData(String name, String price, String time, String imageFileName,
+                        String description, String sellerName, String startTime, String endTime) {
+
         productName.setText(name);
         currentPrice.setText(price);
         timeRemaining.setText(time);
+        if (productDesc != null) {
+            productDesc.setText(description);
+        }
 
         if (imageFileName == null || imageFileName.trim().isEmpty()) {
             imageFileName = "default.png";
@@ -68,12 +74,10 @@ public class ProductCardController {
                     if (productImage != null) {
                         productImage.setImage(finalImg);
 
-                        // 🔥 ĐÃ SỬA: Tạo khuôn cắt ĐỘNG tự co giãn chuẩn khít theo ImageView thực tế
+                        // Tạo khuôn cắt ĐỘNG tự co giãn chuẩn khít theo ImageView thực tế
                         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
                         clip.widthProperty().bind(productImage.fitWidthProperty());
                         clip.heightProperty().bind(productImage.fitHeightProperty());
-
-                        // Đường kính bo góc là 24 (Tương đương bán kính radius 12px chuẩn trong file FXML)
                         clip.setArcWidth(24);
                         clip.setArcHeight(24);
 
@@ -88,7 +92,6 @@ public class ProductCardController {
                         var fallback = getClass().getResourceAsStream("/com/auction/client/images/default.png");
                         productImage.setImage(fallback != null ? new Image(fallback) : null);
 
-                        // 🔥 ĐÃ SỬA: Áp dụng khuôn cắt động tương tự cho ảnh mặc định khi lỗi
                         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle();
                         clip.widthProperty().bind(productImage.fitWidthProperty());
                         clip.heightProperty().bind(productImage.fitHeightProperty());
@@ -104,11 +107,21 @@ public class ProductCardController {
         imageLoadThread.setDaemon(true);
         imageLoadThread.start();
 
-        // 🔥 SỬA TẠI ĐÂY: Truyền cả Object ảnh trên UI kèm theo Chuỗi dữ liệu ảnh gốc (đề phòng ảnh UI chưa load xong)
+        // 🔥 ĐÃ SỬA TẠI ĐÂY: Bắn tất cả các dữ liệu chi tiết sang MainLayoutController để chuyển tiếp sang trang chi tiết
         actionButton.setOnAction(e -> {
             if (MainLayoutController.getInstance() != null) {
                 Image currentImg = (productImage != null) ? productImage.getImage() : null;
-                MainLayoutController.getInstance().openAuctionDetail(name, price, currentImg, finalImageFileName);
+
+                MainLayoutController.getInstance().openAuctionDetail(
+                        name,
+                        price,
+                        currentImg,
+                        finalImageFileName,
+                        description,
+                        sellerName,
+                        startTime,
+                        endTime
+                );
             }
         });
     }

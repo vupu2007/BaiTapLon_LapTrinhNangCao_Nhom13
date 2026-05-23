@@ -5,6 +5,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.VBox;
 import java.text.DecimalFormat;
 
 public class WalletController {
@@ -14,41 +15,38 @@ public class WalletController {
     @FXML private Label lblTotalWithdraw;
     @FXML private TextField txtDeposit;
     @FXML private TextField txtWithdraw;
+    @FXML private VBox transactionContainer; // Quản lý khu vực hiển thị lịch sử
 
     private final DecimalFormat formatter = new DecimalFormat("#,###");
 
     @FXML
     public void initialize() {
-        // Làm mới giao diện ngay khi tab được nạp vào màn hình
+        // Xóa các dòng mẫu hardcode thiết kế trong FXML trước khi nạp giao dịch thật
+        if (transactionContainer != null) {
+            transactionContainer.getChildren().clear();
+        }
         updateWalletUI();
     }
 
-    /**
-     * Hàm đồng bộ số liệu siêu an toàn - Đọc thẳng từ các biến tĩnh (Static) của Session Client
-     */
     private void updateWalletUI() {
-        // ĐỌC THẲNG BIẾN TĨNH: Không thông qua thực thể account.getBalance() nữa để tránh lỗi cache luồng
         double balance = CurrentAccount.getBalance();
         double totalDeposit = CurrentAccount.getTotalDeposit();
         double totalWithdraw = CurrentAccount.getTotalWithdraw();
 
         System.out.println("LOG UI: Số dư=" + balance + " | Tổng nạp=" + totalDeposit + " | Tổng chi=" + totalWithdraw);
 
-        // 1. Hiển thị số dư khả dụng
         if (balance == 0) {
             lblBalance.setText("0 đ");
         } else {
             lblBalance.setText(formatter.format(balance) + " đ");
         }
 
-        // 2. Hiển thị Tổng nạp
         if (totalDeposit == 0) {
             lblTotalDeposit.setText("0 đ");
         } else {
             lblTotalDeposit.setText(formatter.format(totalDeposit) + " đ");
         }
 
-        // 3. Hiển thị Tổng chi tiêu
         if (totalWithdraw == 0) {
             lblTotalWithdraw.setText("0 đ");
         } else {
@@ -71,10 +69,8 @@ public class WalletController {
                 return;
             }
 
-            // 1. Thực hiện tính toán nạp tiền cục bộ trên RAM Client
             CurrentAccount.deposit(amount);
 
-            // 2. Đẩy số dư mới sau khi nạp xuống database MySQL
             if (CurrentAccount.getAccount() != null) {
                 try {
                     int accountIdInt = Integer.parseInt(CurrentAccount.getAccount().getId());
@@ -82,7 +78,6 @@ public class WalletController {
                     double newTotalDeposit = CurrentAccount.getTotalDeposit();
                     double newTotalWithdraw = CurrentAccount.getTotalWithdraw();
 
-                    // 🔥 ĐỒNG BỘ NGƯỢC LÊN OBJECT RAM: Cập nhật lại thuộc tính của chính object hiện tại
                     CurrentAccount.getAccount().setBalance(newBalance);
                     if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Bidder) {
                         ((com.auction.shared.model.Bidder) CurrentAccount.getAccount()).setTotalDeposit(newTotalDeposit);
@@ -90,7 +85,6 @@ public class WalletController {
                         ((com.auction.shared.model.Seller) CurrentAccount.getAccount()).setTotalDeposit(newTotalDeposit);
                     }
 
-                    // Gọi AccountDAO để thực thi câu lệnh UPDATE vĩnh viễn vào MySQL
                     com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
                     boolean isSaved = accountDAO.updateBalance(accountIdInt, newBalance, newTotalDeposit, newTotalWithdraw);
 
@@ -98,11 +92,13 @@ public class WalletController {
                         System.out.println("CẢNH BÁO: Không thể cập nhật số dư mới vào cơ sở dữ liệu!");
                     }
                 } catch (NumberFormatException nfe) {
-                    System.out.println("LỖI: ID tài khoản không hợp lệ (không phải định dạng số).");
+                    System.out.println("LỖI: ID tài khoản không hợp lệ.");
                 }
             }
 
-            // 3. Ép giao diện quét lại biến tĩnh và làm sạch ô nhập
+            // 🔥 THÊM GIAO DỊCH VÀO LỊCH SỬ UI
+            addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true);
+
             updateWalletUI();
             txtDeposit.clear();
 
@@ -128,11 +124,9 @@ public class WalletController {
                 return;
             }
 
-            // 1. Thực hiện tính toán rút tiền cục bộ trên RAM Client
             boolean isSuccess = CurrentAccount.withdraw(amount);
 
             if (isSuccess) {
-                // 2. Đẩy số dư mới sau khi rút xuống database MySQL vĩnh viễn
                 if (CurrentAccount.getAccount() != null) {
                     try {
                         int accountIdInt = Integer.parseInt(CurrentAccount.getAccount().getId());
@@ -140,7 +134,6 @@ public class WalletController {
                         double newTotalDeposit = CurrentAccount.getTotalDeposit();
                         double newTotalWithdraw = CurrentAccount.getTotalWithdraw();
 
-                        // 🔥 ĐỒNG BỘ NGƯỢC LÊN OBJECT RAM: Cập nhật lại thuộc tính của chính object hiện tại
                         CurrentAccount.getAccount().setBalance(newBalance);
                         if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Bidder) {
                             ((com.auction.shared.model.Bidder) CurrentAccount.getAccount()).setTotalWithdraw(newTotalWithdraw);
@@ -148,7 +141,6 @@ public class WalletController {
                             ((com.auction.shared.model.Seller) CurrentAccount.getAccount()).setTotalWithdraw(newTotalWithdraw);
                         }
 
-                        // Thực thi lệnh UPDATE số dư mới vào MySQL
                         com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
                         boolean isSaved = accountDAO.updateBalance(accountIdInt, newBalance, newTotalDeposit, newTotalWithdraw);
 
@@ -156,11 +148,13 @@ public class WalletController {
                             System.out.println("CẢNH BÁO: Không thể trừ số dư trong cơ sở dữ liệu!");
                         }
                     } catch (NumberFormatException nfe) {
-                        System.out.println("LỖI: ID tài khoản không hợp lệ (không phải định dạng số).");
+                        System.out.println("LỖI: ID tài khoản không hợp lệ.");
                     }
                 }
 
-                // 3. Cập nhật lại giao diện hiển thị và làm sạch ô nhập
+                // 🔥 THÊM GIAO DỊCH VÀO LỊCH SỬ UI
+                addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false);
+
                 updateWalletUI();
                 txtWithdraw.clear();
                 showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
@@ -171,6 +165,48 @@ public class WalletController {
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
         }
+    }
+
+    /**
+     * Hàm tự động vẽ một dòng HBox chứa lịch sử và thêm thẳng vào transactionContainer
+     */
+    private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit) {
+        if (transactionContainer == null) return;
+
+        javafx.scene.layout.HBox row = new javafx.scene.layout.HBox();
+        row.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+        row.setSpacing(15);
+        row.setStyle("-fx-border-color: #f1f5f9; -fx-border-width: 0 0 1 0; -fx-padding: 15 0;");
+
+        javafx.scene.shape.Circle circle = new javafx.scene.shape.Circle(20);
+        circle.setStroke(javafx.scene.paint.Color.TRANSPARENT);
+        circle.setFill(javafx.scene.paint.Color.web(isDeposit ? "#ecfdf5" : "#fef2f2"));
+
+        VBox textContainer = new VBox();
+        textContainer.setSpacing(3);
+
+        Label lblTitle = new Label(title);
+        lblTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #1e293b;");
+
+        String currentTime = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        Label lblSub = new Label(type + " • " + currentTime);
+        lblSub.setStyle("-fx-font-size: 12; -fx-text-fill: #64748b;");
+        textContainer.getChildren().addAll(lblTitle, lblSub);
+
+        javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
+        javafx.scene.layout.HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+
+        Label lblAmount = new Label();
+        if (isDeposit) {
+            lblAmount.setText("+" + formatter.format(amount) + " đ");
+            lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #059669;");
+        } else {
+            lblAmount.setText("-" + formatter.format(amount) + " đ");
+            lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #dc2626;");
+        }
+
+        row.getChildren().addAll(circle, textContainer, spacer, lblAmount);
+        transactionContainer.getChildren().add(0, row); // add(0, ...) để đẩy giao dịch mới nhất lên hàng đầu
     }
 
     private void showNotify(String title, String content) {

@@ -103,10 +103,22 @@ public class MyProductsController {
                         String priceStr = String.format("%,.0f đ", item.getStartingPrice());
                         String statusStr = "IN_AUCTION".equalsIgnoreCase(item.getStatus()) ? "Đang diễn ra" : "Đã kết thúc";
 
-                        // Nạp dữ liệu chữ và ảnh như cũ
-                        cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath());
+                        // 🔥 TRÍCH XUẤT THÊM DỮ LIỆU ĐỂ ĐỦ 8 THAM SỐ CHUYỂN SANG SANG TRANG CHI TIẾT
+                        String description = item.getDescription() != null ? item.getDescription() : "Không có mô tả.";
 
-                        // 🔥 Kích hoạt phân quyền nút bấm Sửa / Xóa cho riêng màn hình quản lý này
+                        // Lấy tên người bán của chính mình (Vì đây là màn hình "Sản phẩm của tôi")
+                        String sellerName = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Tôi";
+
+                        // Ép ngày giờ sang chuỗi chữ nếu DB của má có lưu, nếu không có sẵn trường này trong Item model thì tạm để chuỗi trống/mặc định
+                        // (Thường thời gian này sẽ đồng bộ từ phiên đấu giá hoặc lấy mặc định thời gian tạo sản phẩm)
+                        String startTimeStr = "--/--/---- --:--";
+                        String endTimeStr = "--/--/---- --:--";
+
+                        // 🔥 ĐÃ SỬA: Nạp đầy đủ 8 tham số mới cho hàm setData của ProductCard
+                        cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
+                                description, sellerName, startTimeStr, endTimeStr);
+
+                        // Kích hoạt phân quyền nút bấm Sửa / Xóa cho riêng màn hình quản lý này
                         cardController.setSellerMode(
                                 () -> handleEditProduct(item),   // Hành động khi nhấn nút Sửa
                                 () -> handleDeleteProduct(item)  // Hành động khi nhấn nút Xóa
@@ -140,7 +152,7 @@ public class MyProductsController {
     }
 
     /**
-     * 📝 XỬ LÝ KHI BẤM NÚT SỬA SẢN PHẨM (Đã fix lỗi cú pháp lặp hàm)
+     * 📝 XỬ LÝ KHI BẤM NÚT SỬA SẢN PHẨM
      */
     private void handleEditProduct(Item item) {
         System.out.println("👉 Yêu cầu chỉnh sửa sản phẩm: " + item.getName());
@@ -150,15 +162,7 @@ public class MyProductsController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/CreateProduct.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            // 2. Lấy Controller của form đó ra (Tạm đóng đoạn điền data cũ cho tới khi má viết hàm setProductToEdit bên kia)
-            /*
-            CreateProductController formController = loader.getController();
-            if (formController != null) {
-                formController.setProductToEdit(item);
-            }
-            */
-
-            // 3. Khởi tạo một Stage mới làm Popup Modal chui lên giữa màn hình
+            // 2. Khởi tạo một Stage mới làm Popup Modal chui lên giữa màn hình
             javafx.stage.Stage popupStage = new javafx.stage.Stage();
             popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
 

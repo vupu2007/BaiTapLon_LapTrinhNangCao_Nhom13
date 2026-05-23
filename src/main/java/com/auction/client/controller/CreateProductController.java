@@ -20,6 +20,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.UUID;
+import javafx.fxml.FXMLLoader;
 
 public class CreateProductController {
 
@@ -127,6 +128,9 @@ public class CreateProductController {
         double finalStartPrice = startPrice;
         String imageNameInitial = lblImagePath.getText().equals("Chưa chọn tệp nào") || lblImagePath.getText().isEmpty() ? null : lblImagePath.getText();
 
+        // Biến cục bộ để lưu giữ chuỗi dữ liệu ảnh Base64 đồng bộ sang trang chi tiết
+        final String[] sharedImageHolder = {imageNameInitial};
+
         // 🚀 TỐI ƯU ĐA LUỒNG: Đẩy việc đọc file ảnh nặng và ghi DB xuống luồng ngầm
         Task<Boolean> databaseTask = new Task<>() {
             @Override
@@ -141,14 +145,13 @@ public class CreateProductController {
                 newItem.setStatus("IN_AUCTION");
                 newItem.setBrand("");
 
-                String finalImageName = imageNameInitial;
                 // Đọc dữ liệu ảnh và chuyển Base64 ngầm
                 if (productImgFile != null) {
                     byte[] fileBytes = Files.readAllBytes(productImgFile.toPath());
                     String base64 = java.util.Base64.getEncoder().encodeToString(fileBytes);
-                    finalImageName = "base64:" + base64;
+                    sharedImageHolder[0] = "base64:" + base64;
                 }
-                newItem.setImagePath(finalImageName);
+                newItem.setImagePath(sharedImageHolder[0]);
 
                 // Ghi đồng thời vào Database qua tầng DAO
                 boolean isItemSaved = itemDAO.insertItem(newItem);
@@ -162,30 +165,67 @@ public class CreateProductController {
         databaseTask.setOnSucceeded(event -> {
             boolean success = databaseTask.getValue();
             if (success) {
-                // Đóng gói mô hình đẩy lên thời gian thực trang chủ
+                // 🔥 ĐÓNG GÓI ĐẦY ĐỦ THÔNG TIN ĐỂ TRUYỀN SANG TRANG CHI TIẾT KHÔNG BỊ TRỐNG
                 Auction newAuction = new Auction();
                 newAuction.setItemId(itemId);
+                newAuction.setProductName(name); // Thêm tên SP
                 newAuction.setStartPrice(finalStartPrice);
                 newAuction.setCurrentPrice(finalStartPrice);
                 newAuction.setStartTime(startTime);
+                newAuction.setEndTime(endTime); // Thêm thời gian kết thúc
+                newAuction.setSellerId(ownerId);
                 newAuction.setStatus(Auction.AuctionStatus.OPEN);
+                newAuction.setAccount(CurrentAccount.getAccount()); // Gán luôn account người bán để hiện tên chính xác
+
+                // Đồng bộ dùng mẹo qua Reflection hoặc thuộc tính động của ảnh nếu có thể
+                try {
+                    java.lang.reflect.Method setImgMethod = newAuction.getClass().getMethod("setProductName", String.class);
+                    setImgMethod.invoke(newAuction, name);
+                } catch(Exception ex) {}
 
                 if (MainController.getInstance() != null) {
                     MainController.getInstance().addAuctionToRealtimeUI(newAuction);
                 }
 
-                // Hiện Alert thông báo cho người dùng
+                // Hiện Alert thông báo cho người dùng thành công
                 showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công và đã được đưa lên sàn!");
 
-                // Reset trắng form nhập liệu
+                // Sao lưu lại object hoàn chỉnh trước khi clear Form nhập liệu
+                final Auction auctionToNavigate = newAuction;
+                final String finalProductImage = sharedImageHolder[0];
+
+                // Reset trắng form nhập liệu gốc
                 handleCancel();
 
-                // 🌟 CHÌA KHÓA VÀNG: Trì hoãn 300ms đợi DB commit hoàn chỉnh rồi mới chuyển trang nhảy số
+                // 🌟 CHÌA KHÓA VÀNG: Đợi 300ms cho DB ổn định rồi ép chuyển THẲNG sang tab Chi tiết sản phẩm
                 PauseTransition pause = new PauseTransition(Duration.millis(300));
                 pause.setOnFinished(pEvent -> {
                     if (MainLayoutController.getInstance() != null) {
-                        System.out.println("🔄 DB ổn định! Đang tự động nhảy sang tab Đang bán để refresh...");
-                        MainLayoutController.getInstance().openSelling();
+                        System.out.println("🔄 Đang chuyển hướng trực tiếp sang màn hình Chi tiết sản phẩm vừa tạo...");
+
+                        // Gọi hàm Object thông minh của MainLayoutController để lật trang và đẩy dữ liệu toàn vẹn
+                        MainLayoutController.getInstance().openAuctionDetailWithObject(auctionToNavigate);
+
+                        // Đồng thời bồi thêm hàm nạp ảnh Base64 trực tiếp vào View để đảm bảo hình ảnh hiển thị ngay tắp lự
+                        try {
+                            FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
+                            if (getClass().getResource("/view/AuctionDetailView.fxml") == null) {
+                                loader = new FXMLLoader(getClass().getResource("/view/AuctionDetail.fxml"));
+                            }
+                            // Truyền thủ công bằng chuỗi 8 tham số phòng hờ Realtime chưa kịp nạp luồng DB
+                            MainLayoutController.getInstance().openAuctionDetail(
+                                    name,
+                                    String.format("%,.0f đ", finalStartPrice),
+                                    null,
+                                    finalProductImage,
+                                    "Trạng thái phiên: OPEN",
+                                    CurrentAccount.getAccount().getUsername(),
+                                    startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+                                    endTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
+                            );
+                        } catch (Exception err) {
+                            err.printStackTrace();
+                        }
                     }
                 });
                 pause.play();

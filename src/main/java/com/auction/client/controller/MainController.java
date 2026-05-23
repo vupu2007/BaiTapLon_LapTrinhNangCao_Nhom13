@@ -30,6 +30,7 @@ import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import java.io.File;
 import java.io.IOException;
+import java.time.format.DateTimeFormatter;
 
 public class MainController {
 
@@ -44,6 +45,9 @@ public class MainController {
     private static MainController instance;
     private String currentFilter = "ALL";
     private final String UPLOAD_DIR = "C:/uet_uploads/"; // Thư mục lưu ảnh thật bên ngoài
+
+    // Định dạng ngày giờ hiển thị
+    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     public MainController() {
     }
@@ -361,7 +365,7 @@ public class MainController {
         }
     }
 
-    // ================= 🔥 HÀM CHUYỂN TRANG CHI TIẾT AN TOÀN - TRUY VẤN NGƯỢC DATABASE =================
+    // ================= 🔥 HÀM CHUYỂN TRANG CHI TIẾT GỌI TRỰC TIẾP LOADPRODUCTDETAIL CHUẨN ĐỒNG BỘ =================
     public void showAuctionDetail(Object productData) {
         try {
             java.net.URL fxmlLocation = getClass().getResource("/view/AuctionDetailView.fxml");
@@ -380,135 +384,14 @@ public class MainController {
             AuctionDetailController detailController = loader.getController();
 
             if (detailController != null) {
-                String name = "Sản phẩm";
-                String priceText = "0 đ";
-                String rawImageSource = "default.png";
-                String description = "Sản phẩm chất lượng cao đang trong phiên đấu giá.";
-                String sellerName = "Hệ thống đấu giá";
+                System.out.println("🚀 [Đồng bộ] Đang chuyển giao dữ liệu gốc qua hàm loadProductDetail...");
 
-                // Trường hợp 1: Nhấn vào Item tĩnh truyền thống từ DB
+                // Kích hoạt hàm xử lý chi tiết bóc tách đối tượng của AuctionDetailController
                 if (productData instanceof Item) {
-                    Item item = (Item) productData;
-                    name = item.getName();
-                    priceText = String.format("%,.0f đ", item.getStartingPrice());
-                    rawImageSource = item.getImagePath();
-                    if (item.getDescription() != null && !item.getDescription().trim().isEmpty()) {
-                        description = item.getDescription();
-                    }
+                    detailController.loadProductDetail((Item) productData);
+                } else if (productData instanceof Auction) {
+                    detailController.loadProductDetail((Auction) productData);
                 }
-                // 🔥 Trường hợp 2: Nhấn từ gói Real-time (Auction) -> Truy vết ngược lại DB để lấy thông tin đăng bán
-                else if (productData instanceof Auction) {
-                    Auction auction = (Auction) productData;
-
-                    // Lấy thông tin cơ bản trước từ phiên Real-time để phòng hờ
-                    name = auction.getProductName() != null ? auction.getProductName() : "Sản phẩm mới";
-                    priceText = String.format("%,.0f đ", auction.getStartPrice());
-
-                    // Trích xuất chuỗi ảnh từ gói tin Realtime Auction
-                    try {
-                        java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
-                        rawImageSource = (String) getImgMethod.invoke(auction);
-                    } catch (Exception e) {
-                        try {
-                            java.lang.reflect.Method getImgUrlMethod = auction.getClass().getMethod("getImageUrl");
-                            rawImageSource = (String) getImgUrlMethod.invoke(auction);
-                        } catch (Exception ex) {
-                            rawImageSource = auction.getItemId();
-                        }
-                    }
-
-                    // 💡 BƯỚC THẦN THÁNH: Tìm kiếm Item gốc từ mainService theo ID để lấy lại Mô tả & Giá đăng bán gốc
-                    Item dbItem = null;
-                    if (mainService != null) {
-                        try {
-                            // Cách 1: Tìm kiếm trong danh sách Hot Auctions đang có sẵn ở MainService của má
-                            if (mainService.getHotAuctions() != null) {
-                                for (Item it : mainService.getHotAuctions()) {
-                                    if (String.valueOf(it.getId()).equals(auction.getItemId())) {
-                                        dbItem = it;
-                                        break;
-                                    }
-                                }
-                            }
-
-                            // Cách 2: Nếu chưa tìm thấy, cố gắng thử gọi hàm getItemById nếu Service của má có hỗ trợ
-                            if (dbItem == null) {
-                                try {
-                                    java.lang.reflect.Method getByIdMethod = mainService.getClass().getMethod("getItemById", int.class);
-                                    dbItem = (Item) getByIdMethod.invoke(mainService, Integer.parseInt(auction.getItemId()));
-                                } catch (Exception e2) {
-                                    try {
-                                        java.lang.reflect.Method getByIdMethodStr = mainService.getClass().getMethod("getItemById", String.class);
-                                        dbItem = (Item) getByIdMethodStr.invoke(mainService, auction.getItemId());
-                                    } catch (Exception e3) { /* Không có hàm này thì thôi bỏ qua */ }
-                                }
-                            }
-                        } catch (Exception e) {
-                            System.err.println("⚠️ Lỗi khi truy quét Item gốc từ DB: " + e.getMessage());
-                        }
-                    }
-
-                    // Nếu tìm được Item gốc đăng bán trong DB, ghi đè toàn bộ dữ liệu tĩnh chuẩn chỉnh lên màn hình!
-                    if (dbItem != null) {
-                        name = dbItem.getName();
-                        priceText = String.format("%,.0f đ", dbItem.getStartingPrice()); // Đây chính là Giá Khởi Điểm lúc đăng bán!
-                        if (dbItem.getDescription() != null && !dbItem.getDescription().trim().isEmpty()) {
-                            description = dbItem.getDescription();
-                        }
-                    }
-                }
-
-                if (rawImageSource == null || rawImageSource.trim().isEmpty() || rawImageSource.equals("null")) {
-                    rawImageSource = "default.png";
-                }
-
-                // 🔥 DÙNG REFLECTION ĐỂ ÉP ĐỒNG BỘ CÁC LABEL CON TRONG CHI TIẾT (Xóa sổ chữ "Đang tải...", "0 đ")
-                try {
-                    // 1. Ép hiển thị mô tả sản phẩm thật
-                    java.lang.reflect.Field descField = detailController.getClass().getDeclaredField("lblInfoDescription");
-                    descField.setAccessible(true);
-                    Label lblDesc = (Label) descField.get(detailController);
-                    if (lblDesc != null) lblDesc.setText(description);
-                } catch (Exception e) {
-                    if (detailController.lblInfoDescription != null) detailController.lblInfoDescription.setText(description);
-                }
-
-                try {
-                    // 2. Ép nhãn Tên Sản Phẩm ở phần Chi tiết dưới
-                    java.lang.reflect.Field infoNameField = detailController.getClass().getDeclaredField("lblInfoName");
-                    infoNameField.setAccessible(true);
-                    Label lblInfoName = (Label) infoNameField.get(detailController);
-                    if (lblInfoName != null) lblInfoName.setText(name);
-                } catch (Exception e) {}
-
-                try {
-                    // 3. Quét và ép nhãn Giá Khởi Điểm ở bảng chi tiết dưới ăn theo priceText (Giá lúc đăng bán)
-                    String[] priceFields = {"lblInfoStartPrice", "lblStartingPrice", "lblStartPriceDetail", "lblStartPrice"};
-                    for (String fieldName : priceFields) {
-                        try {
-                            java.lang.reflect.Field pField = detailController.getClass().getDeclaredField(fieldName);
-                            pField.setAccessible(true);
-                            Label lblPrice = (Label) pField.get(detailController);
-                            if (lblPrice != null) {
-                                lblPrice.setText(priceText);
-                            }
-                        } catch (NoSuchFieldException ex) {}
-                    }
-                } catch (Exception e) {}
-
-                try {
-                    // 4. Ép nhãn Người Bán hiển thị thông tin thay vì treo "Đang tải..."
-                    java.lang.reflect.Field sellerField = detailController.getClass().getDeclaredField("lblInfoSeller");
-                    if (sellerField != null) {
-                        sellerField.setAccessible(true);
-                        Label lblSeller = (Label) sellerField.get(detailController);
-                        if (lblSeller != null) lblSeller.setText(sellerName);
-                    }
-                } catch (Exception e) {}
-
-                // Gọi hàm khởi tạo giao diện gốc của má
-                System.out.println("🚀 Đang đồng bộ dữ liệu chuẩn sang trang chi tiết...");
-                detailController.initData(name, priceText, null, rawImageSource);
             }
 
             if (MainLayoutController.getInstance() != null) {

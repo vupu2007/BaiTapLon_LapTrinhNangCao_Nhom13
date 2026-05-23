@@ -28,7 +28,7 @@ public class Auction implements Serializable  {
     private LocalDateTime startTime;    // Thời gian bắt đầu
     private LocalDateTime endTime;      // Thời gian kết thúc
     private AuctionStatus status;       // Trạng thái phiên đấu giá
-    private Account account;
+    private Account account;            // Thông tin tài khoản người bán đính kèm từ DB
     private List<Observer> observers = new ArrayList<>();// danh sách ng nhân đc thông báo
 
 
@@ -48,7 +48,6 @@ public class Auction implements Serializable  {
         this.endTime = endTime;
         this.status = status;
         this.account = account;
-
     }
 
     public int getId() { return id; }
@@ -80,17 +79,20 @@ public class Auction implements Serializable  {
 
     public AuctionStatus getStatus() { return status; }
     public void setStatus(AuctionStatus status) { this.status = status; }
-    public String getProductName() {
-        return productName;
-    }
-    public void setProductName(String productName) {
-        this.productName = productName;
-    }
+
+    public String getProductName() { return productName; }
+    public void setProductName(String productName) { this.productName = productName; }
+
+    // 🔥 THÊM MỚI: Hàm Getter và Setter cho thuộc tính Account để lấy tên người bán ("mhuyen") bên Controller
+    public Account getAccount() { return account; }
+    public void setAccount(Account account) { this.account = account; }
+
+    // 🔥 THÊM MỚI: Hàm Getter và Setter cho danh sách bộ quan sát Observer
+    public List<Observer> getObservers() { return observers; }
+    public void setObservers(List<Observer> observers) { this.observers = observers; }
 
     // Kiểm tra phiên đấu giá còn hiệu lực không
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
-
-
 }

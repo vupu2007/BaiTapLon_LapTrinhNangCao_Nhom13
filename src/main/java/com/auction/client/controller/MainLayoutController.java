@@ -18,7 +18,9 @@ import javafx.event.ActionEvent;
 import javafx.scene.Parent;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.scene.image.Image; // 🔥 Đã thêm import để nhận Object Image trực tiếp
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
+import javafx.application.Platform;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -34,8 +36,6 @@ public class MainLayoutController {
     @FXML private VBox roleBox;
     @FXML private Label lblRoleSidebar;
     @FXML private MenuButton roleMenuButton;
-
-    // 🕒 Biến ánh xạ nhãn hiển thị đồng hồ thời gian thực từ FXML sang
     @FXML private Label lblClock;
 
     // ================= BUTTON MENU =================
@@ -47,23 +47,15 @@ public class MainLayoutController {
     @FXML private Button btnHistory;
     @FXML private Button btnSettings;
 
-    // ================= INIT =================
     @FXML private Label nameLabel;
 
     @FXML
     public void initialize() {
-        // Gán instance bằng chính object này khi JavaFX khởi tạo layout
         instance = this;
-
-        // 1. Cập nhật tên người dùng
         if (CurrentAccount.getAccount() != null) {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
         }
-
-        // 2. Kích hoạt kim giây đồng hồ chạy ngầm thời gian thực tế ngay khi nạp giao diện tổng
         startRealtimeClock();
-
-        // TỰ ĐỘNG LOAD TRANG CHỦ KHI MỞ APP
         openHome();
     }
 
@@ -71,36 +63,27 @@ public class MainLayoutController {
         return instance;
     }
 
-    // 🕒 Hàm xử lý chạy ngầm cập nhật đồng hồ mỗi giây một lần liên tục
     private void startRealtimeClock() {
-        // Định dạng hiển thị Giờ:Phút:Giây (Ví dụ: 14:23:05)
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-
-        // Tạo Timeline lặp lại vô hạn, cứ mỗi 1 giây (Duration.seconds(1)) sẽ lấy giờ máy tính nạp vào UI
         Timeline clockTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(1), event -> {
                     String currentTime = LocalDateTime.now().format(formatter);
                     if (lblClock != null) {
-                        lblClock.setText(currentTime); // Đổ chuỗi giờ thực tế lên Widget Sidebar
+                        lblClock.setText(currentTime);
                     }
                 })
         );
-
-        // Đặt chế độ lặp vô hạn và bấm nút kích hoạt chạy
         clockTimeline.setCycleCount(Animation.INDEFINITE);
         clockTimeline.play();
     }
 
-    // ================= LOAD PAGE ĐỂ TRẢ VỀ FXMLLoader =================
     private FXMLLoader loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Node page = loader.load();
             contentArea.getChildren().clear();
 
-            // Kiểm tra và ép giãn trang con
-            if (page instanceof Region) {
-                Region region = (Region) page;
+            if (page instanceof Region region) {
                 region.prefWidthProperty().bind(contentArea.widthProperty());
                 region.prefHeightProperty().bind(contentArea.heightProperty());
                 region.setMaxWidth(Double.MAX_VALUE);
@@ -109,7 +92,7 @@ public class MainLayoutController {
             StackPane.setAlignment(page, Pos.TOP_CENTER);
             contentArea.getChildren().add(page);
 
-            return loader; // Trả loader về để lấy Controller khi cần
+            return loader;
         } catch (Exception e) {
             System.err.println("Lỗi load file: " + fxmlPath);
             e.printStackTrace();
@@ -117,12 +100,8 @@ public class MainLayoutController {
         }
     }
 
-    // ================= ACTIVE BUTTON =================
     private void setActive(Button activeButton) {
-        Button[] buttons = {
-                btnHome, btnWallet, btnAuction, btnSelling,
-                btnCreateAuction, btnHistory, btnSettings
-        };
+        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings};
         for (Button btn : buttons) {
             if (btn != null) {
                 btn.getStyleClass().remove("nav-button-active");
@@ -138,32 +117,76 @@ public class MainLayoutController {
             }
         }
     }
-    // ================= 🔥 HÀM MỞ CHI TIẾT ĐẤU GIÁ SONG LUỒNG AN TOÀN TUYỆT ĐỐI =================
-    public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName) {
-        // 1. Nạp file FXML chi tiết đấu giá vào vùng giữa
-        FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
 
-        // 2. Chuyển trạng thái sáng nút sang "Đang đấu giá" trên thanh điều hướng
+    /**
+     * 🔥 HÀM 1: Mở trang chi tiết bằng các tham số chuỗi thô (Giữ nguyên gốc của bồ)
+     */
+    public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName,
+                                  String description, String sellerName, String startTime, String endTime) {
+
+        FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
+        if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
+
         setActive(btnAuction);
 
-        // 3. Đổ dữ liệu sang controller chi tiết với cơ chế cứu cánh thông minh
         if (loader != null) {
             AuctionDetailController detailController = loader.getController();
             if (detailController != null) {
-                // Truyền cả object ảnh và tên/chuỗi base64 gốc để sơ cua
-                detailController.initData(name, price, fxImage, imageFileName);
+                detailController.initData(name, price, fxImage, imageFileName, description, sellerName, startTime, endTime);
             }
         }
     }
 
-    // ================= OPEN HOME AUTO REFRESH DỮ LIỆU =================
+    /**
+     * 🚀 HÀM MỚI 2: Ép mở trang chi tiết và truyền trực tiếp Object AUCTION (Cứu cánh phần Realtime/Tạo xong)
+     */
+    public void openAuctionDetailWithObject(com.auction.shared.model.Auction auction) {
+        if (auction == null) return;
+
+        Platform.runLater(() -> {
+            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
+            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
+
+            setActive(btnAuction);
+
+            if (loader != null) {
+                AuctionDetailController detailController = loader.getController();
+                if (detailController != null) {
+                    // Gọi hàm xử lý object thông minh mà chúng ta đã sửa bên AuctionDetailController
+                    detailController.loadProductDetail(auction);
+                    System.out.println("✅ Đã ép chuyển trang và nạp Object Auction thành công!");
+                }
+            }
+        });
+    }
+
+    /**
+     * 🚀 HÀM MỚI 3: Ép mở trang chi tiết và truyền trực tiếp Object ITEM
+     */
+    public void openAuctionDetailWithObject(com.auction.shared.model.Item item) {
+        if (item == null) return;
+
+        Platform.runLater(() -> {
+            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
+            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
+
+            setActive(btnAuction);
+
+            if (loader != null) {
+                AuctionDetailController detailController = loader.getController();
+                if (detailController != null) {
+                    detailController.loadProductDetail(item);
+                    System.out.println("✅ Đã ép chuyển trang và nạp Object Item thành công!");
+                }
+            }
+        });
+    }
+
     @FXML
     public void openHome() {
-        // 1. Load trang chủ lên màn hình như bình thường
         FXMLLoader loader = loadPage("/view/MainView.fxml");
         setActive(btnHome);
 
-        // 2. Ép MainController chạy hàm quét lại Database ngay lập tức khi mở tab
         if (loader != null) {
             MainController mainController = loader.getController();
             if (mainController != null) {
@@ -172,19 +195,9 @@ public class MainLayoutController {
         }
     }
 
-    // ================= MENU ACTIONS =================
-    @FXML
-    private void openWallet() {
-        loadPage("/view/WalletView.fxml");
-        setActive(btnWallet);
-    }
-    @FXML
-    private void openAuction() {
-        loadPage("/view/ActiveAuctions.fxml");
-        setActive(btnAuction);
-    }
+    @FXML private void openWallet() { loadPage("/view/WalletView.fxml"); setActive(btnWallet); }
+    @FXML private void openAuction() { loadPage("/view/ActiveAuctions.fxml"); setActive(btnAuction); }
 
-    // Ép trang "Đang bán" tự động refresh kéo dữ liệu cá nhân mới nhất khi bấm menu trái
     @FXML
     public void openSelling() {
         FXMLLoader loader = loadPage("/view/MyProducts.fxml");
@@ -198,55 +211,31 @@ public class MainLayoutController {
         }
     }
 
-    @FXML
-    private void openCreateAuction() {
-        loadPage("/view/CreateAuction.fxml");
-        setActive(btnCreateAuction);
-    }
-    @FXML
-    private void openHistory() {
-        loadPage("/view/HistoryView.fxml");
-        setActive(btnHistory);
-    }
-    @FXML
-    private void openSettings() {
-        loadPage("/view/Settings.fxml");
-        setActive(btnSettings);
-    }
+    @FXML private void openCreateAuction() { loadPage("/view/CreateAuction.fxml"); setActive(btnCreateAuction); }
+    @FXML private void openHistory() { loadPage("/view/HistoryView.fxml"); setActive(btnHistory); }
+    @FXML private void openSettings() { loadPage("/view/Settings.fxml"); setActive(btnSettings); }
+    public void showCreateProductView() { openCreateAuction(); }
 
-    public void showCreateProductView() {
-        openCreateAuction();
-    }
-
-    // ================= ROLE SWITCHING =================
     @FXML
     private void switchToBuyer() {
         lblRoleSidebar.setText("🛒 Người mua");
         roleMenuButton.setText("🔄 Người mua");
-
         roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
         lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-size: 18; -fx-font-weight: bold;");
         roleMenuButton.setStyle("-fx-background-color: #A21CAF; -fx-background-radius: 10; -fx-text-fill: white;");
-
-        buyerMenu.setVisible(true);
-        buyerMenu.setManaged(true);
-        sellerMenu.setVisible(false);
-        sellerMenu.setManaged(false);
+        buyerMenu.setVisible(true); buyerMenu.setManaged(true);
+        sellerMenu.setVisible(false); sellerMenu.setManaged(false);
     }
 
     @FXML
     private void switchToSeller() {
         lblRoleSidebar.setText("🏪 Người bán");
         roleMenuButton.setText("🔄 Người bán");
-
         roleBox.setStyle("-fx-background-color: #dbeafe; -fx-background-radius: 15; -fx-padding: 20;");
         lblRoleSidebar.setStyle("-fx-text-fill: #1d4ed8; -fx-font-size: 18; -fx-font-weight: bold;");
         roleMenuButton.setStyle("-fx-background-color: #2563eb; -fx-background-radius: 10; -fx-text-fill: white;");
-
-        sellerMenu.setVisible(true);
-        sellerMenu.setManaged(true);
-        buyerMenu.setVisible(false);
-        buyerMenu.setManaged(false);
+        sellerMenu.setVisible(true); sellerMenu.setManaged(true);
+        buyerMenu.setVisible(false); buyerMenu.setManaged(false);
     }
 
     @FXML
