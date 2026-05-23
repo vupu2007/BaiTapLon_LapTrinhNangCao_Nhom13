@@ -1,9 +1,10 @@
 package com.auction.client.controller;
 
+import com.auction.client.util.CurrentAccount;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.ItemDAO;
+import com.auction.shared.model.Account;
 import com.auction.shared.model.Auction;
-import com.auction.shared.model.Auction.AuctionStatus;
 import com.auction.shared.model.Item;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -33,69 +34,90 @@ public class ActiveAuctionsController {
     }
 
     private void loadAuctions() {
-        List<Auction> auctions = auctionDAO.getAuctionsByStatus(AuctionStatus.RUNNING);
+        // Xóa sạch các card cũ trước khi load để tránh trùng lặp dữ liệu
+        if (cardsContainer != null) {
+            cardsContainer.getChildren().clear();
+        }
 
-        if (auctions.isEmpty()) {
+        // Lấy thông tin tài khoản đang đăng nhập hệ thống hiện tại
+        Account currentAcc = CurrentAccount.getAccount();
+        if (currentAcc == null) {
             showEmptyState(true);
             return;
         }
 
-        showEmptyState(false);
+        try {
+            // Đã sửa: Ép kiểu ID tài khoản từ String sang int để gọi khớp với AuctionDAO
+            int bidderIdInt = Integer.parseInt(currentAcc.getId());
 
-        for (Auction auction : auctions) {
-            try {
-                // Load ProductCard.fxml
-                FXMLLoader loader = new FXMLLoader(
-                        getClass().getResource("/view/ProductCard.fxml")
-                );
-                Node card = loader.load();
-                ProductCardController controller = loader.getController();
+            // Chỉ lấy những phiên mà tài khoản này ĐÃ ĐẶT GIÁ THÀNH CÔNG
+            List<Auction> auctions = auctionDAO.getAuctionsByBidder(bidderIdInt);
 
-                // Lấy thông tin item từ DB
-                Item item = itemDAO.getItemById(auction.getItemId());
-                String name  = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
-                String image = (item != null) ? item.getImagePath() : null;
-
-                // 🔥 TRÍCH XUẤT THÊM DỮ LIỆU ĐỂ ĐỦ 8 THAM SỐ
-                String description = (item != null) ? item.getDescription() : "Không có mô tả.";
-
-                // Giả sử item có lưu thông tin người bán (sellerId hoặc sellerName).
-                // Nếu chưa có bảng User/Seller cụ thể, má cứ tạm thời để tên người bán là "Chủ phòng #" + item.getOwnerId() hoặc tên thật nếu có trường name.
-                String sellerName = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
-
-                // Định dạng ngày giờ bắt đầu và kết thúc của phiên đấu giá thành chuỗi chữ
-                String startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                String endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-
-                // Tính thời gian còn lại hiển thị ở ngoài card
-                long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
-                String time  = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
-
-                // Định dạng giá
-                String price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
-
-                // 🔥 ĐÃ SỬA: Truyền chuẩn đét ĐỦ 8 THAM SỐ vào hàm setData mới nâng cấp
-                controller.setData(name, price, time, image, description, sellerName, startTimeStr, endTimeStr);
-
-                cardsContainer.getChildren().add(card);
-
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi load card auction_id=" + auction.getId() + ": " + e.getMessage());
+            if (auctions == null || auctions.isEmpty()) {
+                showEmptyState(true);
+                return;
             }
+
+            showEmptyState(false);
+
+            for (Auction auction : auctions) {
+                try {
+                    // Load ProductCard.fxml
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
+                    Node card = loader.load();
+                    ProductCardController controller = loader.getController();
+
+                    // Đã sửa: Truyền thẳng auction.getItemId() (vì nó là String sẵn rồi), fix triệt để lỗi Incompatible types
+                    Item item = itemDAO.getItemById(auction.getItemId());
+                    String name  = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
+                    String image = (item != null) ? item.getImagePath() : null;
+
+                    // Trích xuất dữ liệu nâng cao đầy đủ tham số
+                    String description = (item != null) ? item.getDescription() : "Không có mô tả.";
+                    String sellerName = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
+
+                    // Định dạng ngày giờ bắt đầu và kết thúc của phiên đấu giá thành chuỗi chữ
+                    String startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                    String endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+
+                    // Tính thời gian còn lại hiển thị ở ngoài card
+                    long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
+                    String time  = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
+
+                    // Định dạng giá tiền
+                    String price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
+
+                    // Nạp chuẩn đét ĐỦ 8 THAM SỐ vào hàm setData của Card
+                    controller.setData(name, price, time, image, description, sellerName, startTimeStr, endTimeStr);
+
+                    cardsContainer.getChildren().add(card);
+
+                } catch (Exception e) {
+                    System.err.println("❌ Lỗi load card auction_id=" + auction.getId() + ": " + e.getMessage());
+                }
+            }
+        } catch (NumberFormatException e) {
+            System.err.println("❌ ID Tài khoản không hợp lệ (Không phải số nguyên): " + currentAcc.getId());
+            showEmptyState(true);
         }
     }
 
     private void showEmptyState(boolean isEmpty) {
-        emptyStateBox.setVisible(isEmpty);
-        emptyStateBox.setManaged(isEmpty);
-        cardsContainer.setVisible(!isEmpty);
-        cardsContainer.setManaged(!isEmpty);
+        if (emptyStateBox != null) {
+            emptyStateBox.setVisible(isEmpty);
+            emptyStateBox.setManaged(isEmpty);
+        }
+        if (cardsContainer != null) {
+            cardsContainer.setVisible(!isEmpty);
+            cardsContainer.setManaged(!isEmpty);
+        }
     }
-
     @FXML
     private void openHome() {
         if (MainLayoutController.getInstance() != null) {
-            MainLayoutController.getInstance().openHome();
+            javafx.application.Platform.runLater(() -> {
+                MainLayoutController.getInstance().openHome();
+            });
         }
     }
 }

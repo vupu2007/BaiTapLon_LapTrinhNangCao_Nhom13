@@ -2,286 +2,329 @@ package com.auction.client.controller;
 
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
+import com.auction.client.util.CurrentAccount;
 import javafx.application.Platform;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
+import javafx.animation.Timeline;
 import javafx.fxml.FXML;
 import javafx.scene.chart.LineChart;
+import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
+import javafx.util.Duration;
+
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.InputStream;
-import java.util.Base64;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Base64;
 
 public class AuctionDetailController {
 
-    @FXML
-    public Label lblProductTitle, lblTimeRemaining, lblInfoName, lblInfoDescription,
+    @FXML public Label lblProductTitle, lblTimeRemaining, lblInfoName, lblInfoDescription,
             lblStartPrice, lblSellerName, lblStartTime, lblEndTime,
             lblCurrentPrice, lblTopBidder;
 
-    @FXML
-    private ImageView imgProduct;
-    @FXML
-    private LineChart<Number, Number> chartPriceHistory;
-    @FXML
-    private TextField txtBidAmount;
-    @FXML
-    private Button btnSubmitBid;
-    @FXML
-    private ToggleButton btnAutoBid;
-    @FXML
-    private VBox vboxBidHistoryContainer;
+    @FXML private ImageView imgProduct;
+    @FXML private LineChart<Number, Number> chartPriceHistory;
+    @FXML private TextField txtBidAmount;
+    @FXML private Button btnSubmitBid;
+    @FXML private ToggleButton btnAutoBid;
+    @FXML private VBox vboxBidHistoryContainer;
+
+    private Auction currentAuction;
+    private Item currentItem;
+    private Timeline countdownTimeline;
+    private XYChart.Series<Number, Number> priceSeries;
+    private int bidCount = 0;
+
+    private boolean isAutoBidEnabled = false;
+    private double maxAutoBidAmount = 0.0;
+    private double autoBidIncrement = 0.0;
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
     @FXML
     public void initialize() {
+        priceSeries = new XYChart.Series<>();
+        priceSeries.setName("Giá hiện tại");
+        if (chartPriceHistory != null) {
+            chartPriceHistory.getData().clear();
+            chartPriceHistory.getData().add(priceSeries);
+            chartPriceHistory.setAnimated(false);
+        }
+
         if (btnSubmitBid != null) {
-            btnSubmitBid.setOnAction(event -> handleBid());
+            btnSubmitBid.setOnAction(event -> handleManualBid());
         }
+
         if (btnAutoBid != null) {
-            btnAutoBid.selectedProperty().addListener((obs, oldVal, newVal) -> {
-                btnAutoBid.setText(newVal ? "Bật" : "Tắt");
-            });
+            btnAutoBid.setOnAction(event -> handleAutoBidToggle());
         }
     }
 
-    /**
-     * 🔥 HÀM NẠP DỮ LIỆU CHUẨN ĐỒNG BỘ ĐỦ 8 THAM SỐ VỚI MAIN_LAYOUT
-     */
-    public void initData(String productName, String startingPrice, javafx.scene.image.Image fxImage, String imageFileName,
-                         String description, String sellerName, String startTime, String endTime) {
-
-        // 1. Gán thông tin chữ cơ bản
-        if (lblProductTitle != null) lblProductTitle.setText(productName);
-        if (lblInfoName != null) lblInfoName.setText(productName);
-        if (lblInfoDescription != null) lblInfoDescription.setText(description);
-        if (lblSellerName != null) lblSellerName.setText(sellerName);
-
-        // 2. Hiển thị giá tiền
-        if (lblStartPrice != null) {
-            lblStartPrice.setText(startingPrice);
+    private void startCountdownClock(LocalDateTime endTime) {
+        if (countdownTimeline != null) {
+            countdownTimeline.stop();
         }
 
-        if (lblCurrentPrice != null) {
-            lblCurrentPrice.setText(startingPrice);
+        if (endTime == null) {
+            if (lblTimeRemaining != null) lblTimeRemaining.setText("Vô thời hạn");
+            return;
         }
 
-        // 3. Cơ chế kiểm tra chống ghi đè thời gian trống (Giữ lại giờ cũ nếu chuỗi truyền sang không hợp lệ)
-        if (lblStartTime != null) {
-            if (startTime != null && !startTime.trim().isEmpty() && !startTime.contains("--/--")) {
-                lblStartTime.setText(startTime);
-            }
-        }
+        countdownTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> {
+            java.time.Duration duration = java.time.Duration.between(LocalDateTime.now(), endTime);
 
-        if (lblEndTime != null) {
-            if (endTime != null && !endTime.trim().isEmpty() && !endTime.contains("--/--")) {
-                lblEndTime.setText(endTime);
-            }
-        }
-
-        // 4. Xử lý hiển thị ảnh an toàn thông minh
-        if (imgProduct != null) {
-            if (fxImage != null) {
-                imgProduct.setImage(fxImage);
-            } else if (imageFileName != null && !imageFileName.trim().isEmpty() && !imageFileName.equals("null")) {
-                tryLoadImageToView(imgProduct, imageFileName);
+            if (duration.isZero() || duration.isNegative()) {
+                if (lblTimeRemaining != null) {
+                    lblTimeRemaining.setText("00h 00m 00s (Đã kết thúc)");
+                    lblTimeRemaining.setStyle("-fx-text-fill: #ff4d4d; -fx-font-weight: bold;");
+                }
+                disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
+                countdownTimeline.stop();
             } else {
-                loadFallbackDefaultImage();
+                long hours = duration.toHours();
+                long minutes = duration.toMinutesPart();
+                long seconds = duration.toSecondsPart();
+
+                if (lblTimeRemaining != null) {
+                    lblTimeRemaining.setText(String.format("%02dh %02dm %02ds", hours, minutes, seconds));
+                }
             }
-        }
+        }));
+
+        countdownTimeline.setCycleCount(Animation.INDEFINITE);
+        countdownTimeline.play();
     }
 
-    /**
-     * 🖼️ Tự động tải ảnh thông minh từ upload ngoài hoặc tài nguyên hệ thống
-     */
-    private void tryLoadImageToView(ImageView imgView, Object imageSource) {
-        if (imgView == null || imageSource == null) {
-            loadFallbackDefaultImage();
+    private void checkBiddingPermissions(int sellerId) {
+        if (CurrentAccount.getAccount() == null) {
+            disableBiddingFeatures("Vui lòng đăng nhập hệ thống!");
             return;
         }
 
-        if (imageSource instanceof javafx.scene.image.Image) {
-            imgView.setImage((javafx.scene.image.Image) imageSource);
-            return;
-        }
-
-        if (imageSource instanceof String preferredFileName) {
-            try {
-                if (preferredFileName.startsWith("base64:")) {
-                    byte[] bytes = Base64.getDecoder().decode(preferredFileName.substring(7));
-                    imgView.setImage(new Image(new ByteArrayInputStream(bytes)));
-                    return;
-                }
-                if (preferredFileName.startsWith("http://") || preferredFileName.startsWith("https://")) {
-                    imgView.setImage(new Image(preferredFileName, true));
-                    return;
-                }
-
-                File file = new File("C:/uet_uploads/" + preferredFileName);
-                if (file.exists() && file.isFile()) {
-                    imgView.setImage(new Image(file.toURI().toString()));
-                    return;
-                }
-
-                InputStream is = getClass().getResourceAsStream("/com/auction/client/images/" + preferredFileName);
-                if (is != null) {
-                    imgView.setImage(new Image(is));
-                } else {
-                    loadFallbackDefaultImage();
-                }
-            } catch (Exception e) {
-                loadFallbackDefaultImage();
-            }
-        } else {
-            loadFallbackDefaultImage();
-        }
-    }
-
-    private void loadFallbackDefaultImage() {
         try {
-            InputStream is = getClass().getResourceAsStream("/com/auction/client/images/default.png");
-            if (is == null) is = getClass().getResourceAsStream("/view/images/default.png");
-            if (is == null) is = getClass().getResourceAsStream("/images/default.png");
-
-            if (is != null) {
-                imgProduct.setImage(new Image(is));
+            int currentUserId = Integer.parseInt(CurrentAccount.getAccount().getId());
+            if (currentUserId == sellerId) {
+                disableBiddingFeatures("Bạn là chủ sở hữu sản phẩm này!");
+                if (btnSubmitBid != null) btnSubmitBid.setText("Sản phẩm của bạn");
             } else {
-                imgProduct.setImage(null);
+                if (txtBidAmount != null) txtBidAmount.setDisable(false);
+                if (btnSubmitBid != null) {
+                    btnSubmitBid.setDisable(false);
+                    btnSubmitBid.setText("Đặt giá ngay");
+                }
             }
-        } catch (Exception ex) {
-            imgProduct.setImage(null);
+        } catch (Exception e) {
+            System.err.println("Lỗi kiểm tra quyền: " + e.getMessage());
         }
     }
 
-    /**
-     * 🚀 HÀM 1: Nhận đối tượng Item thô từ trang chủ
-     */
+    private void disableBiddingFeatures(String message) {
+        if (txtBidAmount != null) {
+            txtBidAmount.setDisable(true);
+            txtBidAmount.setPromptText(message);
+        }
+        if (btnSubmitBid != null) btnSubmitBid.setDisable(true);
+    }
+
     public void loadProductDetail(Item item) {
         if (item == null) return;
+        this.currentItem = item;
+        this.currentAuction = null;
 
         String formattedPrice = String.format("%,.0f đ", item.getStartingPrice());
         String sellerName = "Người bán #" + item.getOwnerId();
 
-        if (com.auction.client.util.CurrentAccount.getAccount() != null) {
-            String itemOwnerIdStr = String.valueOf(item.getOwnerId());
-            String currentUserIdStr = com.auction.client.util.CurrentAccount.getAccount().getId();
+        fillTextFields(item.getName(), formattedPrice, item.getDescription(), sellerName, "--/--/---- --:--", "--/--/---- --:--");
 
-            if (currentUserIdStr != null && (currentUserIdStr.equals(itemOwnerIdStr) || item.getOwnerId() == 1)) {
-                sellerName = com.auction.client.util.CurrentAccount.getAccount().getUsername();
-            }
-        }
+        Platform.runLater(() -> {
+            tryLoadImageToView(imgProduct, item.getImagePath());
+            checkBiddingPermissions(item.getOwnerId());
 
-        String startTimeStr = "--/--/---- --:--";
-        String endTimeStr = "--/--/---- --:--";
-        try {
-            java.lang.reflect.Method getStartMethod = item.getClass().getMethod("getStartTime");
-            Object sTime = getStartMethod.invoke(item);
-            if (sTime instanceof java.time.LocalDateTime) {
-                startTimeStr = ((java.time.LocalDateTime) sTime).format(dateTimeFormatter);
-            } else if (sTime != null) {
-                startTimeStr = sTime.toString();
-            }
-        } catch (Exception e) {}
-
-        try {
-            java.lang.reflect.Method getEndMethod = item.getClass().getMethod("getEndTime");
-            Object eTime = getEndMethod.invoke(item);
-            if (eTime instanceof java.time.LocalDateTime) {
-                endTimeStr = ((java.time.LocalDateTime) eTime).format(dateTimeFormatter);
-            } else if (eTime != null) {
-                endTimeStr = eTime.toString();
-            }
-        } catch (Exception e) {}
-
-        // Đẩy chuẩn xác qua hàm initData 8 tham số
-        initData(item.getName(), formattedPrice, null, item.getImagePath(),
-                item.getDescription() != null ? item.getDescription() : "Không có mô tả.",
-                sellerName, startTimeStr, endTimeStr);
+            priceSeries.getData().clear();
+            bidCount = 0;
+            priceSeries.getData().add(new XYChart.Data<>(bidCount, item.getStartingPrice()));
+        });
     }
 
-    /**
-     * 🚀 HÀM 2: Nhận đối tượng Auction từ Realtime / DB (ĐÃ XÓA BỎ HOÀN TOÀN GETITEM LỖI)
-     */
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
+        this.currentAuction = auction;
+        this.currentItem = null;
 
-        String pName = (auction.getProductName() != null) ? auction.getProductName() : "Mã sản phẩm #" + auction.getItemId();
+        String pName = (auction.getProductName() != null) ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
         String startPriceStr = String.format("%,.0f đ", auction.getStartPrice());
 
         double currentPriceVal = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
         String currentPriceStr = String.format("%,.0f đ", currentPriceVal);
 
         String sellerName = "Người bán #" + auction.getSellerId();
-        if (auction.getAccount() != null && auction.getAccount().getUsername() != null) {
-            sellerName = auction.getAccount().getUsername();
-        } else if (com.auction.client.util.CurrentAccount.getAccount() != null) {
-            String auctionSellerIdStr = String.valueOf(auction.getSellerId());
-            String currentUserIdStr = com.auction.client.util.CurrentAccount.getAccount().getId();
-            if (currentUserIdStr != null && currentUserIdStr.equals(auctionSellerIdStr)) {
-                sellerName = com.auction.client.util.CurrentAccount.getAccount().getUsername();
-            }
+        String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+        String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+
+        fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
+
+        if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
+
+        // Cố định lỗi: Sử dụng getWinnerId() để lấy định danh người dẫn đầu phiên đấu giá
+        if (lblTopBidder != null) {
+            lblTopBidder.setText(auction.getWinnerId() != null && auction.getWinnerId() > 0
+                    ? "Thành viên #" + auction.getWinnerId() : "Chưa có");
         }
 
-        // 🕰️ Giữ lại dữ liệu giờ cũ trên UI nếu object cập nhật ngầm bị thiếu dữ liệu thời gian
-        String startTimeStr = (lblStartTime != null && lblStartTime.getText() != null && !lblStartTime.getText().contains("-"))
-                ? lblStartTime.getText() : "--/--/---- --:--";
-        String endTimeStr = (lblEndTime != null && lblEndTime.getText() != null && !lblEndTime.getText().contains("-"))
-                ? lblEndTime.getText() : "--/--/---- --:--";
+        Platform.runLater(() -> {
+            tryLoadImageToView(imgProduct, auction.getItemId() + ".png");
+            startCountdownClock(auction.getEndTime());
+            checkBiddingPermissions(auction.getSellerId());
 
-        if (auction.getStartTime() != null) {
-            startTimeStr = auction.getStartTime().format(dateTimeFormatter);
+            priceSeries.getData().clear();
+            bidCount = 0;
+            priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
+        });
+    }
+
+    private void fillTextFields(String title, String price, String desc, String seller, String start, String end) {
+        if (lblProductTitle != null) lblProductTitle.setText(title);
+        if (lblInfoName != null) lblInfoName.setText(title);
+        if (lblStartPrice != null) lblStartPrice.setText(price);
+        if (lblCurrentPrice != null) lblCurrentPrice.setText(price);
+        if (lblInfoDescription != null) lblInfoDescription.setText(desc);
+        if (lblSellerName != null) lblSellerName.setText(seller);
+        if (lblStartTime != null) lblStartTime.setText(start);
+        if (lblEndTime != null) lblEndTime.setText(end);
+    }
+
+    private void handleManualBid() {
+        if (txtBidAmount == null || txtBidAmount.getText().trim().isEmpty()) {
+            showAlert("Thông báo", "Vui lòng điền số tiền hợp lệ!");
+            return;
         }
-        if (auction.getEndTime() != null) {
-            endTimeStr = auction.getEndTime().format(dateTimeFormatter);
-        }
 
-        String statusStr = auction.getStatus() != null ? auction.getStatus().name() : "RUNNING";
-
-        Object imgObj = "default.png";
         try {
-            java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
-            Object res = getImgMethod.invoke(auction);
-            if (res != null) imgObj = res;
-        } catch (Exception e) {
-            try {
-                java.lang.reflect.Method getImgUrlMethod = auction.getClass().getMethod("getImageUrl");
-                Object res = getImgUrlMethod.invoke(auction);
-                if (res != null) imgObj = res;
-            } catch (Exception ex) {
-                imgObj = (auction.getItemId() != null) ? auction.getItemId() : "default.png";
+            double bidAmount = Double.parseDouble(txtBidAmount.getText().trim());
+            double currentPrice = getCurrentPriceOnUI();
+
+            if (bidAmount <= currentPrice) {
+                showAlert("Lỗi đặt giá", "Giá đặt mới bắt buộc phải lớn hơn giá hiện tại!");
+                return;
             }
+
+            String activeUser = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Ẩn danh";
+            processValidBidUpdate(activeUser, bidAmount);
+
+            if (isAutoBidEnabled) {
+                triggerAutoBidSimulation(bidAmount);
+            }
+
+        } catch (NumberFormatException e) {
+            showAlert("Lỗi dữ liệu", "Vui lòng nhập định dạng số!");
         }
-
-        // ĐỒNG BỘ KHỚP THAM SỐ: Đưa ảnh về dạng String an toàn nếu có thể, truyền đi đồng bộ
-        initData(pName, startPriceStr, null, (imgObj instanceof String ? (String)imgObj : null),
-                "Trạng thái phiên: " + statusStr, sellerName, startTimeStr, endTimeStr);
-
-        if (lblCurrentPrice != null) {
-            lblCurrentPrice.setText(currentPriceStr);
-        }
-
-        // Nạp ảnh bằng cơ chế Object kiểm tra đa năng độc lập để không làm mất ảnh base64/file
-        tryLoadImageToView(imgProduct, imgObj);
     }
 
-    public void loadProductDetail(com.auction.shared.model.Auction auction, String fallbackImg) {
-        loadProductDetail(auction);
+    private void processValidBidUpdate(String username, double amount) {
+        Platform.runLater(() -> {
+            if (lblCurrentPrice != null) lblCurrentPrice.setText(String.format("%,.0f đ", amount));
+            if (lblTopBidder != null) lblTopBidder.setText(username);
+
+            if (vboxBidHistoryContainer != null) {
+                Label log = new Label(String.format("• [%s] Người dùng %s đặt mức giá %,.0f đ",
+                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), username, amount));
+                log.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
+                vboxBidHistoryContainer.getChildren().add(0, log);
+            }
+
+            bidCount++;
+            priceSeries.getData().add(new XYChart.Data<>(bidCount, amount));
+        });
     }
 
-    private void handleBid() {
-        if (txtBidAmount != null) {
-            System.out.println("Đang tiến hành đặt giá: " + txtBidAmount.getText());
+    private void handleAutoBidToggle() {
+        if (btnAutoBid == null) return;
+
+        if (btnAutoBid.isSelected()) {
+            TextInputDialog dialog = new TextInputDialog("5000000");
+            dialog.setTitle("Thiết lập Auto-Bid");
+            dialog.setHeaderText("Hệ thống tự động nâng giá khi có đối thủ cạnh tranh.");
+            dialog.setContentText("Nhập mức giá tối đa bạn có thể trả:");
+
+            var result = dialog.showAndWait();
+            if (result.isPresent()) {
+                try {
+                    this.maxAutoBidAmount = Double.parseDouble(result.get());
+                    this.autoBidIncrement = 50000.0;
+                    this.isAutoBidEnabled = true;
+                    btnAutoBid.setText("Bật");
+                } catch (Exception e) {
+                    btnAutoBid.setSelected(false);
+                }
+            } else {
+                btnAutoBid.setSelected(false);
+            }
+        } else {
+            this.isAutoBidEnabled = false;
+            btnAutoBid.setText("Tắt");
         }
+    }
+
+    private void triggerAutoBidSimulation(double opponentBid) {
+        if (opponentBid + autoBidIncrement <= maxAutoBidAmount) {
+            Timeline autoBidTimer = new Timeline(new KeyFrame(Duration.seconds(2), event -> {
+                double myNewBid = opponentBid + autoBidIncrement;
+                processValidBidUpdate("AutoBot", myNewBid);
+            }));
+            autoBidTimer.play();
+        }
+    }
+
+    private double getCurrentPriceOnUI() {
+        if (lblCurrentPrice == null || lblCurrentPrice.getText() == null) return 0.0;
+        try {
+            return Double.parseDouble(lblCurrentPrice.getText().replaceAll("[^0-9]", ""));
+        } catch (Exception e) {
+            return 0.0;
+        }
+    }
+
+    private void tryLoadImageToView(ImageView imgView, String imagePath) {
+        if (imgView == null) return;
+        try {
+            if (imagePath != null && imagePath.startsWith("base64:")) {
+                byte[] bytes = Base64.getDecoder().decode(imagePath.substring(7));
+                imgView.setImage(new Image(new ByteArrayInputStream(bytes)));
+                return;
+            }
+            File file = new File("C:/uet_uploads/" + imagePath);
+            if (file.exists()) {
+                imgView.setImage(new Image(file.toURI().toString()));
+                return;
+            }
+            InputStream is = getClass().getResourceAsStream("/images/" + imagePath);
+            if (is != null) {
+                imgView.setImage(new Image(is));
+            } else {
+                imgView.setImage(new Image(getClass().getResourceAsStream("/images/uet_logo.png")));
+            }
+        } catch (Exception e) {
+            System.err.println("Không tải được ảnh: " + e.getMessage());
+        }
+    }
+
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(content);
+        alert.showAndWait();
     }
 
     @FXML
     private void handleBack() {
-        if (MainLayoutController.getInstance() != null) {
-            MainLayoutController.getInstance().openHome();
-        }
+        if (countdownTimeline != null) countdownTimeline.stop();
     }
 }
