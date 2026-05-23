@@ -321,8 +321,8 @@ public class MainController {
         priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
         Region priceSpacer = new Region();
         HBox.setHgrow(priceSpacer, Priority.ALWAYS);
-        Label priceValue = new Label(String.format("%,.0f đ", auction.getStartPrice()));
-        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
+        Label priceValue = new Label(String.format("%,.0f đ",
+                auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice()));        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
         priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 

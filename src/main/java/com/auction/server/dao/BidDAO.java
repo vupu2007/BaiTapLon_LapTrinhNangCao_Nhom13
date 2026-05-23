@@ -8,6 +8,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class BidDAO {
+    private String bidderUsername;
+    public String getBidderUsername() { return bidderUsername; }
+    public void setBidderUsername(String bidderUsername) { this.bidderUsername = bidderUsername; }
 
     // 1. Lưu một lần đặt giá mới vào DB
     public boolean insertBid(BidTransaction bid) {
@@ -29,14 +32,18 @@ public class BidDAO {
     // 2. Lấy toàn bộ lịch sử bid của một phiên đấu giá
     public List<BidTransaction> getBidsByAuction(int auctionId) {
         List<BidTransaction> list = new ArrayList<>();
-        String sql = "SELECT * FROM Bids WHERE auction_id = ? ORDER BY bid_time ASC";
+        // JOIN với Accounts để lấy username luôn
+        String sql = "SELECT b.*, a.username FROM Bids b " +
+                "JOIN Accounts a ON b.bidder_id = a.account_id " +
+                "WHERE b.auction_id = ? ORDER BY b.bid_time ASC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToBid(rs));
+                    BidTransaction bid = mapResultSetToBid(rs);
+                    bid.setBidderUsername(rs.getString("username")); // thêm field này
+                    list.add(bid);
                 }
             }
         } catch (SQLException e) {

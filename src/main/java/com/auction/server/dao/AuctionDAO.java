@@ -230,4 +230,18 @@ public class AuctionDAO {
 
         return auction;
     }
+
+    public boolean updateCurrentPrice(int auctionId, double newPrice, int winnerId) {
+        String sql = "UPDATE Auctions SET current_price = ?, winner_id = ? WHERE auction_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setDouble(1, newPrice);
+            pstmt.setInt(2, winnerId);
+            pstmt.setInt(3, auctionId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

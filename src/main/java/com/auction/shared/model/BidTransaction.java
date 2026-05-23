@@ -11,6 +11,11 @@ public class BidTransaction implements Serializable {
     private int bidderId;         // Ai là người đặt giá
     private double bidAmount;     // Số tiền đặt
     private LocalDateTime bidTime;// Thời gian đặt giá chính xác
+    // Username của người đặt giá — dùng khi load lịch sử từ DB
+    private String bidderUsername;
+
+    public String getBidderUsername() { return bidderUsername; }
+    public void setBidderUsername(String bidderUsername) { this.bidderUsername = bidderUsername; }
 
     public BidTransaction() {
     }

@@ -6,6 +6,7 @@ import java.util.*;
 
 public class TransactionDAO {
 
+
     public boolean save(int accountId, String type, double amount, String description) {
         String sql = "INSERT INTO Transactions (account_id, type, amount, description) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
