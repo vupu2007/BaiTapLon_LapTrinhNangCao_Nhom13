@@ -134,6 +134,8 @@ public class WalletController {
      * createdAt = null khi thêm mới (dùng giờ hiện tại), có giá trị khi load từ DB
      */
     private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit, LocalDateTime createdAt) {
+
+
         if (transactionContainer == null) return;
 
         javafx.scene.layout.HBox row = new javafx.scene.layout.HBox();
@@ -166,7 +168,11 @@ public class WalletController {
 
         row.getChildren().addAll(circle, textContainer, spacer, lblAmount);
         // Thêm vào cuối — thứ tự đã được sắp xếp DESC từ DB
-        transactionContainer.getChildren().add(row);
+        if (createdAt == null) {
+            transactionContainer.getChildren().add(0, row);
+        } else {
+            transactionContainer.getChildren().add(row);
+        }
     }
 
     private void showNotify(String title, String content) {
