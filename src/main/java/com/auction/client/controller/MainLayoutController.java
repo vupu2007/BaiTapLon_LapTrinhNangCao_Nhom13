@@ -18,8 +18,6 @@ import javafx.event.ActionEvent;
 import javafx.scene.Parent;
 import javafx.stage.Stage;
 import javafx.util.Duration;
-import javafx.scene.image.Image;
-import javafx.scene.image.ImageView;
 import javafx.application.Platform;
 
 import java.io.IOException;
@@ -94,7 +92,7 @@ public class MainLayoutController {
 
             return loader;
         } catch (Exception e) {
-            System.err.println("Lỗi load file: " + fxmlPath);
+            System.err.println("Lỗi tải trang: " + fxmlPath);
             e.printStackTrace();
             return null;
         }
@@ -119,26 +117,85 @@ public class MainLayoutController {
     }
 
     /**
-     * 🔥 HÀM 1: Mở trang chi tiết bằng các tham số chuỗi thô (Giữ nguyên gốc của bồ)
+     * Khởi tạo thông tin chi tiết cuộc đấu giá và điều hướng sang giao diện hiển thị
      */
     public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName,
                                   String description, String sellerName, String startTime, String endTime) {
 
-        FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
-        if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
+        Platform.runLater(() -> {
+            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
+            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
 
-        setActive(btnAuction);
+            setActive(btnAuction);
 
-        if (loader != null) {
-            AuctionDetailController detailController = loader.getController();
-            if (detailController != null) {
-                detailController.initData(name, price, fxImage, imageFileName, description, sellerName, startTime, endTime);
+            if (loader != null) {
+                AuctionDetailController detailController = loader.getController();
+                if (detailController != null) {
+                    com.auction.shared.model.Auction mockAuction = new com.auction.shared.model.Auction();
+                    mockAuction.setProductName(name);
+
+                    // Trích xuất thông tin giá từ chuỗi ký tự dữ liệu
+                    try {
+                        String cleanPrice = price.replaceAll("[^0-9]", "");
+                        if (!cleanPrice.isEmpty()) {
+                            mockAuction.setCurrentPrice(Double.parseDouble(cleanPrice));
+                            mockAuction.setStartPrice(Double.parseDouble(cleanPrice));
+                        }
+                    } catch (Exception e) {
+                        mockAuction.setStartPrice(0.0);
+                    }
+
+                    mockAuction.setStatus(com.auction.shared.model.Auction.AuctionStatus.RUNNING);
+
+                    // Đồng bộ định dạng thời gian
+                    LocalDateTime start = null;
+                    LocalDateTime end = null;
+                    DateTimeFormatter[] formatters = {
+                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
+                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"),
+                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
+                            DateTimeFormatter.ISO_LOCAL_DATE_TIME
+                    };
+
+                    if (startTime != null && !startTime.trim().isEmpty() && !startTime.contains("--")) {
+                        for (DateTimeFormatter fmt : formatters) {
+                            try { start = LocalDateTime.parse(startTime.trim(), fmt); break; } catch (Exception ignored) {}
+                        }
+                    }
+                    if (endTime != null && !endTime.trim().isEmpty() && !endTime.contains("--")) {
+                        for (DateTimeFormatter fmt : formatters) {
+                            try { end = LocalDateTime.parse(endTime.trim(), fmt); break; } catch (Exception ignored) {}
+                        }
+                    }
+
+                    mockAuction.setStartTime(start != null ? start : LocalDateTime.now());
+                    mockAuction.setEndTime(end != null ? end : LocalDateTime.now().plusHours(2));
+
+                    if (imageFileName != null) {
+                        String cleanImageName = imageFileName.replaceAll("(?i)\\.(png|jpg|jpeg|gif)$", "");
+                        mockAuction.setItemId(cleanImageName);
+                    } else {
+                        mockAuction.setItemId("default");
+                    }
+
+                    // Khởi tạo tài khoản người bán với cấu hình constructor 5 tham số định dạng chính xác
+                    String finalSellerName = (sellerName != null && !sellerName.trim().isEmpty()) ? sellerName : "Ẩn danh";
+                    com.auction.shared.model.Seller sellerAccount = new com.auction.shared.model.Seller("", finalSellerName, "", "", 0.0);
+                    mockAuction.setAccount(sellerAccount);
+
+                    // Nạp dữ liệu vào giao diện chi tiết cuộc đấu giá
+                    detailController.loadProductDetail(mockAuction);
+
+                    if (detailController.lblInfoDescription != null && description != null) {
+                        detailController.lblInfoDescription.setText(description);
+                    }
+                }
             }
-        }
+        });
     }
 
     /**
-     * 🚀 HÀM MỚI 2: Ép mở trang chi tiết và truyền trực tiếp Object AUCTION (Cứu cánh phần Realtime/Tạo xong)
+     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Auction
      */
     public void openAuctionDetailWithObject(com.auction.shared.model.Auction auction) {
         if (auction == null) return;
@@ -152,16 +209,15 @@ public class MainLayoutController {
             if (loader != null) {
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
-                    // Gọi hàm xử lý object thông minh mà chúng ta đã sửa bên AuctionDetailController
                     detailController.loadProductDetail(auction);
-                    System.out.println("✅ Đã ép chuyển trang và nạp Object Auction thành công!");
+                    System.out.println("✅ Hệ thống đã chuyển tiếp thông tin đối tượng Đấu giá thành công.");
                 }
             }
         });
     }
 
     /**
-     * 🚀 HÀM MỚI 3: Ép mở trang chi tiết và truyền trực tiếp Object ITEM
+     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Item
      */
     public void openAuctionDetailWithObject(com.auction.shared.model.Item item) {
         if (item == null) return;
@@ -176,7 +232,7 @@ public class MainLayoutController {
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
                     detailController.loadProductDetail(item);
-                    System.out.println("✅ Đã ép chuyển trang và nạp Object Item thành công!");
+                    System.out.println("✅ Hệ thống đã chuyển tiếp thông tin đối tượng Sản phẩm thành công.");
                 }
             }
         });
@@ -188,9 +244,15 @@ public class MainLayoutController {
         setActive(btnHome);
 
         if (loader != null) {
-            MainController mainController = loader.getController();
-            if (mainController != null) {
-                mainController.refreshDashboard();
+            // Sử dụng kỹ thuật Reflection để cập nhật trang chủ một cách an toàn và tối ưu độc lập
+            Object controller = loader.getController();
+            if (controller != null) {
+                try {
+                    java.lang.reflect.Method refreshMethod = controller.getClass().getMethod("refreshDashboard");
+                    refreshMethod.invoke(controller);
+                } catch (Exception e) {
+                    System.out.println("ℹ️ Không thực thi phương thức refreshDashboard() tại View chính.");
+                }
             }
         }
     }
@@ -204,9 +266,14 @@ public class MainLayoutController {
         setActive(btnSelling);
 
         if (loader != null) {
-            MyProductsController myProductsController = loader.getController();
+            Object myProductsController = loader.getController();
             if (myProductsController != null) {
-                myProductsController.loadMyProductsData();
+                try {
+                    java.lang.reflect.Method loadMethod = myProductsController.getClass().getMethod("loadMyProductsData");
+                    loadMethod.invoke(myProductsController);
+                } catch (Exception e) {
+                    System.out.println("ℹ️ Không tìm thấy phương thức loadMyProductsData().");
+                }
             }
         }
     }

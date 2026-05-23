@@ -108,7 +108,6 @@ public class AuctionDAO {
     }
 
     // THÊM: insertBid + updateCurrentPrice trong 1 transaction
-    // → tránh lost update, tránh rollback giá, tránh 2 người cùng thắng
     public boolean placeBidTransaction(BidTransaction bid, double newPrice, int bidderId) {
         String insertBidSql    = "INSERT INTO Bids (auction_id, bidder_id, bid_amount) VALUES (?, ?, ?)";
         String updatePriceSql  = "UPDATE Auctions SET current_price = ?, winner_id = ? " +
@@ -117,9 +116,8 @@ public class AuctionDAO {
         Connection conn = null;
         try {
             conn = DatabaseConnection.getConnection();
-            conn.setAutoCommit(false); // Bắt đầu transaction
+            conn.setAutoCommit(false);
 
-            // Bước 1: Lưu bid
             try (PreparedStatement ps1 = conn.prepareStatement(insertBidSql)) {
                 ps1.setInt(1, bid.getAuctionId());
                 ps1.setInt(2, bid.getBidderId());
@@ -127,23 +125,20 @@ public class AuctionDAO {
                 ps1.executeUpdate();
             }
 
-            // Bước 2: Cập nhật giá — chỉ update nếu current_price < newPrice
-            // → tránh trường hợp 2 thread cùng vào, thread sau ghi đè thread trước
             try (PreparedStatement ps2 = conn.prepareStatement(updatePriceSql)) {
                 ps2.setDouble(1, newPrice);
                 ps2.setInt(2, bidderId);
                 ps2.setInt(3, bid.getAuctionId());
-                ps2.setDouble(4, newPrice); // current_price < newPrice
+                ps2.setDouble(4, newPrice);
                 int rows = ps2.executeUpdate();
                 if (rows == 0) {
-                    // Có người khác vừa đặt giá cao hơn → rollback
                     conn.rollback();
                     System.err.println("Giá vừa bị vượt qua bởi người khác, vui lòng thử lại!");
                     return false;
                 }
             }
 
-            conn.commit(); // Hoàn tất transaction
+            conn.commit();
             return true;
 
         } catch (SQLException e) {
@@ -177,6 +172,7 @@ public class AuctionDAO {
             return false;
         }
     }
+
     // 7. Cập nhật thời gian kết thúc (Anti-sniping)
     public boolean updateEndTime(int auctionId, LocalDateTime newEndTime) {
         String sql = "UPDATE Auctions SET end_time = ? WHERE auction_id = ?";
@@ -191,6 +187,29 @@ public class AuctionDAO {
             e.printStackTrace();
             return false;
         }
+    }
+
+    // 🌟 8. THÊM MỚI FULL: Hàm lấy các phiên đang diễn ra mà người dùng ĐÃ ĐẶT GIÁ THÀNH CÔNG
+    public List<Auction> getAuctionsByBidder(int bidderId) {
+        List<Auction> list = new ArrayList<>();
+        String sql = "SELECT DISTINCT a.* FROM Auctions a " +
+                "JOIN Bids b ON a.auction_id = b.auction_id " +
+                "WHERE a.status = 'RUNNING' AND b.bidder_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, bidderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    list.add(mapResultSetToAuction(rs));
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi truy vấn getAuctionsByBidder: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
     }
 
     // --- Helper: map ResultSet sang Auction object ---

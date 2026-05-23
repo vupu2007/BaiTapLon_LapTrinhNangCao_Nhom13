@@ -1,12 +1,18 @@
 package com.auction.client.controller;
 
 import com.auction.client.util.CurrentAccount;
+import com.auction.server.dao.AccountDAO;
+import com.auction.server.dao.TransactionDAO;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import java.text.DecimalFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Map;
 
 public class WalletController {
 
@@ -18,14 +24,17 @@ public class WalletController {
     @FXML private VBox transactionContainer; // Quản lý khu vực hiển thị lịch sử
 
     private final DecimalFormat formatter = new DecimalFormat("#,###");
+    // DAO để thao tác với DB
+    private final TransactionDAO transactionDAO = new TransactionDAO();
+    private final AccountDAO accountDAO = new AccountDAO();
 
     @FXML
     public void initialize() {
         // Xóa các dòng mẫu hardcode thiết kế trong FXML trước khi nạp giao dịch thật
-        if (transactionContainer != null) {
-            transactionContainer.getChildren().clear();
-        }
+        if (transactionContainer != null) transactionContainer.getChildren().clear();
         updateWalletUI();
+        // Load lịch sử giao dịch từ DB khi vào màn hình
+        loadTransactionHistory();
     }
 
     private void updateWalletUI() {
@@ -35,73 +44,53 @@ public class WalletController {
 
         System.out.println("LOG UI: Số dư=" + balance + " | Tổng nạp=" + totalDeposit + " | Tổng chi=" + totalWithdraw);
 
-        if (balance == 0) {
-            lblBalance.setText("0 đ");
-        } else {
-            lblBalance.setText(formatter.format(balance) + " đ");
-        }
+        lblBalance.setText(formatter.format(balance) + " đ");
+        lblTotalDeposit.setText(formatter.format(totalDeposit) + " đ");
+        lblTotalWithdraw.setText(formatter.format(totalWithdraw) + " đ");
+    }
 
-        if (totalDeposit == 0) {
-            lblTotalDeposit.setText("0 đ");
-        } else {
-            lblTotalDeposit.setText(formatter.format(totalDeposit) + " đ");
-        }
-
-        if (totalWithdraw == 0) {
-            lblTotalWithdraw.setText("0 đ");
-        } else {
-            lblTotalWithdraw.setText(formatter.format(totalWithdraw) + " đ");
+    // Load lịch sử từ DB — tránh mất dữ liệu khi thoát ra vào lại
+    private void loadTransactionHistory() {
+        if (transactionContainer == null) return;
+        transactionContainer.getChildren().clear();
+        int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
+        List<Map<String, Object>> list = transactionDAO.getByAccount(accountId);
+        for (Map<String, Object> tx : list) {
+            boolean isDeposit = tx.get("type").equals("DEPOSIT");
+            addTransactionToHistory(
+                    isDeposit ? "Nạp tiền thành công" : "Rút tiền thành công",
+                    (String) tx.get("description"),
+                    (double) tx.get("amount"),
+                    isDeposit,
+                    (LocalDateTime) tx.get("created_at")
+            );
         }
     }
 
     @FXML
     private void handleDeposit() {
         String amountStr = txtDeposit.getText().trim();
-        if (amountStr.isEmpty()) {
-            showNotify("Thông báo", "Vui lòng nhập số tiền cần nạp!");
-            return;
-        }
+        if (amountStr.isEmpty()) { showNotify("Thông báo", "Vui lòng nhập số tiền cần nạp!"); return; }
 
         try {
             double amount = Double.parseDouble(amountStr);
-            if (amount <= 0) {
-                showNotify("Lỗi nhập liệu", "Số tiền nạp vào phải lớn hơn 0 đ!");
-                return;
-            }
+            if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền nạp vào phải lớn hơn 0 đ!"); return; }
 
+            // 1. Cập nhật số dư trên RAM
             CurrentAccount.deposit(amount);
 
-            if (CurrentAccount.getAccount() != null) {
-                try {
-                    int accountIdInt = Integer.parseInt(CurrentAccount.getAccount().getId());
-                    double newBalance = CurrentAccount.getBalance();
-                    double newTotalDeposit = CurrentAccount.getTotalDeposit();
-                    double newTotalWithdraw = CurrentAccount.getTotalWithdraw();
+            // 2. Đồng bộ số dư mới xuống DB
+            int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
+            accountDAO.updateBalance(accountId, CurrentAccount.getBalance(), CurrentAccount.getTotalDeposit(), CurrentAccount.getTotalWithdraw());
 
-                    CurrentAccount.getAccount().setBalance(newBalance);
-                    if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Bidder) {
-                        ((com.auction.shared.model.Bidder) CurrentAccount.getAccount()).setTotalDeposit(newTotalDeposit);
-                    } else if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Seller) {
-                        ((com.auction.shared.model.Seller) CurrentAccount.getAccount()).setTotalDeposit(newTotalDeposit);
-                    }
+            // 3. Lưu lịch sử giao dịch vào DB
+            transactionDAO.insertTransaction(accountId, "DEPOSIT", amount, CurrentAccount.getBalance());
 
-                    com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
-                    boolean isSaved = accountDAO.updateBalance(accountIdInt, newBalance, newTotalDeposit, newTotalWithdraw);
-
-                    if (!isSaved) {
-                        System.out.println("CẢNH BÁO: Không thể cập nhật số dư mới vào cơ sở dữ liệu!");
-                    }
-                } catch (NumberFormatException nfe) {
-                    System.out.println("LỖI: ID tài khoản không hợp lệ.");
-                }
-            }
-
-            // 🔥 THÊM GIAO DỊCH VÀO LỊCH SỬ UI
-            addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true);
+            // 4. Thêm giao dịch vào lịch sử UI
+            addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
 
             updateWalletUI();
             txtDeposit.clear();
-
             showNotify("Thành công", "Đã nạp thành công " + formatter.format(amount) + " đ vào ví!");
 
         } catch (NumberFormatException e) {
@@ -112,55 +101,28 @@ public class WalletController {
     @FXML
     private void handleWithdraw() {
         String amountStr = txtWithdraw.getText().trim();
-        if (amountStr.isEmpty()) {
-            showNotify("Thông báo", "Vui lòng nhập số tiền cần rút!");
-            return;
-        }
+        if (amountStr.isEmpty()) { showNotify("Thông báo", "Vui lòng nhập số tiền cần rút!"); return; }
 
         try {
             double amount = Double.parseDouble(amountStr);
-            if (amount <= 0) {
-                showNotify("Lỗi nhập liệu", "Số tiền rút ra phải lớn hơn 0 đ!");
-                return;
-            }
+            if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền rút ra phải lớn hơn 0 đ!"); return; }
 
-            boolean isSuccess = CurrentAccount.withdraw(amount);
+            // 1. Kiểm tra và trừ tiền trên RAM
+            if (!CurrentAccount.withdraw(amount)) { showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!"); return; }
 
-            if (isSuccess) {
-                if (CurrentAccount.getAccount() != null) {
-                    try {
-                        int accountIdInt = Integer.parseInt(CurrentAccount.getAccount().getId());
-                        double newBalance = CurrentAccount.getBalance();
-                        double newTotalDeposit = CurrentAccount.getTotalDeposit();
-                        double newTotalWithdraw = CurrentAccount.getTotalWithdraw();
+            // 2. Đồng bộ số dư mới xuống DB
+            int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
+            accountDAO.updateBalance(accountId, CurrentAccount.getBalance(), CurrentAccount.getTotalDeposit(), CurrentAccount.getTotalWithdraw());
 
-                        CurrentAccount.getAccount().setBalance(newBalance);
-                        if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Bidder) {
-                            ((com.auction.shared.model.Bidder) CurrentAccount.getAccount()).setTotalWithdraw(newTotalWithdraw);
-                        } else if (CurrentAccount.getAccount() instanceof com.auction.shared.model.Seller) {
-                            ((com.auction.shared.model.Seller) CurrentAccount.getAccount()).setTotalWithdraw(newTotalWithdraw);
-                        }
+            // 3. Lưu lịch sử giao dịch vào DB
+            transactionDAO.insertTransaction(accountId, "WITHDRAW", amount, CurrentAccount.getBalance());
 
-                        com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
-                        boolean isSaved = accountDAO.updateBalance(accountIdInt, newBalance, newTotalDeposit, newTotalWithdraw);
+            // 4. Thêm giao dịch vào lịch sử UI
+            addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
 
-                        if (!isSaved) {
-                            System.out.println("CẢNH BÁO: Không thể trừ số dư trong cơ sở dữ liệu!");
-                        }
-                    } catch (NumberFormatException nfe) {
-                        System.out.println("LỖI: ID tài khoản không hợp lệ.");
-                    }
-                }
-
-                // 🔥 THÊM GIAO DỊCH VÀO LỊCH SỬ UI
-                addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false);
-
-                updateWalletUI();
-                txtWithdraw.clear();
-                showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
-            } else {
-                showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!");
-            }
+            updateWalletUI();
+            txtWithdraw.clear();
+            showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
 
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
@@ -169,8 +131,11 @@ public class WalletController {
 
     /**
      * Hàm tự động vẽ một dòng HBox chứa lịch sử và thêm thẳng vào transactionContainer
+     * createdAt = null khi thêm mới (dùng giờ hiện tại), có giá trị khi load từ DB
      */
-    private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit) {
+    private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit, LocalDateTime createdAt) {
+
+
         if (transactionContainer == null) return;
 
         javafx.scene.layout.HBox row = new javafx.scene.layout.HBox();
@@ -188,25 +153,26 @@ public class WalletController {
         Label lblTitle = new Label(title);
         lblTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #1e293b;");
 
-        String currentTime = java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-        Label lblSub = new Label(type + " • " + currentTime);
+        // Dùng thời gian từ DB nếu có, không thì dùng giờ hiện tại
+        String time = (createdAt != null ? createdAt : LocalDateTime.now())
+                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+        Label lblSub = new Label(type + " • " + time);
         lblSub.setStyle("-fx-font-size: 12; -fx-text-fill: #64748b;");
         textContainer.getChildren().addAll(lblTitle, lblSub);
 
         javafx.scene.layout.Region spacer = new javafx.scene.layout.Region();
         javafx.scene.layout.HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
 
-        Label lblAmount = new Label();
-        if (isDeposit) {
-            lblAmount.setText("+" + formatter.format(amount) + " đ");
-            lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #059669;");
-        } else {
-            lblAmount.setText("-" + formatter.format(amount) + " đ");
-            lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #dc2626;");
-        }
+        Label lblAmount = new Label((isDeposit ? "+" : "-") + formatter.format(amount) + " đ");
+        lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: " + (isDeposit ? "#059669" : "#dc2626") + ";");
 
         row.getChildren().addAll(circle, textContainer, spacer, lblAmount);
-        transactionContainer.getChildren().add(0, row); // add(0, ...) để đẩy giao dịch mới nhất lên hàng đầu
+        // Thêm vào cuối — thứ tự đã được sắp xếp DESC từ DB
+        if (createdAt == null) {
+            transactionContainer.getChildren().add(0, row);
+        } else {
+            transactionContainer.getChildren().add(row);
+        }
     }
 
     private void showNotify(String title, String content) {

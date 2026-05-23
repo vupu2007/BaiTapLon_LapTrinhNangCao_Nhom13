@@ -72,3 +72,12 @@ UPDATE Accounts SET total_deposit = 0.0, total_withdraw = 0.0 WHERE username = '
 ALTER TABLE Items ADD COLUMN image_path VARCHAR(255);
 
 ALTER TABLE Items MODIFY COLUMN image_path MEDIUMTEXT;
+-- Tạo thêm bản Transactions để lưu trữ số dư
+CREATE TABLE Transactions (
+                              transaction_id INT AUTO_INCREMENT PRIMARY KEY,
+                              account_id INT NOT NULL,
+                              type VARCHAR(50) NOT NULL,
+                              amount DOUBLE NOT NULL,
+                              description VARCHAR(255),
+                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

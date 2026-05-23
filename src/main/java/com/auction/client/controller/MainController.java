@@ -4,7 +4,7 @@ import com.auction.server.service.MainService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Account;
-import com.auction.shared.model.User; // 🌟 ĐÃ GIỮ: Nhận diện chuẩn class User abstract của bồ
+import com.auction.shared.model.User;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Electronics;
 import javafx.application.Platform;
@@ -69,12 +69,7 @@ public class MainController {
     public void refreshDashboard() {
         Account current = CurrentAccount.getAccount();
         if (balanceLabel != null) {
-            // 🌟 ĐÃ SỬA: Kiểm tra instance chuẩn class User (Bidder/Seller) để ép kiểu lấy số dư không lo bị crash
-            if (current instanceof User) {
-                balanceLabel.setText(String.format("%,.0f VNĐ", ((User) current).getBalance()));
-            } else {
-                balanceLabel.setText("N/A (Admin)");
-            }
+            balanceLabel.setText(current instanceof User ? String.format("%.0f VNĐ", ((User) current).getBalance()) : "N/A");
         }
         if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(mainService.getOngoingCount()));
         if (wonLabel != null) wonLabel.setText(String.valueOf(mainService.getWonCount()));
@@ -219,7 +214,7 @@ public class MainController {
         Label statusLabel = new Label(statusText);
         statusLabel.setStyle(statusText.equals("Sắp diễn ra") ?
                 "-fx-background-color: #dbeafe; -fx-text-fill: #2563eb; -fx-background-radius: 20; -fx-font-weight: bold;" :
-                "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
+                "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold warm-white;");
         statusLabel.setPadding(new Insets(5, 12, 5, 12));
         StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
         StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
@@ -248,8 +243,7 @@ public class MainController {
         priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 
-        // 🌟 ĐÃ SỬA: Fix lỗi chính tả "Sắp diễn du" thành "Sắp diễn ra" để hiện nút Xem chi tiết ngon lành
-        Button bidButton = new Button(statusText.equals("Sắp diễn ra") ? "Xem chi tiết" : "Đấu giá ngay");
+        Button bidButton = new Button(statusText.equals("Sắp diễn du") ? "Xem chi tiết" : "Đấu giá ngay");
         bidButton.setMaxWidth(Double.MAX_VALUE);
         bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
         bidButton.setPadding(new Insets(8, 0, 8, 0));
@@ -371,6 +365,7 @@ public class MainController {
         }
     }
 
+    // ================= 🔥 HÀM CHUYỂN TRANG CHI TIẾT GỌI TRỰC TIẾP LOADPRODUCTDETAIL CHUẨN ĐỒNG BỘ =================
     public void showAuctionDetail(Object productData) {
         try {
             java.net.URL fxmlLocation = getClass().getResource("/view/AuctionDetailView.fxml");
@@ -391,6 +386,7 @@ public class MainController {
             if (detailController != null) {
                 System.out.println("🚀 [Đồng bộ] Đang chuyển giao dữ liệu gốc qua hàm loadProductDetail...");
 
+                // Kích hoạt hàm xử lý chi tiết bóc tách đối tượng của AuctionDetailController
                 if (productData instanceof Item) {
                     detailController.loadProductDetail((Item) productData);
                 } else if (productData instanceof Auction) {
