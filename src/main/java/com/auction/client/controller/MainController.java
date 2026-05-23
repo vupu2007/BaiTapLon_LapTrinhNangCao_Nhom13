@@ -281,18 +281,9 @@ public class MainController {
         imgView.setFitHeight(180);
         imgView.setPreserveRatio(false);
 
-        String preferredName = null;
-        try {
-            java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
-            preferredName = (String) getImgMethod.invoke(auction);
-        } catch (Exception e) {
-            try {
-                java.lang.reflect.Method getImgUrlMethod = auction.getClass().getMethod("getImageUrl");
-                preferredName = (String) getImgUrlMethod.invoke(auction);
-            } catch (Exception ex) {
-                preferredName = auction.getItemId();
-            }
-        }
+        String preferredName = auction.getImagePath();
+        tryLoadImageToView(imgView, preferredName);
+
 
         if (preferredName == null || preferredName.trim().isEmpty()) {
             preferredName = "default.png";

@@ -35,6 +35,7 @@ public class AuctionDetailController {
     @FXML private Button btnSubmitBid;
     @FXML private ToggleButton btnAutoBid;
     @FXML private VBox vboxBidHistoryContainer;
+    @FXML private Label lblAuctionId;
 
     private Auction currentAuction;
     private Item currentItem;
@@ -176,9 +177,13 @@ public class AuctionDetailController {
         String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
         String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
 
-        fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
+        String description = (item != null && item.getDescription() != null) ? item.getDescription() : "";
 
+        fillTextFields(pName, startPriceStr, description, sellerName, startTimeStr, endTimeStr);
+        if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
         if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
+
+
 
         // Cố định lỗi: Sử dụng getWinnerId() để lấy định danh người dẫn đầu phiên đấu giá
         if (lblTopBidder != null) {
