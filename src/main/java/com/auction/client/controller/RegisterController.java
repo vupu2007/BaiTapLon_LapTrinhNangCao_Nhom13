@@ -1,6 +1,11 @@
 package com.auction.client.controller;
 
-import com.auction.server.service.AccountService;
+// Thêm các import cho Network (Bạn hãy điều chỉnh package cho khớp nếu cần)
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+import com.auction.shared.network.MessageType;
+import com.auction.client.network.ClientSocket;
+
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -21,7 +26,8 @@ public class RegisterController {
     @FXML private ToggleButton toggleConfirmPasswordBtn;
     @FXML private TextField emailField;
 
-    private final AccountService accountService = new AccountService();
+    // ĐÃ XÓA: private final AccountService accountService = new AccountService();
+    // Client không được khởi tạo trực tiếp Service của Server.
 
     @FXML
     public void initialize() {
@@ -34,56 +40,55 @@ public class RegisterController {
         confirmPasswordTextField.setVisible(false);
         confirmPasswordTextField.setManaged(false);
     }
+
     @FXML
     void handleRegister(ActionEvent event) {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
         String confirm = confirmPasswordField.getText();
+        String email = emailField.getText().trim();
 
-        if (username.isEmpty() || password.isEmpty() || confirm.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING,
-                    "Lỗi",
-                    "Không được để trống thông tin!");
+        // 1. Kiểm tra (Validate) dữ liệu trực tiếp tại Client để giảm tải cho mạng
+        if (username.isEmpty() || password.isEmpty() || confirm.isEmpty() || email.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi", "Không được để trống thông tin!");
             return;
         }
         if (!password.equals(confirm)) {
-            showAlert(Alert.AlertType.ERROR,
-                    "Lỗi",
-                    "Mật khẩu xác nhận không khớp!");
+            showAlert(Alert.AlertType.ERROR, "Lỗi", "Mật khẩu xác nhận không khớp!");
             return;
         }
-        String email = emailField.getText().trim();
 
-        boolean success =
-                accountService.register(
-                        username,
-                        password,
-                        email
-                );
+        // 2. Đóng gói dữ liệu thành Request
+        String[] registerData = {username, password, email};
+        Request request = new Request(MessageType.REGISTER, registerData);
 
-        if (success) {
+        try {
+            // 3. Gửi qua Socket (Giả sử ClientSocket của bạn dùng Singleton Pattern là getInstance())
+            // Nếu bạn implement khác, hãy sửa dòng này cho phù hợp với class ClientSocket của bạn.
+            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            showAlert(Alert.AlertType.INFORMATION,
-                    "Thành công",
-                    "Đăng ký thành công!");
+            // 4. Xử lý UI dựa trên Response trả về từ Server
+            if (response.isSuccess()) {
+                // Sử dụng chính câu thông báo từ Server gửi về cho sinh động
+                showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
+                goToLogin(event);
+            } else {
+                showAlert(Alert.AlertType.ERROR, "Thất bại", response.getMessage());
+            }
 
-            goToLogin(event);
-        } else {
-
-            showAlert(Alert.AlertType.ERROR,
-                    "Thất bại",
-                    "Tên đăng nhập đã tồn tại hoặc lỗi database!");
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi mạng", "Không thể kết nối đến máy chủ.");
+            e.printStackTrace();
         }
     }
+
     @FXML
     public void goToLogin(ActionEvent event) {
-        switchScene(event,
-                "/view/LoginView.fxml",
-                "Đăng nhập");
+        switchScene(event, "/view/LoginView.fxml", "Đăng nhập");
     }
+
     @FXML
     private void togglePasswordVisibility() {
-
         boolean show = togglePasswordBtn.isSelected();
 
         passwordTextField.setVisible(show);
@@ -94,11 +99,10 @@ public class RegisterController {
 
         togglePasswordBtn.setText(show ? "👁‍🗨" : "👁");
     }
+
     @FXML
     private void toggleConfirmPasswordVisibility() {
-
-        boolean show =
-                toggleConfirmPasswordBtn.isSelected();
+        boolean show = toggleConfirmPasswordBtn.isSelected();
 
         confirmPasswordTextField.setVisible(show);
         confirmPasswordTextField.setManaged(show);
@@ -109,17 +113,10 @@ public class RegisterController {
         toggleConfirmPasswordBtn.setText(show ? "👁‍🗨" : "👁");
     }
 
-    private void switchScene(ActionEvent event,
-                             String fxmlPath,
-                             String title) {
+    private void switchScene(ActionEvent event, String fxmlPath, String title) {
         try {
-            Parent root =
-                    FXMLLoader.load(
-                            getClass().getResource(fxmlPath));
-            Stage stage =
-                    (Stage) ((Node) event.getSource())
-                            .getScene()
-                            .getWindow();
+            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
+            Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
 
             stage.getScene().setRoot(root);
             stage.setTitle(title);
@@ -128,10 +125,8 @@ public class RegisterController {
             e.printStackTrace();
         }
     }
-    private void showAlert(Alert.AlertType type,
-                           String title,
-                           String message) {
 
+    private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
         alert.setHeaderText(null);

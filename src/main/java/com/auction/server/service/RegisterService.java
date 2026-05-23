@@ -13,7 +13,8 @@ public class RegisterService {
 
         if (UserStore.users.containsKey(username)) return false;
 
-        if (!password.equals(email)) return false;
+        //if (!password.equals(email)) return false;
+        if (!email.contains("@")) return false;
 
         UserStore.users.put(username, password);
         return true;

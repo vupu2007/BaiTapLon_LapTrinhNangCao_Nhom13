@@ -3,18 +3,20 @@ package com.auction.shared.network;
 import java.io.Serializable;
 
 public class Response implements Serializable {
-
+    private static final long serialVersionUID = 1L;
     private boolean success;
-    private Object data;
     private String message;
+    private Object data;
 
-    public Response(boolean success, Object data, String message) {
+    // BẠN HÃY SỬA LẠI CONSTRUCTOR THEO ĐÚNG THỨ TỰ NÀY: (boolean, String, Object)
+    public Response(boolean success, String message, Object data) {
         this.success = success;
-        this.data = data;
         this.message = message;
+        this.data = data;
     }
 
-    public boolean isSuccess() {
-        return success;
-    }
+    // Các Getters và Setters giữ nguyên
+    public boolean isSuccess() { return success; }
+    public String getMessage() { return message; }
+    public Object getData() { return data; }
 }
