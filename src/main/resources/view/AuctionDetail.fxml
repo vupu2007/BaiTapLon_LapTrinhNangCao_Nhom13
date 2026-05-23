@@ -122,7 +122,7 @@
                                                     </font>
                                                 </Label>
                                                 <Label text="Người bán sở hữu:" textFill="#757575" GridPane.rowIndex="3" />
-                                                <Label fx:id="lblSellerName" text="Đang tải..." GridPane.columnIndex="1" />
+                                                <Label fx:id="lblSellerName" text="Đang tải..." GridPane.columnIndex="1" GridPane.rowIndex="3"/>
                                                 <Label text="Thời gian bắt đầu:" textFill="#757575" GridPane.rowIndex="4" />
                                                 <Label fx:id="lblStartTime" text="--/--/---- --:--:--" GridPane.columnIndex="1" GridPane.rowIndex="4" />
                                                 <Label text="Thời gian kết thúc:" textFill="#757575" GridPane.rowIndex="5" />

@@ -10,12 +10,10 @@ public class Electronics extends Item  {
         super();
     }
 
-    // 2. Constructor đầy đủ
     public Electronics(String itemId, String name, String description,
                        double startingPrice, int ownerId, int categoryId, String status,
-                       String brand, int warrantyMonths) {
-        super(itemId, name, description, startingPrice, ownerId, categoryId, status, null);
-        this.brand = brand;
+                       String imagePath, int warrantyMonths) {
+        super(itemId, name, description, startingPrice, ownerId, categoryId, status, imagePath); // ✅ truyền imagePath
         this.warrantyMonths = warrantyMonths;
     }
 

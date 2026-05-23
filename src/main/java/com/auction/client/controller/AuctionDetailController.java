@@ -42,6 +42,8 @@ public class AuctionDetailController {
     private XYChart.Series<Number, Number> priceSeries;
     private int bidCount = 0;
 
+    private final com.auction.server.dao.ItemDAO itemDAO = new com.auction.server.dao.ItemDAO();
+
     private boolean isAutoBidEnabled = false;
     private double maxAutoBidAmount = 0.0;
     private double autoBidIncrement = 0.0;
@@ -135,6 +137,7 @@ public class AuctionDetailController {
 
     public void loadProductDetail(Item item) {
         if (item == null) return;
+        System.out.println("🔍 loadProductDetail Item: name=" + item.getName() + " | imagePath=" + item.getImagePath());
         this.currentItem = item;
         this.currentAuction = null;
 
@@ -158,6 +161,11 @@ public class AuctionDetailController {
         this.currentAuction = auction;
         this.currentItem = null;
 
+        Item item = itemDAO.getItemById(auction.getItemId());
+        System.out.println("🔍 AuctionDetail itemId=" + auction.getItemId() + " | item=" + item + " | imagePath=" + (item != null ? item.getImagePath() : "null"));
+        String imagePath = (item != null) ? item.getImagePath() : null;
+        tryLoadImageToView(imgProduct, imagePath);
+
         String pName = (auction.getProductName() != null) ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
         String startPriceStr = String.format("%,.0f đ", auction.getStartPrice());
 
@@ -176,10 +184,12 @@ public class AuctionDetailController {
         if (lblTopBidder != null) {
             lblTopBidder.setText(auction.getWinnerId() != null && auction.getWinnerId() > 0
                     ? "Thành viên #" + auction.getWinnerId() : "Chưa có");
+
         }
 
         Platform.runLater(() -> {
-            tryLoadImageToView(imgProduct, auction.getItemId() + ".png");
+            com.auction.server.dao.ItemDAO itemDAO = new com.auction.server.dao.ItemDAO();
+            tryLoadImageToView(imgProduct, imagePath);
             startCountdownClock(auction.getEndTime());
             checkBiddingPermissions(auction.getSellerId());
 
@@ -299,6 +309,18 @@ public class AuctionDetailController {
                 imgView.setImage(new Image(new ByteArrayInputStream(bytes)));
                 return;
             }
+            // ✅ THÊM: xử lý Base64
+            if (imagePath.startsWith("base64:")) {
+                byte[] bytes = Base64.getDecoder().decode(imagePath.substring(7));
+                imgView.setImage(new Image(new ByteArrayInputStream(bytes)));
+                return;
+            }
+
+            // ✅ THÊM: xử lý URL online
+            if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
+                imgView.setImage(new Image(imagePath, true));
+                return;
+            }
             File file = new File("C:/uet_uploads/" + imagePath);
             if (file.exists()) {
                 imgView.setImage(new Image(file.toURI().toString()));
@@ -312,6 +334,11 @@ public class AuctionDetailController {
             }
         } catch (Exception e) {
             System.err.println("Không tải được ảnh: " + e.getMessage());
+        }
+
+        if (imagePath == null || imagePath.trim().isEmpty()) {
+            imgView.setImage(new Image(getClass().getResourceAsStream("/images/uet_logo.png")));
+            return;
         }
     }
 

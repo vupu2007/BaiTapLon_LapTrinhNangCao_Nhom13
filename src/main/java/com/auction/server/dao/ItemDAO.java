@@ -39,22 +39,15 @@ public class ItemDAO {
         String sql = "SELECT * FROM Items WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            try {
-                pstmt.setInt(1, Integer.parseInt(itemId));
-            } catch (NumberFormatException e) {
-                System.err.println("❌ itemId không hợp lệ: " + itemId);
-                return null;
-            }
+            pstmt.setString(1, itemId);
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToItem(rs);
-                }
+                if (rs.next()) return mapResultSetToItem(rs);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
+
     }
 
     // 3. Lấy toàn bộ danh sách sản phẩm
