@@ -1,6 +1,10 @@
 package com.auction.client.controller;
 
-import com.auction.server.service.MainService;
+import com.auction.client.network.ClientSocket;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Account;
@@ -41,10 +45,9 @@ public class MainController {
     @FXML
     private FlowPane flowPane;
 
-    private MainService mainService = new MainService();
     private static MainController instance;
     private String currentFilter = "ALL";
-    private final String UPLOAD_DIR = "C:/uet_uploads/"; // Thư mục lưu ảnh thật bên ngoài
+    private final String UPLOAD_DIR = System.getProperty("user.home") + "/uet_uploads/"; // Thư mục lưu ảnh thật bên ngoài
 
     // Định dạng ngày giờ hiển thị
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -69,11 +72,32 @@ public class MainController {
     public void refreshDashboard() {
         Account current = CurrentAccount.getAccount();
         if (balanceLabel != null) {
-            balanceLabel.setText(current instanceof User ? String.format("%.0f VNĐ", ((User) current).getBalance()) : "N/A");
+            balanceLabel.setText(current instanceof User
+                    ? String.format("%.0f VNĐ", ((User) current).getBalance()) : "N/A");
         }
-        if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(mainService.getOngoingCount()));
-        if (wonLabel != null) wonLabel.setText(String.valueOf(mainService.getWonCount()));
-        handleFilterAll();
+        // Dua xuong background thread tranh block UI
+        Thread t = new Thread(() -> {
+            try {
+                Request statsReq = new Request(MessageType.GET_DASHBOARD_STATS,
+                        CurrentAccount.getAccount().getId());
+                Response statsResp = ClientSocket.getInstance().sendRequest(statsReq);
+                if (statsResp != null && statsResp.isSuccess()) {
+                    java.util.Map<String, Integer> stats =
+                            (java.util.Map<String, Integer>) statsResp.getData();
+                    Platform.runLater(() -> {
+                        if (ongoingLabel != null)
+                            ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
+                        if (wonLabel != null)
+                            wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("Loi load dashboard stats: " + e.getMessage());
+            }
+            Platform.runLater(this::handleFilterAll);
+        }, "DashboardLoader");
+        t.setDaemon(true);
+        t.start();
     }
 
     // Tải ảnh ngắn gọn: Ưu tiên quét thư mục upload ngoài trước, lỗi thì về default hệ thống
@@ -151,10 +175,9 @@ public class MainController {
         setButtonActive(btnFilterAll);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Auction auction : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createCardFromAuction(auction));
+        for (Item item : loadHotAuctions()) {
+            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
         }
-
     }
 
     @FXML
@@ -163,10 +186,9 @@ public class MainController {
         setButtonActive(btnFilterActive);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Auction auction : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createCardFromAuction(auction));
+        for (Item item : loadHotAuctions()) {
+            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
         }
-
     }
 
     @FXML
@@ -175,8 +197,8 @@ public class MainController {
         setButtonActive(btnFilterUpcoming);
         if (flowPane == null) return;
         flowPane.getChildren().clear();
-        for (Auction auction : mainService.getHotAuctions()) {
-            flowPane.getChildren().add(createCardFromAuction(auction));
+        for (Item item : loadHotAuctions()) {
+            flowPane.getChildren().add(createItemCardWithStatus(item, "Sắp diễn ra"));
         }
     }
 
@@ -245,7 +267,7 @@ public class MainController {
         priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 
-        Button bidButton = new Button(statusText.equals("Sắp diễn du") ? "Xem chi tiết" : "Đấu giá ngay");
+        Button bidButton = new Button(statusText.equals("Sắp diễn ra") ? "Xem chi tiết" : "Đấu giá ngay");
         bidButton.setMaxWidth(Double.MAX_VALUE);
         bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
         bidButton.setPadding(new Insets(8, 0, 8, 0));
@@ -281,9 +303,18 @@ public class MainController {
         imgView.setFitHeight(180);
         imgView.setPreserveRatio(false);
 
-        String preferredName = auction.getImagePath();
-        tryLoadImageToView(imgView, preferredName);
-
+        String preferredName = null;
+        try {
+            java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
+            preferredName = (String) getImgMethod.invoke(auction);
+        } catch (Exception e) {
+            try {
+                java.lang.reflect.Method getImgUrlMethod = auction.getClass().getMethod("getImageUrl");
+                preferredName = (String) getImgUrlMethod.invoke(auction);
+            } catch (Exception ex) {
+                preferredName = auction.getItemId();
+            }
+        }
 
         if (preferredName == null || preferredName.trim().isEmpty()) {
             preferredName = "default.png";
@@ -321,8 +352,8 @@ public class MainController {
         priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
         Region priceSpacer = new Region();
         HBox.setHgrow(priceSpacer, Priority.ALWAYS);
-        Label priceValue = new Label(String.format("%,.0f đ",
-                auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice()));        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
+        Label priceValue = new Label(String.format("%,.0f đ", auction.getStartPrice()));
+        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
         priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
         priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
 
@@ -335,6 +366,21 @@ public class MainController {
         infoBox.getChildren().addAll(nameLabel, descLabel, spacer, priceBox, bidButton);
         card.getChildren().addAll(imageHolder, infoBox);
         return card;
+    }
+
+
+    @SuppressWarnings("unchecked")
+    private java.util.List<Item> loadHotAuctions() {
+        try {
+            Request req = new Request(MessageType.GET_HOT_AUCTIONS, null);
+            Response resp = ClientSocket.getInstance().sendRequest(req);
+            if (resp != null && resp.isSuccess()) {
+                return (java.util.List<Item>) resp.getData();
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi load hot auctions: " + e.getMessage());
+        }
+        return new java.util.ArrayList<>();
     }
 
     private void setButtonActive(Button activeButton) {

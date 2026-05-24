@@ -12,7 +12,10 @@ import javafx.stage.Stage;
 import com.auction.shared.model.Observer;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.Admin;
-import com.auction.server.service.AuctionService;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+import com.auction.client.network.ClientSocket;
 import com.auction.client.util.CurrentAccount;
 
 public class AuctionController implements Observer {
@@ -23,21 +26,21 @@ public class AuctionController implements Observer {
     @FXML private TextField txtBidAmount;
 
     // 2. Các đối tượng nghiệp vụ và thông tin phiên
-    private AuctionService auctionService;
     private Account currentAccount;
     private int currentAuctionId;
 
     /**
      * 3. Hàm khởi tạo: Nhận dữ liệu từ màn hình trước và ĐĂNG KÝ nhận thông báo
      */
-    public void initData(AuctionService service, int auctionId, Account account) {
-        this.auctionService = service;
+    public void initData(int auctionId, Account account) {
         this.currentAuctionId = auctionId;
         this.currentAccount = account;
-
-        // BƯỚC QUAN TRỌNG: Đăng ký Controller này vào phòng đấu giá hiện tại
-        if (this.auctionService != null) {
-            this.auctionService.addObserver(this.currentAuctionId, this);
+        // Đăng ký observer qua socket để nhận realtime update từ server
+        try {
+            Request req = new Request(MessageType.SUBSCRIBE_AUCTION, auctionId);
+            ClientSocket.getInstance().sendRequest(req);
+        } catch (Exception e) {
+            System.err.println("Lỗi đăng ký observer: " + e.getMessage());
         }
     }
 
@@ -75,18 +78,20 @@ public class AuctionController implements Observer {
 
         try {
             double amount = Double.parseDouble(txtBidAmount.getText());
+            Object[] data = {currentAuctionId, amount, currentUser.getId()};
+            Request request = new Request(MessageType.PLACE_BID, data);
+            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            // Gọi Service để lưu vào DB (Service đã có Transaction và Lock)
-            boolean success = auctionService.placeBid(currentAuctionId, amount, currentUser);
-
-            if (success) {
-                // Thành công thì chỉ xóa chữ trong ô nhập, không cần hiện popup ngáng đường
+            if (response != null && response.isSuccess()) {
                 txtBidAmount.clear();
             } else {
-                showAlert("Thất bại", "Đặt giá không thành công. Kiểm tra lại giá hoặc số dư!");
+                String msg = (response != null) ? response.getMessage() : "Đặt giá không thành công!";
+                showAlert("Thất bại", msg);
             }
         } catch (NumberFormatException e) {
             showAlert("Lỗi", "Vui lòng nhập số tiền hợp lệ!");
+        } catch (Exception e) {
+            showAlert("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
 
@@ -95,11 +100,16 @@ public class AuctionController implements Observer {
      */
     @FXML
     public void handleCloseAuction() {
-        boolean success = auctionService.closeAuction(currentAuctionId);
-        if (success) {
-            showAlert("Thông báo", "Phiên đấu giá đã kết thúc!");
-        } else {
-            showAlert("Lỗi", "Không thể đóng phiên đấu giá!");
+        try {
+            Request request = new Request(MessageType.CLOSE_AUCTION, currentAuctionId);
+            Response response = ClientSocket.getInstance().sendRequest(request);
+            if (response != null && response.isSuccess()) {
+                showAlert("Thông báo", "Phiên đấu giá đã kết thúc!");
+            } else {
+                showAlert("Lỗi", "Không thể đóng phiên đấu giá!");
+            }
+        } catch (Exception e) {
+            showAlert("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
 
@@ -107,9 +117,12 @@ public class AuctionController implements Observer {
      * 7. HÀM DỌN DẸP CHUNG: Luôn gọi hàm này trước khi rời đi để chống tràn RAM
      */
     public void cleanup() {
-        if (auctionService != null) {
-            auctionService.removeObserver(currentAuctionId, this);
+        try {
+            Request req = new Request(MessageType.UNSUBSCRIBE_AUCTION, currentAuctionId);
+            ClientSocket.getInstance().sendRequest(req);
             System.out.println("Đã hủy đăng ký nhận thông báo cho phòng " + currentAuctionId);
+        } catch (Exception e) {
+            System.err.println("Lỗi hủy observer: " + e.getMessage());
         }
     }
 

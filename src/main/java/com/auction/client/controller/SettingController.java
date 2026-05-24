@@ -1,6 +1,10 @@
 package com.auction.client.controller;
 
-import com.auction.server.dao.AccountDAO;
+import com.auction.client.network.ClientSocket;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import com.auction.shared.model.Account;
 import com.auction.client.util.CurrentAccount;
 import javafx.fxml.FXML;
@@ -53,9 +57,14 @@ public class SettingController {
 
         Account current = CurrentAccount.getAccount();
         if (current != null) {
-            AccountDAO dao = new AccountDAO();
             // Truyền vào: ID, Tên mới, Email mới
-            if (dao.updateProfile(current.getId(), name, email)) {
+            Request req = new Request(MessageType.UPDATE_PROFILE, new String[]{current.getId(), name, email});
+            boolean updated = false;
+            try {
+                Response resp = ClientSocket.getInstance().sendRequest(req);
+                updated = resp != null && resp.isSuccess();
+            } catch (Exception ex) { System.err.println("Lỗi server: " + ex.getMessage()); }
+            if (updated) {
                 // Chỉ khi DB thành công mới cập nhật Session
                 current.setUsername(name);
                 current.setEmail(email);
@@ -65,7 +74,7 @@ public class SettingController {
 
                 showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân vào Database!");
             } else {
-                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lưu dữ liệu. Hãy kiểm tra lại AccountDAO!");
+                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lưu dữ liệu. Vui lòng thử lại!");
             }
         }
     }
@@ -98,8 +107,13 @@ public class SettingController {
         }
 
         // 6. Thực hiện cập nhật vào Database qua DAO
-        AccountDAO dao = new AccountDAO();
-        if (dao.updatePassword(currentAcc.getId(), next)) {
+        Request pwReq = new Request(MessageType.CHANGE_PASSWORD, new String[]{currentAcc.getId(), next});
+        boolean pwUpdated = false;
+        try {
+            Response pwResp = ClientSocket.getInstance().sendRequest(pwReq);
+            pwUpdated = pwResp != null && pwResp.isSuccess();
+        } catch (Exception ex) { System.err.println("Lỗi server: " + ex.getMessage()); }
+        if (pwUpdated) {
             currentAcc.setPassword(next); // Cập nhật bộ nhớ tạm để đồng bộ
             showAlert(Alert.AlertType.INFORMATION, "Thành công", "Mật khẩu đã được thay đổi và lưu vào hệ thống!");
 

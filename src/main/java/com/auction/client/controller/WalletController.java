@@ -1,8 +1,10 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.util.CurrentAccount;
-import com.auction.server.dao.AccountDAO;
-import com.auction.server.dao.TransactionDAO;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
@@ -24,9 +26,6 @@ public class WalletController {
     @FXML private VBox transactionContainer; // Quản lý khu vực hiển thị lịch sử
 
     private final DecimalFormat formatter = new DecimalFormat("#,###");
-    // DAO để thao tác với DB
-    private final TransactionDAO transactionDAO = new TransactionDAO();
-    private final AccountDAO accountDAO = new AccountDAO();
 
     @FXML
     public void initialize() {
@@ -54,16 +53,24 @@ public class WalletController {
         if (transactionContainer == null) return;
         transactionContainer.getChildren().clear();
         int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
-        List<Map<String, Object>> list = transactionDAO.getByAccount(accountId);
-        for (Map<String, Object> tx : list) {
-            boolean isDeposit = tx.get("type").equals("DEPOSIT");
-            addTransactionToHistory(
-                    isDeposit ? "Nạp tiền thành công" : "Rút tiền thành công",
-                    (String) tx.get("description"),
-                    (double) tx.get("amount"),
-                    isDeposit,
-                    (LocalDateTime) tx.get("created_at")
-            );
+        try {
+            Request request = new Request(MessageType.GET_TRANSACTIONS, accountId);
+            Response response = ClientSocket.getInstance().sendRequest(request);
+            if (response != null && response.isSuccess()) {
+                List<Map<String, Object>> list = (List<Map<String, Object>>) response.getData();
+                for (Map<String, Object> tx : list) {
+                    boolean isDeposit = tx.get("type").equals("DEPOSIT");
+                    addTransactionToHistory(
+                            isDeposit ? "Nạp tiền thành công" : "Rút tiền thành công",
+                            (String) tx.get("description"),
+                            (double) tx.get("amount"),
+                            isDeposit,
+                            (LocalDateTime) tx.get("created_at")
+                    );
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Lỗi load lịch sử giao dịch: " + e.getMessage());
         }
     }
 
@@ -76,25 +83,27 @@ public class WalletController {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền nạp vào phải lớn hơn 0 đ!"); return; }
 
-            // 1. Cập nhật số dư trên RAM
+            // Cập nhật số dư trên RAM
             CurrentAccount.deposit(amount);
 
-            // 2. Đồng bộ số dư mới xuống DB
             int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
-            accountDAO.updateBalance(accountId, CurrentAccount.getBalance(), CurrentAccount.getTotalDeposit(), CurrentAccount.getTotalWithdraw());
+            Object[] data = {accountId, amount, "DEPOSIT"};
+            Request request = new Request(MessageType.WALLET_TRANSACTION, data);
+            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            // 3. Lưu lịch sử giao dịch vào DB
-            transactionDAO.insertTransaction(accountId, "DEPOSIT", amount, CurrentAccount.getBalance());
-
-            // 4. Thêm giao dịch vào lịch sử UI
-            addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
-
-            updateWalletUI();
-            txtDeposit.clear();
-            showNotify("Thành công", "Đã nạp thành công " + formatter.format(amount) + " đ vào ví!");
-
+            if (response != null && response.isSuccess()) {
+                CurrentAccount.deposit(amount);
+                addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
+                updateWalletUI();
+                txtDeposit.clear();
+                showNotify("Thành công", "Đã nạp thành công " + formatter.format(amount) + " đ vào ví!");
+            } else {
+                showNotify("Thất bại", "Không thể thực hiện giao dịch!");
+            }
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
+        } catch (Exception e) {
+            showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
 
@@ -107,27 +116,30 @@ public class WalletController {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền rút ra phải lớn hơn 0 đ!"); return; }
 
-            // 1. Kiểm tra và trừ tiền trên RAM
+            //Kiểm tra và trừ tiền trên RAM
             if (!CurrentAccount.withdraw(amount)) { showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!"); return; }
 
-            // 2. Đồng bộ số dư mới xuống DB
             int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
-            accountDAO.updateBalance(accountId, CurrentAccount.getBalance(), CurrentAccount.getTotalDeposit(), CurrentAccount.getTotalWithdraw());
+            Object[] data = {accountId, amount, "WITHDRAW"};
+            Request request = new Request(MessageType.WALLET_TRANSACTION, data);
+            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            // 3. Lưu lịch sử giao dịch vào DB
-            transactionDAO.insertTransaction(accountId, "WITHDRAW", amount, CurrentAccount.getBalance());
-
-            // 4. Thêm giao dịch vào lịch sử UI
-            addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
-
-            updateWalletUI();
-            txtWithdraw.clear();
-            showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
-
+            if (response != null && response.isSuccess()) {
+                CurrentAccount.withdraw(amount);
+                addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
+                updateWalletUI();
+                txtWithdraw.clear();
+                showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
+            } else {
+                showNotify("Thất bại", "Không thể thực hiện giao dịch!");
+            }
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
+        } catch (Exception e) {
+            showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
+
 
     /**
      * Hàm tự động vẽ một dòng HBox chứa lịch sử và thêm thẳng vào transactionContainer
