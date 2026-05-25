@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * ClientSocket — Singleton quản lý kết nối TCP đến Server.
- * PHIÊN BẢN BẤT ĐỒNG BỘ: Cách ly hộp thư biệt lập, lỗi luồng này không ảnh hưởng luồng khác!
+ * PHIÊN BẢN BẤT ĐỒNG BỘ: Đã sửa lỗi phân phối gói tin trống gây Timeout!
  */
 public class ClientSocket {
 
@@ -65,7 +65,7 @@ public class ClientSocket {
 
     /**
      * GỬI NHẬN BẤT ĐỒNG BỘ (ASYNCHRONOUS):
-     * Đọc ghi độc lập trên từng hộp thư của luồng, không khóa luồng đọc chung, chống nghẽn chéo tuyệt đối.
+     * Đã nâng thời gian chờ lên 10 giây để tránh nghẽn luồng Database local.
      */
     public Response sendRequest(Request request) throws Exception {
         String routeKey = request.getType().name();
@@ -77,10 +77,10 @@ public class ClientSocket {
         // Gửi lệnh lên Server
         sendInternal(request);
 
-        // Thằng nào gửi thì tự vào hàng đợi của mình mà móng tin, tối đa 4 giây không có thì bỏ qua
-        Response res = queue.poll(4, TimeUnit.SECONDS);
+        // Thằng nào gửi thì tự vào hàng đợi của mình mà móng tin, nâng lên tối đa 10 giây
+        Response res = queue.poll(10, TimeUnit.SECONDS);
         if (res == null) {
-            throw new IOException("Server phản hồi quá lâu (Timeout 4s) hoặc mất kết nối tại luồng: " + routeKey);
+            throw new IOException("Server phản hồi quá lâu (Timeout 10s) hoặc mất kết nối tại luồng: " + routeKey);
         }
         return res;
     }
@@ -90,7 +90,7 @@ public class ClientSocket {
     }
 
     /**
-     * LUỒNG ĐỌC TẬP TRUNG (Dispatcher) - Phân phối gói tin về đúng làn hộp thư biệt lập
+     * LUỒNG ĐỌC TẬP TRUNG (Dispatcher) - Đã chuẩn hóa cơ chế phân phối theo Waiter
      */
     private void startDispatcherThread() {
         if (listenerThread != null && listenerThread.isAlive()) return;
@@ -109,37 +109,35 @@ public class ClientSocket {
                                 cb.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
                             }
                         }
-                        // 2. Phân loại phản hồi dựa trên cấu trúc ruột dữ liệu để đưa về đúng hộp thư
+                        // 2. Định tuyến thông minh: Luồng nào đang mở cửa đợi thì ưu tiên trả về luồng đó trước
                         else {
-                            Object data = resp.getData();
-
-                            if (data instanceof Map) {
-                                // Kiểu dữ liệu Map chắc chắn là kết quả Dashboard Stats
+                            if (hasWaiter("GET_DASHBOARD_STATS")) {
                                 pushToQueue("GET_DASHBOARD_STATS", resp);
                             }
-                            else if (data instanceof List) {
-                                List<?> list = (List<?>) data;
-                                if (!list.isEmpty() && list.get(0) instanceof Map) {
-                                    // Danh sách các dòng lịch sử ví tiền (Thường lưu kiểu List<Map> hoặc List<Transaction>)
-                                    pushToQueue("GET_TRANSACTIONS", resp);
-                                } else {
-                                    // Phân phối danh sách sản phẩm
-                                    // Ưu tiên ném vào luồng đang mở và đang đợi thực tế
-                                    if (hasWaiter("GET_HOT_AUCTIONS")) {
-                                        pushToQueue("GET_HOT_AUCTIONS", resp);
-                                    } else if (hasWaiter("GET_PRODUCTS")) {
-                                        pushToQueue("GET_PRODUCTS", resp);
-                                    } else {
-                                        // Nếu không rõ luồng nào đợi, đưa đều vào cả 2 để giải phóng UI
-                                        pushToQueue("GET_PRODUCTS", resp);
-                                        pushToQueue("GET_HOT_AUCTIONS", resp);
-                                    }
-                                }
+                            else if (hasWaiter("GET_HOT_AUCTIONS")) {
+                                pushToQueue("GET_HOT_AUCTIONS", resp);
+                            }
+                            else if (hasWaiter("GET_PRODUCTS")) {
+                                pushToQueue("GET_PRODUCTS", resp);
+                            }
+                            else if (hasWaiter("GET_TRANSACTIONS")) {
+                                pushToQueue("GET_TRANSACTIONS", resp);
+                            }
+                            else if (hasWaiter("REGISTER")) {
+                                pushToQueue("REGISTER", resp);
+                            }
+                            else if (hasWaiter("LOGIN")) {
+                                pushToQueue("LOGIN", resp);
                             }
                             else {
-                                // Mặc định dành cho luồng Đăng nhập / Đăng ký
-                                if (hasWaiter("REGISTER")) {
-                                    pushToQueue("REGISTER", resp);
+                                // Phương án dự phòng (Fallback) nếu gói tin trả về lúc không có luồng nào đợi chủ động
+                                Object data = resp.getData();
+                                if (data instanceof Map) {
+                                    pushToQueue("GET_DASHBOARD_STATS", resp);
+                                } else if (data instanceof List) {
+                                    pushToQueue("GET_PRODUCTS", resp);
+                                    pushToQueue("GET_HOT_AUCTIONS", resp);
+                                    pushToQueue("GET_TRANSACTIONS", resp);
                                 } else {
                                     pushToQueue("LOGIN", resp);
                                 }
@@ -165,7 +163,7 @@ public class ClientSocket {
 
     private boolean hasWaiter(String routeKey) {
         LinkedBlockingQueue<Response> queue = responseMap.get(routeKey);
-        return queue != null;
+        return queue != null && !queue.isEmpty(); // Sửa điều kiện check hàng đợi thực tế
     }
 
     public void setBidUpdateListener(BidUpdateListener listener) {

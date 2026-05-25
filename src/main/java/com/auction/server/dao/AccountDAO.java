@@ -7,6 +7,7 @@ import com.auction.shared.model.Seller;
 import com.auction.shared.model.Transaction;
 import com.auction.server.util.DatabaseConnection;
 import java.sql.*;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -238,30 +239,30 @@ public class AccountDAO {
     }
 
     // =========================================================================
-    // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÁP ỨNG MESSAGE_TYPE.GET_TRANSACTIONS CHO CLIENT
+    // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÃ CHUẨN HÓA ĐỊNH DẠNG CHUỖI CHO SOCKET CLIENT
     // =========================================================================
-
-    /**
-     * Lấy lịch sử giao dịch và đóng gói thành dạng List<Map> đúng như Client mong đợi,
-     * tận dụng 100% hàm getTransactionHistory có sẵn của nhóm bạn.
-     */
     public List<Map<String, Object>> getTransactions(int accountId) {
         List<Map<String, Object>> resultList = new ArrayList<>();
-
-        // Gọi lại hàm lấy dữ liệu từ bảng Transactions có sẵn của bạn
         List<Transaction> history = getTransactionHistory(accountId);
+
+        // Sử dụng Formatter để chuyển LocalDateTime sang String tránh lỗi truyền luồng Object mạng
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
         if (history != null) {
             for (Transaction t : history) {
                 Map<String, Object> txMap = new HashMap<>();
-                txMap.put("type", t.getType()); // "DEPOSIT" hoặc "WITHDRAW"
+                txMap.put("type", t.getType());
 
-                // Map mô tả thân thiện sang cho Client đọc
                 String desc = "DEPOSIT".equalsIgnoreCase(t.getType()) ? "Chuyển khoản / Nạp tiền" : "Ví điện tử / Rút tiền";
                 txMap.put("description", desc);
-
                 txMap.put("amount", t.getAmount());
-                txMap.put("created_at", t.getCreatedAt()); // LocalDateTime nguyên bản
+
+                // Định dạng ngày tháng thành String cực kỳ an toàn cho Socket
+                if (t.getCreatedAt() != null) {
+                    txMap.put("time", t.getCreatedAt().format(formatter));
+                } else {
+                    txMap.put("time", "");
+                }
 
                 resultList.add(txMap);
             }
@@ -282,14 +283,12 @@ public class AccountDAO {
     }
 
     public boolean insertTransaction(int accountId, double amount, String type) {
-        // Tự động tính toán số dư sau giao dịch bằng cách lấy số dư hiện tại của tài khoản
         Account acc = getAccountById(accountId);
         double currentBalance = (acc != null) ? acc.getBalance() : 0.0;
         double balanceAfter = "DEPOSIT".equalsIgnoreCase(type) ? (currentBalance + amount) : (currentBalance - amount);
         return insertTransaction(accountId, type, amount, balanceAfter);
     }
 
-    // Helper map dữ liệu sạch từ ResultSet MySQL lên Object Java
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
         String id       = String.valueOf(rs.getInt("account_id"));
         String username = rs.getString("username");
