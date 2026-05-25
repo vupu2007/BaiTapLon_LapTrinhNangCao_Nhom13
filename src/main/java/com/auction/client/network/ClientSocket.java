@@ -78,7 +78,7 @@ public class ClientSocket {
         sendInternal(request);
 
         // Thằng nào gửi thì tự vào hàng đợi của mình mà móng tin, tối đa 4 giây không có thì bỏ qua
-        Response res = queue.poll(15, TimeUnit.SECONDS);
+        Response res = queue.poll(4, TimeUnit.SECONDS);
         if (res == null) {
             throw new IOException("Server phản hồi quá lâu (Timeout 4s) hoặc mất kết nối tại luồng: " + routeKey);
         }
@@ -96,46 +96,68 @@ public class ClientSocket {
         if (listenerThread != null && listenerThread.isAlive()) return;
 
         listenerThread = new Thread(() -> {
-            while (!Thread.currentThread().isInterrupted()) {
-                try {
+            try {
+                while (!Thread.currentThread().isInterrupted()) {
                     Object obj = in.readObject();
                     if (obj instanceof Response resp) {
 
+                        // 1. Xử lý gói tin Realtime (Đấu giá đẩy từ Server)
                         if ("BID_UPDATE".equals(resp.getMessage())) {
                             BidUpdateListener cb = bidUpdateListener;
                             if (cb != null) {
                                 Object[] data = (Object[]) resp.getData();
                                 cb.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
                             }
-                        } else {
-                            // === BẮT ĐẦU ĐOẠN DEBUG VỪA THÊM ===
-                            String type = resp.getType();
-                            System.out.println("Dispatcher nhận gói tin type: " + type);
+                        }
+                        // 2. Phân loại phản hồi dựa trên cấu trúc ruột dữ liệu để đưa về đúng hộp thư
+                        else {
+                            Object data = resp.getData();
 
-                            if (type != null) {
-                                pushToQueue(type, resp);
-                            } else {
-                                if (hasWaiter("LOGIN")) {
-                                    pushToQueue("LOGIN", resp);
+                            if (data instanceof Map) {
+                                // Kiểu dữ liệu Map chắc chắn là kết quả Dashboard Stats
+                                pushToQueue("GET_DASHBOARD_STATS", resp);
+                            }
+                            else if (data instanceof List) {
+                                List<?> list = (List<?>) data;
+                                if (!list.isEmpty() && list.get(0) instanceof Map) {
+                                    // Danh sách các dòng lịch sử ví tiền (Thường lưu kiểu List<Map> hoặc List<Transaction>)
+                                    pushToQueue("GET_TRANSACTIONS", resp);
                                 } else {
-                                    pushToQueue("REGISTER", resp);
+                                    // Phân phối danh sách sản phẩm
+                                    // Ưu tiên ném vào luồng đang mở và đang đợi thực tế
+                                    if (hasWaiter("GET_HOT_AUCTIONS")) {
+                                        pushToQueue("GET_HOT_AUCTIONS", resp);
+                                    } else if (hasWaiter("GET_PRODUCTS")) {
+                                        pushToQueue("GET_PRODUCTS", resp);
+                                    } else {
+                                        // Nếu không rõ luồng nào đợi, đưa đều vào cả 2 để giải phóng UI
+                                        pushToQueue("GET_PRODUCTS", resp);
+                                        pushToQueue("GET_HOT_AUCTIONS", resp);
+                                    }
                                 }
                             }
-                            // === KẾT THÚC ĐOẠN DEBUG ===
+                            else {
+                                // Mặc định dành cho luồng Đăng nhập / Đăng ký
+                                if (hasWaiter("REGISTER")) {
+                                    pushToQueue("REGISTER", resp);
+                                } else {
+                                    pushToQueue("LOGIN", resp);
+                                }
+                            }
                         }
                     }
-                } catch (EOFException | java.net.SocketException e) {
-                    System.out.println("Dispatcher: Kết nối tới server đã đóng.");
-                    break;
-                } catch (Exception e) {
-                    System.err.println("Dispatcher: lỗi gói tin, tiếp tục: " + e.getMessage());
                 }
+            } catch (EOFException | java.net.SocketException e) {
+                System.out.println("Dispatcher: Kết nối tới server đã đóng.");
+            } catch (Exception e) {
+                System.err.println("Dispatcher lỗi hệ thống stream: " + e.getMessage());
             }
         }, "socket-dispatcher-thread");
 
         listenerThread.setDaemon(true);
         listenerThread.start();
     }
+
     private void pushToQueue(String routeKey, Response resp) throws InterruptedException {
         LinkedBlockingQueue<Response> queue = responseMap.computeIfAbsent(routeKey, k -> new LinkedBlockingQueue<>());
         queue.put(resp);

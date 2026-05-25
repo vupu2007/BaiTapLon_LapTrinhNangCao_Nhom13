@@ -12,19 +12,24 @@ public class DatabaseConnection {
     private static final String USER = "uvx5jzbzu6h6egtv";
     private static final String PASSWORD = "gxvNiCizwruEPSZnfwud";
 
-    // ĐÃ THÊM CẤU HÌNH TỰ ĐỘNG KẾT NỐI LẠI (AUTO RECONNECT) CHO CLOUD DATABASE
     private static final String URL = "jdbc:mysql://" + HOST + ":" + PORT + "/" + DB_NAME
             + "?useSSL=false"
             + "&allowPublicKeyRetrieval=true"
             + "&serverTimezone=Asia/Ho_Chi_Minh"
-            + "&autoReconnect=true"        // Tự động kết nối lại nếu bị mất link
-            + "&maxReconnects=5"           // Thử kết nối lại tối đa 5 lần nếu rớt mạng
-            + "&tcpKeepAlive=true";        // Giữ đường truyền luôn "sống" liên tục
+            + "&autoReconnect=true"
+            + "&maxReconnects=5"
+            + "&tcpKeepAlive=true";
 
-    // Singleton — chỉ 1 instance của class này tồn tại
     private static DatabaseConnection instance;
 
-    private DatabaseConnection() {}
+    private DatabaseConnection() {
+        try {
+            // Ép buộc nạp Driver để đảm bảo không bị mất luồng khi chạy đa luồng
+            Class.forName("com.mysql.cj.jdbc.Driver");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+    }
 
     public static DatabaseConnection getInstance() {
         if (instance == null) {
@@ -33,9 +38,12 @@ public class DatabaseConnection {
         return instance;
     }
 
-    // Mỗi lần gọi trả về connection MỚI — không cache connection
-    // vì DAO dùng try-with-resources sẽ close() sau mỗi lần dùng
-    public static Connection getConnection() throws SQLException {
+    /**
+     * Thêm từ khóa 'synchronized' để bắt các luồng chạy ngầm của Server
+     * phải xếp hàng lấy Connection một cách trật tự, tránh việc tạo connection song song
+     * làm nghẽn băng thông mạng Internet kết nối tới Clever Cloud.
+     */
+    public static synchronized Connection getConnection() throws SQLException {
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 }

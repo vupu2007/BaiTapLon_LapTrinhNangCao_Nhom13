@@ -47,10 +47,7 @@ public class ClientHandler implements Runnable {
 
             while (true) {
                 Request request = (Request) in.readObject();
-                System.out.println("====> [Server] Vừa nhận được yêu cầu từ Client: " + request.getType());
                 Response response = handleRequest(request);
-                response.setType(request.getType().name()); // ← THÊM DÒNG NÀY
-
 
                 if (response != null) {
                     synchronized (out) {
@@ -191,18 +188,29 @@ public class ClientHandler implements Runnable {
                 case GET_HOT_AUCTIONS: {
                     try {
                         List<Auction> hotAuctions = auctionService.getHotAuctions();
+                        List<Item> hotItems = new java.util.ArrayList<>();
                         if (hotAuctions != null) {
                             for (Auction a : hotAuctions) {
-                                if (a.getImagePath() != null && a.getImagePath().startsWith("base64:")) {
-                                    a.setImagePath(null);
-                                }
+                                try {
+                                    Item item = itemService.getItemById(a.getItemId());
+                                    if (item != null) {
+                                        try {
+                                            item.setStatus(a.getStatus().name());
+                                        } catch (Throwable ignored) {}
+                                        hotItems.add(item);
+                                    }
+                                } catch (Exception ignored) {}
                             }
                         }
-                        return new Response(true, "OK", (Serializable) hotAuctions);
+                        return new Response(true, "OK", (Serializable) hotItems);
                     } catch (Exception e) {
-                        return new Response(true, "Lỗi", new java.util.ArrayList<Auction>());
+                        System.err.println("Lỗi xử lý GET_HOT_AUCTIONS: " + e.getMessage());
+                        // Trả về danh sách rỗng để Client hiển thị mượt mà, không bị treo luồng
+                        return new Response(true, "Lỗi server hot auctions", new java.util.ArrayList<Item>());
                     }
                 }
+
+                // 🌟 ĐÃ SỬA: Đảm bảo trả về Map chuẩn chỉnh (HashMap) đúng yêu cầu Client để vẽ giao diện
                 case GET_DASHBOARD_STATS: {
                     try {
                         Map<String, Object> rawStats = auctionService.getDashboardStats();
@@ -211,22 +219,13 @@ public class ClientHandler implements Runnable {
 
                         stats.put("ongoing", stats.getOrDefault("running", 0));
                         stats.put("won", stats.getOrDefault("won", 0));
-
-                        // --- ĐÃ SỬA: Gán nhãn cho gói tin thành công ---
-                        Response response = new Response(true, "OK", (Serializable) stats);
-                        response.setType("GET_DASHBOARD_STATS");
-                        return response;
-
+                        return new Response(true, "OK", (Serializable) stats);
                     } catch (Exception e) {
                         System.err.println("Lỗi xử lý GET_DASHBOARD_STATS: " + e.getMessage());
                         Map<String, Object> fallbackStats = new HashMap<>();
                         fallbackStats.put("ongoing", 0);
                         fallbackStats.put("won", 0);
-
-                        // --- ĐÃ SỬA: Gán nhãn cho cả gói tin dự phòng khi có lỗi ---
-                        Response fallbackResponse = new Response(true, "OK", (Serializable) fallbackStats);
-                        fallbackResponse.setType("GET_DASHBOARD_STATS");
-                        return fallbackResponse;
+                        return new Response(true, "OK", (Serializable) fallbackStats);
                     }
                 }
 
