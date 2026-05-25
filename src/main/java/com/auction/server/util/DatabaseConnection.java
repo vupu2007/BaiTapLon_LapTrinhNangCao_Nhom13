@@ -30,14 +30,12 @@ public class DatabaseConnection {
             e.printStackTrace();
         }
     }
-
     public static DatabaseConnection getInstance() {
         if (instance == null) {
             instance = new DatabaseConnection();
         }
         return instance;
     }
-
     /**
      * Thêm từ khóa 'synchronized' để bắt các luồng chạy ngầm của Server
      * phải xếp hàng lấy Connection một cách trật tự, tránh việc tạo connection song song
