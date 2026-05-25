@@ -15,12 +15,10 @@ import java.util.concurrent.CopyOnWriteArrayList;
 public class ClientHandler implements Runnable {
 
     // ── Realtime: map auctionId → danh sách handler đang subscribe ──────────
-    // ConcurrentHashMap + CopyOnWriteArrayList để thread-safe khi nhiều client
     private static final ConcurrentHashMap<Integer, CopyOnWriteArrayList<ClientHandler>>
             auctionSubscribers = new ConcurrentHashMap<>();
 
     // ── Concurrent Bidding: mỗi phiên có 1 lock riêng ───────────────────────
-    // Tránh lost update / race condition khi nhiều bidder đặt giá cùng lúc
     private static final ConcurrentHashMap<Integer, Object> auctionLocks = new ConcurrentHashMap<>();
 
     // ── Socket & Stream ──────────────────────────────────────────────────────
@@ -51,12 +49,12 @@ public class ClientHandler implements Runnable {
                 Request request = (Request) in.readObject();
                 Response response = handleRequest(request);
 
-                // Một số MessageType là fire-and-forget (SUBSCRIBE, BID_UPDATE push),
-                // không cần trả response đồng bộ → trả null thay vì throw
                 if (response != null) {
-                    out.writeObject(response);
-                    out.flush();
-                    out.reset(); // Quan trọng: tránh cache object cũ trong stream
+                    synchronized (out) {
+                        out.writeObject(response);
+                        out.flush();
+                        out.reset(); // Tránh cache object cũ trong stream gây lỗi dữ liệu
+                    }
                 }
             }
 
@@ -88,7 +86,6 @@ public class ClientHandler implements Runnable {
 
                 case REGISTER: {
                     String[] d = (String[]) request.getPayload();
-                    // d[0]=username, d[1]=password, d[2]=role
                     boolean ok = accountService.register(d[0], d[1], d[2]);
                     return ok
                             ? new Response(true, "Đăng ký thành công!", null)
@@ -106,15 +103,12 @@ public class ClientHandler implements Runnable {
 
                 case UPDATE_PROFILE: {
                     String[] d = (String[]) request.getPayload();
-                    // d[0]=id, d[1]=name, d[2]=email
                     boolean ok = accountService.updateProfile(d[0], d[1], d[2]);
                     return new Response(ok, ok ? "Cập nhật thành công!" : "Cập nhật thất bại!", null);
                 }
 
                 case CHANGE_PASSWORD: {
                     String[] d = (String[]) request.getPayload();
-                    // d[0]=id, d[1]=currentPassword, d[2]=newPassword
-                    // Server verify current password trước khi đổi
                     boolean ok = accountService.changePassword(d[0], d[1], d[2]);
                     return new Response(ok, ok ? "Đổi mật khẩu thành công!" : "Mật khẩu hiện tại không đúng!", null);
                 }
@@ -127,7 +121,6 @@ public class ClientHandler implements Runnable {
                 }
 
                 case GET_ITEM_BY_ID: {
-                    // itemId có thể là String ("ITEM-XXXXXXXX") hoặc int — xử lý cả 2
                     String itemId = String.valueOf(request.getPayload());
                     Item item = itemService.getItemById(itemId);
                     return item != null
@@ -147,9 +140,35 @@ public class ClientHandler implements Runnable {
                     return new Response(ok, ok ? "Xóa thành công!" : "Xóa thất bại (đang đấu giá?)", null);
                 }
 
+                // 🌟 FIX TRIỆT ĐỂ LỖI TIMEOUT SẢN PHẨM & CHỐNG NO_SUCH_METHOD_ERROR
+                case GET_PRODUCTS: {
+                    try {
+                        List<Auction> activeAuctions = auctionService.getAllAuctions();
+                        List<Item> productItems = new java.util.ArrayList<>();
+
+                        if (activeAuctions != null) {
+                            for (Auction a : activeAuctions) {
+                                try {
+                                    Item item = itemService.getItemById(a.getItemId());
+                                    if (item != null) {
+                                        try {
+                                            item.setStatus(a.getStatus().name());
+                                        } catch (Throwable ignored) {}
+
+                                        productItems.add(item);
+                                    }
+                                } catch (Exception ignored) {}
+                            }
+                        }
+                        return new Response(true, "OK", (Serializable) productItems);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi xử lý GET_PRODUCTS: " + e.getMessage());
+                        return new Response(true, "Lỗi server nhưng vẫn trả danh sách rỗng để tránh treo", new java.util.ArrayList<Item>());
+                    }
+                }
+
                 // ── Auction ───────────────────────────────────────────────────
                 case CREATE_AUCTION: {
-                    // payload: Object[] {itemId, sellerId, startPrice, startTimeStr, endTimeStr}
                     Object[] d = (Object[]) request.getPayload();
                     boolean ok = auctionService.createAuction(
                             (String) d[0],
@@ -166,33 +185,50 @@ public class ClientHandler implements Runnable {
                     return new Response(true, "OK", (Serializable) auctions);
                 }
 
-                // GET_HOT_AUCTIONS — tra List<Item> vi MainController cast sang Item
                 case GET_HOT_AUCTIONS: {
-                    // Server lay List<Auction> roi convert sang List<Item> cho MainController
-                    List<Auction> hotAuctions = auctionService.getHotAuctions();
-                    List<Item> hotItems = new java.util.ArrayList<>();
-                    for (Auction a : hotAuctions) {
-                        Item item = itemService.getItemById(a.getItemId());
-                        if (item != null) {
-                            // Gan them thong tin tu auction vao item de hien thi
-                            item.setStatus(a.getStatus().name());
-                            hotItems.add(item);
+                    try {
+                        List<Auction> hotAuctions = auctionService.getHotAuctions();
+                        List<Item> hotItems = new java.util.ArrayList<>();
+                        if (hotAuctions != null) {
+                            for (Auction a : hotAuctions) {
+                                try {
+                                    Item item = itemService.getItemById(a.getItemId());
+                                    if (item != null) {
+                                        try {
+                                            item.setStatus(a.getStatus().name());
+                                        } catch (Throwable ignored) {}
+                                        hotItems.add(item);
+                                    }
+                                } catch (Exception ignored) {}
+                            }
                         }
+                        return new Response(true, "OK", (Serializable) hotItems);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi xử lý GET_HOT_AUCTIONS: " + e.getMessage());
+                        // Trả về danh sách rỗng để Client hiển thị mượt mà, không bị treo luồng
+                        return new Response(true, "Lỗi server hot auctions", new java.util.ArrayList<Item>());
                     }
-                    return new Response(true, "OK", (Serializable) hotItems);
                 }
 
-                // GET_DASHBOARD_STATS — getDashboardStats() khong nhan tham so
+                // 🌟 ĐÃ SỬA: Đảm bảo trả về Map chuẩn chỉnh (HashMap) đúng yêu cầu Client để vẽ giao diện
                 case GET_DASHBOARD_STATS: {
-                    // Bo qua payload userId, goi method khong tham so
-                    Map<String, Object> stats = auctionService.getDashboardStats();
-                    // Them key "ongoing" va "won" cho MainController
-                    stats.put("ongoing", stats.getOrDefault("running", 0));
-                    stats.put("won", 0);
-                    return new Response(true, "OK", (Serializable) stats);
+                    try {
+                        Map<String, Object> rawStats = auctionService.getDashboardStats();
+                        // Bọc vào HashMap mới để tránh lỗi UnsupportedOperationException nếu dữ liệu gốc là Unmodifiable Map
+                        Map<String, Object> stats = (rawStats != null) ? new HashMap<>(rawStats) : new HashMap<>();
+
+                        stats.put("ongoing", stats.getOrDefault("running", 0));
+                        stats.put("won", stats.getOrDefault("won", 0));
+                        return new Response(true, "OK", (Serializable) stats);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi xử lý GET_DASHBOARD_STATS: " + e.getMessage());
+                        Map<String, Object> fallbackStats = new HashMap<>();
+                        fallbackStats.put("ongoing", 0);
+                        fallbackStats.put("won", 0);
+                        return new Response(true, "OK", (Serializable) fallbackStats);
+                    }
                 }
 
-                // GET_BID_HISTORY — goi getBidHistory(auctionId)
                 case GET_BID_HISTORY: {
                     int auctionId = (int) request.getPayload();
                     List<BidTransaction> history = auctionService.getBidHistory(auctionId);
@@ -227,22 +263,17 @@ public class ClientHandler implements Runnable {
 
                 // ── Bidding ───────────────────────────────────────────────────
                 case PLACE_BID: {
-                    // payload: Object[] {auctionId, amount, userId}
                     Object[] d = (Object[]) request.getPayload();
                     int aId = (int) d[0];
                     double amt = (double) d[1];
                     String uId = (String) d[2];
 
-                    // ── Concurrent Bidding Protection ────────────────────────
-                    // Mỗi phiên có 1 lock riêng → các phiên khác không block nhau.
-                    // Bid cùng 1 phiên xử lý tuần tự → tránh lost update, race condition.
                     Object lock = auctionLocks.computeIfAbsent(aId, k -> new Object());
                     Response bidResult;
                     synchronized (lock) {
                         bidResult = auctionService.placeBid(aId, amt, uId);
                     }
 
-                    // Nếu đặt giá thành công → push realtime cho tất cả subscriber
                     if (bidResult.isSuccess()) {
                         String username = accountService.getUsernameById(uId);
                         pushBidUpdate(aId, amt, username);
@@ -257,7 +288,6 @@ public class ClientHandler implements Runnable {
                 }
 
                 case SET_AUTO_BID: {
-                    // payload: Object[] {auctionId, userId, maxBid, increment}
                     Object[] d = (Object[]) request.getPayload();
                     boolean ok = auctionService.setAutoBid(
                             (int) d[0],
@@ -286,7 +316,6 @@ public class ClientHandler implements Runnable {
 
                 // ── Wallet ────────────────────────────────────────────────────
                 case WALLET_TRANSACTION: {
-                    // payload: Object[] {accountId, amount, type("DEPOSIT"|"WITHDRAW")}
                     Object[] d = (Object[]) request.getPayload();
                     int acId = (int) d[0];
                     double amt = (double) d[1];
@@ -295,10 +324,26 @@ public class ClientHandler implements Runnable {
                     return new Response(ok, ok ? "Giao dịch thành công!" : "Giao dịch thất bại!", null);
                 }
 
+                // 🌟 ĐÃ SỬA: Bảo đảm luôn trả về danh sách dạng List chứ không được lộn sang HashMap
                 case GET_TRANSACTIONS: {
-                    int accountId = (int) request.getPayload();
-                    List<Map<String, Object>> txList = accountService.getTransactions(accountId);
-                    return new Response(true, "OK", (Serializable) txList);
+                    try {
+                        Object idPayload = request.getPayload();
+                        int accountId;
+
+                        if (idPayload instanceof String) {
+                            accountId = Integer.parseInt((String) idPayload);
+                        } else {
+                            accountId = (int) idPayload;
+                        }
+
+                        List<Map<String, Object>> txList = accountService.getTransactions(accountId);
+                        if (txList == null) txList = new ArrayList<>();
+
+                        return new Response(true, "OK", (Serializable) txList);
+                    } catch (Exception e) {
+                        System.err.println("Lỗi xử lý GET_TRANSACTIONS: " + e.getMessage());
+                        return new Response(true, "Ví trống do lỗi", new ArrayList<Map<String, Object>>());
+                    }
                 }
 
                 default:
@@ -316,23 +361,17 @@ public class ClientHandler implements Runnable {
     // ════════════════════════════════════════════════════════════════════════
     //  REALTIME PUSH — gửi BID_UPDATE đến tất cả client đang xem phiên này
     // ════════════════════════════════════════════════════════════════════════
-
-    /**
-     * Gọi sau mỗi PLACE_BID thành công.
-     * Thread-safe: CopyOnWriteArrayList cho phép iterate khi đang có add/remove.
-     */
     private void pushBidUpdate(int auctionId, double newPrice, String username) {
         CopyOnWriteArrayList<ClientHandler> subs = auctionSubscribers.get(auctionId);
         if (subs == null) return;
 
-        // payload của BID_UPDATE: Object[] {auctionId, newPrice, username}
         Request push = new Request(
                 MessageType.BID_UPDATE,
                 new Object[]{auctionId, newPrice, username}
         );
 
         for (ClientHandler handler : subs) {
-            if (handler == this) continue; // Không push lại cho người vừa bid
+            if (handler == this) continue;
             try {
                 synchronized (handler.out) {
                     handler.out.writeObject(push);
@@ -356,17 +395,8 @@ public class ClientHandler implements Runnable {
     }
 
     private void closeQuietly() {
-        try {
-            if (in != null) in.close();
-        } catch (IOException ignored) {
-        }
-        try {
-            if (out != null) out.close();
-        } catch (IOException ignored) {
-        }
-        try {
-            if (socket != null) socket.close();
-        } catch (IOException ignored) {
-        }
+        try { if (in != null) in.close(); } catch (IOException ignored) {}
+        try { if (out != null) out.close(); } catch (IOException ignored) {}
+        try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
 }

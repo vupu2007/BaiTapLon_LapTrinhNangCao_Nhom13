@@ -5,6 +5,7 @@ import com.auction.client.util.CurrentAccount;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Label;
@@ -12,6 +13,7 @@ import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
 import java.text.DecimalFormat;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
@@ -23,16 +25,15 @@ public class WalletController {
     @FXML private Label lblTotalWithdraw;
     @FXML private TextField txtDeposit;
     @FXML private TextField txtWithdraw;
-    @FXML private VBox transactionContainer; // Quản lý khu vực hiển thị lịch sử
+    @FXML private VBox transactionContainer;
 
     private final DecimalFormat formatter = new DecimalFormat("#,###");
 
     @FXML
     public void initialize() {
-        // Xóa các dòng mẫu hardcode thiết kế trong FXML trước khi nạp giao dịch thật
         if (transactionContainer != null) transactionContainer.getChildren().clear();
         updateWalletUI();
-        // Load lịch sử giao dịch từ DB khi vào màn hình
+        // Chạy ngầm việc tải lịch sử từ DB khi vừa vào màn hình, tránh đơ ví
         loadTransactionHistory();
     }
 
@@ -48,30 +49,63 @@ public class WalletController {
         lblTotalWithdraw.setText(formatter.format(totalWithdraw) + " đ");
     }
 
-    // Load lịch sử từ DB — tránh mất dữ liệu khi thoát ra vào lại
     private void loadTransactionHistory() {
         if (transactionContainer == null) return;
         transactionContainer.getChildren().clear();
         int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
-        try {
-            Request request = new Request(MessageType.GET_TRANSACTIONS, accountId);
-            Response response = ClientSocket.getInstance().sendRequest(request);
-            if (response != null && response.isSuccess()) {
-                List<Map<String, Object>> list = (List<Map<String, Object>>) response.getData();
-                for (Map<String, Object> tx : list) {
-                    boolean isDeposit = tx.get("type").equals("DEPOSIT");
-                    addTransactionToHistory(
-                            isDeposit ? "Nạp tiền thành công" : "Rút tiền thành công",
-                            (String) tx.get("description"),
-                            (double) tx.get("amount"),
-                            isDeposit,
-                            (LocalDateTime) tx.get("created_at")
-                    );
+
+        // 🚀 Chạy ngầm tải lịch sử giao dịch
+        Thread loaderWorker = new Thread(() -> {
+            try {
+                Request request = new Request(MessageType.GET_TRANSACTIONS, accountId);
+                Response response = ClientSocket.getInstance().sendRequest(request);
+
+                if (response != null && response.isSuccess()) {
+                    // 🌟 DÙNG ĐÚNG .getData() và kiểm tra kiểu dữ liệu an toàn trước khi ép kiểu
+                    Object rawData = response.getData();
+                    if (rawData instanceof List) {
+                        List<Map<String, Object>> list = (List<Map<String, Object>>) rawData;
+
+                        // Vẽ giao diện động đẩy về luồng UI chính
+                        Platform.runLater(() -> {
+                            for (Map<String, Object> tx : list) {
+                                try {
+                                    boolean isDeposit = "DEPOSIT".equalsIgnoreCase(String.valueOf(tx.get("type")));
+
+                                    // Bẫy ép kiểu ngày tháng an toàn (xử lý cả Timestamp lẫn LocalDateTime)
+                                    Object timeObj = tx.get("created_at");
+                                    LocalDateTime createdAt = LocalDateTime.now();
+                                    if (timeObj instanceof LocalDateTime) {
+                                        createdAt = (LocalDateTime) timeObj;
+                                    } else if (timeObj instanceof java.sql.Timestamp) {
+                                        createdAt = ((java.sql.Timestamp) timeObj).toLocalDateTime();
+                                    } else if (timeObj instanceof java.util.Date) {
+                                        createdAt = ((java.util.Date) timeObj).toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime();
+                                    }
+
+                                    addTransactionToHistory(
+                                            isDeposit ? "Nạp tiền thành công" : "Rút tiền thành công",
+                                            tx.get("description") != null ? (String) tx.get("description") : "Không có mô tả",
+                                            tx.get("amount") != null ? Double.parseDouble(tx.get("amount").toString()) : 0.0,
+                                            isDeposit,
+                                            createdAt
+                                    );
+                                } catch (Exception ex) {
+                                    System.err.println("Bỏ qua 1 giao dịch lỗi định dạng: " + ex.getMessage());
+                                }
+                            }
+                        });
+                    } else {
+                        // 🌟 Nếu Server trả về HashMap lỗi, nó sẽ rơi vào đây chứ không làm sập App nữa!
+                        System.err.println("⚠️ CẢNH BÁO: Server phản hồi success nhưng data không phải là List! Thực tế là: " + (rawData != null ? rawData.getClass().getName() : "null"));
+                    }
                 }
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi load lịch sử giao dịch chạy ngầm: " + e.getMessage());
             }
-        } catch (Exception e) {
-            System.err.println("Lỗi load lịch sử giao dịch: " + e.getMessage());
-        }
+        }, "WalletHistoryLoaderThread");
+        loaderWorker.setDaemon(true);
+        loaderWorker.start();
     }
 
     @FXML
@@ -83,25 +117,35 @@ public class WalletController {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền nạp vào phải lớn hơn 0 đ!"); return; }
 
-            // Cập nhật số dư trên RAM
             int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
             Object[] data = {accountId, amount, "DEPOSIT"};
             Request request = new Request(MessageType.WALLET_TRANSACTION, data);
-            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            if (response != null && response.isSuccess()) {
-                CurrentAccount.deposit(amount);
-                addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
-                updateWalletUI();
-                txtDeposit.clear();
-                showNotify("Thành công", "Đã nạp thành công " + formatter.format(amount) + " đ vào ví!");
-            } else {
-                showNotify("Thất bại", "Không thể thực hiện giao dịch!");
-            }
+            // 🚀 Chạy luồng xử lý nạp tiền ngầm
+            Thread depositWorker = new Thread(() -> {
+                try {
+                    Response response = ClientSocket.getInstance().sendRequest(request);
+
+                    Platform.runLater(() -> {
+                        if (response != null && response.isSuccess()) {
+                            CurrentAccount.deposit(amount);
+                            addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
+                            updateWalletUI();
+                            txtDeposit.clear();
+                            showNotify("Thành công", "Đã nạp thành công " + formatter.format(amount) + " đ vào ví!");
+                        } else {
+                            showNotify("Thất bại", "Không thể thực hiện giao dịch!");
+                        }
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!"));
+                }
+            }, "WalletDepositThread");
+            depositWorker.setDaemon(true);
+            depositWorker.start();
+
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
-        } catch (Exception e) {
-            showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
 
@@ -114,38 +158,45 @@ public class WalletController {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền rút ra phải lớn hơn 0 đ!"); return; }
 
-            //Kiểm tra và trừ tiền trên RAM
-            if (!CurrentAccount.withdraw(amount)) { showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!"); return; }
+            // Kiểm tra số dư khả dụng trước khi gọi mạng
+            if (CurrentAccount.getBalance() < amount) {
+                showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!");
+                return;
+            }
 
             int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
             Object[] data = {accountId, amount, "WITHDRAW"};
             Request request = new Request(MessageType.WALLET_TRANSACTION, data);
-            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            if (response != null && response.isSuccess()) {
-                CurrentAccount.withdraw(amount);
-                addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
-                updateWalletUI();
-                txtWithdraw.clear();
-                showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
-            } else {
-                showNotify("Thất bại", "Không thể thực hiện giao dịch!");
-            }
+            // 🚀 Chạy luồng xử lý rút tiền ngầm
+            Thread withdrawWorker = new Thread(() -> {
+                try {
+                    Response response = ClientSocket.getInstance().sendRequest(request);
+
+                    Platform.runLater(() -> {
+                        if (response != null && response.isSuccess()) {
+                            CurrentAccount.withdraw(amount);
+                            addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
+                            updateWalletUI();
+                            txtWithdraw.clear();
+                            showNotify("Thành công", "Đã rút thành công " + formatter.format(amount) + " đ khỏi ví!");
+                        } else {
+                            showNotify("Thất bại", "Không thể thực hiện giao dịch!");
+                        }
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() -> showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!"));
+                }
+            }, "WalletWithdrawThread");
+            withdrawWorker.setDaemon(true);
+            withdrawWorker.start();
+
         } catch (NumberFormatException e) {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
-        } catch (Exception e) {
-            showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!");
         }
     }
 
-
-    /**
-     * Hàm tự động vẽ một dòng HBox chứa lịch sử và thêm thẳng vào transactionContainer
-     * createdAt = null khi thêm mới (dùng giờ hiện tại), có giá trị khi load từ DB
-     */
     private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit, LocalDateTime createdAt) {
-
-
         if (transactionContainer == null) return;
 
         javafx.scene.layout.HBox row = new javafx.scene.layout.HBox();
@@ -163,7 +214,6 @@ public class WalletController {
         Label lblTitle = new Label(title);
         lblTitle.setStyle("-fx-font-weight: bold; -fx-text-fill: #1e293b;");
 
-        // Dùng thời gian từ DB nếu có, không thì dùng giờ hiện tại
         String time = (createdAt != null ? createdAt : LocalDateTime.now())
                 .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
         Label lblSub = new Label(type + " • " + time);
@@ -177,7 +227,7 @@ public class WalletController {
         lblAmount.setStyle("-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: " + (isDeposit ? "#059669" : "#dc2626") + ";");
 
         row.getChildren().addAll(circle, textContainer, spacer, lblAmount);
-        // Thêm vào cuối — thứ tự đã được sắp xếp DESC từ DB
+
         if (createdAt == null) {
             transactionContainer.getChildren().add(0, row);
         } else {
@@ -186,10 +236,20 @@ public class WalletController {
     }
 
     private void showNotify(String title, String content) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+        if (Platform.isFxApplicationThread()) {
+            Alert alert = new Alert(Alert.AlertType.INFORMATION);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(content);
+            alert.showAndWait();
+        } else {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.INFORMATION);
+                alert.setTitle(title);
+                alert.setHeaderText(null);
+                alert.setContentText(content);
+                alert.showAndWait();
+            });
+        }
     }
 }

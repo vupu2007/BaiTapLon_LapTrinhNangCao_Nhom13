@@ -4,6 +4,7 @@ import com.auction.server.dao.AccountDAO;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.Bidder;
 import com.auction.shared.model.Seller;
+import java.util.*;
 
 public class AccountService {
 
@@ -97,18 +98,18 @@ public class AccountService {
         double newBalance = currentBalance + amount;
         double newTotalDeposit = currentTotalDeposit + amount; // Cộng dồn số tiền nạp mới vào tổng nạp
 
-        // ĐÃ SỬA: Gọi hàm updateBalance với đầy đủ tham số để đồng bộ MySQL vĩnh viễn
+        // 🌟 ĐÃ SỬA FULL: Đồng bộ tham số chuẩn chỉnh cho tầng DAO hoạt động
         return accountDAO.updateBalance(accountId, newBalance, newTotalDeposit, currentTotalWithdraw);
     }
 
     // ── Các method bổ sung cho ClientHandler ─────────────────────────────────
 
     // Lấy tất cả user dạng Map để Admin hiển thị
-    public java.util.List<java.util.Map<String, String>> getAllUsersAsMap() {
-        java.util.List<Account> accounts = accountDAO.getAllAccounts();
-        java.util.List<java.util.Map<String, String>> result = new java.util.ArrayList<>();
+    public List<Map<String, String>> getAllUsersAsMap() {
+        List<Account> accounts = accountDAO.getAllAccounts();
+        List<Map<String, String>> result = new ArrayList<>();
         for (Account acc : accounts) {
-            java.util.Map<String, String> map = new java.util.HashMap<>();
+            Map<String, String> map = new HashMap<>();
             map.put("id",       acc.getId());
             map.put("username", acc.getUsername());
             map.put("role",     acc.getRole());
@@ -150,7 +151,7 @@ public class AccountService {
         }
     }
 
-    // Giao dich vi: DEPOSIT hoac WITHDRAW
+    // 🌟 Giao dịch ví: DEPOSIT hoặc WITHDRAW (ĐÃ SỬA FULL THAM SỐ)
     public boolean walletTransaction(int accountId, double amount, String type) {
         if (amount <= 0) return false;
         Account acc = accountDAO.getAccountById(accountId);
@@ -176,13 +177,18 @@ public class AccountService {
             return false;
         }
 
+        // 🌟 FIX LỖI: Gọi hàm với đầy đủ 4 tham số như AccountDAO yêu cầu
         boolean ok = accountDAO.updateBalance(accountId, newBalance, totalDeposit, totalWithdraw);
-        if (ok) accountDAO.insertTransaction(accountId, amount, type);
+
+        // 🌟 FIX LỖI: Thêm các tham số log cho hàm insertTransaction chạy chuẩn
+        if (ok) {
+            accountDAO.insertTransaction(accountId, type, amount, newBalance);
+        }
         return ok;
     }
 
     // Lay lich su giao dich vi
-    public java.util.List<java.util.Map<String, Object>> getTransactions(int accountId) {
+    public List<Map<String, Object>> getTransactions(int accountId) {
         return accountDAO.getTransactions(accountId);
     }
 }

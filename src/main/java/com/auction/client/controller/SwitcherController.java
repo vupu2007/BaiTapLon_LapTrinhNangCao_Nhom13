@@ -5,7 +5,8 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.VBox;
 
 public class SwitcherController {
-    // 1. Chỉ khai báo MỘT LẦN duy nhất các biến này
+
+    // 1. Chỉ khai báo MỘT LẦN duy nhất các biến này - Giữ nguyên
     @FXML private VBox roleBox;        // Khung Sidebar (chứa chữ Tư cách hiện tại)
     @FXML private VBox buyerMenu;      // Nhóm nút cho người mua
     @FXML private VBox sellerMenu;     // Nhóm nút cho người bán
@@ -17,27 +18,47 @@ public class SwitcherController {
      */
     public void updateRoleUI(boolean isBuyer) {
         if (isBuyer) {
-            // Chế độ NGƯỜI MUA (Màu hồng)
-            roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
-            lblRoleSidebar.setText("🛒 Người mua");
-            lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-weight: bold; -fx-font-size: 18;");
-            lblRoleTitle.setStyle("-fx-text-fill: #86198f; -fx-font-size: 11;");
+            // Chế độ NGƯỜI MUA (Màu hồng) - Tích hợp kiểm tra an toàn chống null
+            if (roleBox != null) {
+                roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
+            }
+            if (lblRoleSidebar != null) {
+                lblRoleSidebar.setText("🛒 Người mua");
+                lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-weight: bold; -fx-font-size: 18;");
+            }
+            if (lblRoleTitle != null) {
+                lblRoleTitle.setStyle("-fx-text-fill: #86198f; -fx-font-size: 11;");
+            }
 
-            buyerMenu.setVisible(true);
-            buyerMenu.setManaged(true);
-            sellerMenu.setVisible(false);
-            sellerMenu.setManaged(false);
+            if (buyerMenu != null) {
+                buyerMenu.setVisible(true);
+                buyerMenu.setManaged(true);
+            }
+            if (sellerMenu != null) {
+                sellerMenu.setVisible(false);
+                sellerMenu.setManaged(false);
+            }
         } else {
-            // Chế độ NGƯỜI BÁN (Màu xanh)
-            roleBox.setStyle("-fx-background-color: #e0f2fe; -fx-background-radius: 15; -fx-padding: 20;");
-            lblRoleSidebar.setText("🏪 Người bán");
-            lblRoleSidebar.setStyle("-fx-text-fill: #0369a1; -fx-font-weight: bold; -fx-font-size: 18;");
-            lblRoleTitle.setStyle("-fx-text-fill: #0369a1; -fx-font-size: 11;");
+            // Chế độ NGƯỜI BÁN (Màu xanh) - Tích hợp kiểm tra an toàn chống null
+            if (roleBox != null) {
+                roleBox.setStyle("-fx-background-color: #e0f2fe; -fx-background-radius: 15; -fx-padding: 20;");
+            }
+            if (lblRoleSidebar != null) {
+                lblRoleSidebar.setText("🏪 Người bán");
+                lblRoleSidebar.setStyle("-fx-text-fill: #0369a1; -fx-font-weight: bold; -fx-font-size: 18;");
+            }
+            if (lblRoleTitle != null) {
+                lblRoleTitle.setStyle("-fx-text-fill: #0369a1; -fx-font-size: 11;");
+            }
 
-            buyerMenu.setVisible(false);
-            buyerMenu.setManaged(false);
-            sellerMenu.setVisible(true);
-            sellerMenu.setManaged(true);
+            if (buyerMenu != null) {
+                buyerMenu.setVisible(false);
+                buyerMenu.setManaged(false);
+            }
+            if (sellerMenu != null) {
+                sellerMenu.setVisible(true);
+                sellerMenu.setManaged(true);
+            }
         }
     }
 }

@@ -47,7 +47,6 @@ public class ItemDAO {
             e.printStackTrace();
         }
         return null;
-
     }
 
     // 3. Lấy toàn bộ danh sách sản phẩm
@@ -67,10 +66,9 @@ public class ItemDAO {
         return list;
     }
 
-    // 4. 🚀 CẬP NHẬT REALTIME: Lấy danh sách kèm theo logic thời gian đấu giá cho Seller
+    // 4. Lấy danh sách kèm theo logic thời gian đấu giá cho Seller
     public List<Item> getItemsByOwner(int ownerId) {
         List<Item> list = new ArrayList<>();
-        // LEFT JOIN bảng Auctions để lấy thêm cột start_time và end_time của phiên đấu giá
         String sql = "SELECT i.*, a.start_time, a.end_time " +
                 "FROM Items i " +
                 "LEFT JOIN Auctions a ON i.item_id = a.item_id " +
@@ -83,23 +81,15 @@ public class ItemDAO {
             pstmt.setInt(1, ownerId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    // Sử dụng chính hàm mapResultSetToItem gốc của nhóm má để tạo ra đối tượng Electronics (con của Item)
                     Item item = mapResultSetToItem(rs);
-
-                    // Đọc dữ liệu thời gian trực tiếp từ ResultSet
                     Timestamp start = rs.getTimestamp("start_time");
                     Timestamp end = rs.getTimestamp("end_time");
 
-                    // Ép sang kiểu dữ liệu con Electronics để gán tạm thời gian vào trường brand/attributes nếu cần,
-                    // Hoặc an toàn nhất là má truyền chuỗi thời gian qua chính trường description (mô tả) tạm thời
-                    // hoặc trường attributes nếu lớp Electronics của má có set/get cho nó.
-                    // Để không lỗi, tui sẽ gán chuỗi thời gian vào thuộc tính Brand của Electronics luôn:
                     if (item instanceof Electronics && start != null && end != null) {
                         ((Electronics) item).setBrand(start.toString() + "|" + end.toString());
                     } else if (item instanceof Electronics) {
                         ((Electronics) item).setBrand("");
                     }
-
                     list.add(item);
                 }
             }
@@ -159,6 +149,26 @@ public class ItemDAO {
         }
     }
 
+    // 🛠️ 8. BỔ SUNG HÀM THIẾU CHÍ MẠNG: Lấy danh sách sản phẩm đang Hot Auctions
+    public List<Item> getHotAuctions() {
+        List<Item> list = new ArrayList<>();
+        String sql = "SELECT i.* FROM Items i " +
+                "JOIN Auctions a ON i.item_id = a.item_id " +
+                "WHERE a.status = 'RUNNING' " +
+                "LIMIT 10";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql);
+             ResultSet rs = pstmt.executeQuery()) {
+            while (rs.next()) {
+                list.add(mapResultSetToItem(rs));
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi getHotAuctions: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     // --- Helper: map ResultSet sang Item object ---
     private Item mapResultSetToItem(ResultSet rs) throws SQLException {
         Electronics item = new Electronics();
@@ -170,7 +180,7 @@ public class ItemDAO {
         item.setOwnerId(rs.getInt("owner_id"));
         item.setStatus(rs.getString("status"));
         item.setImagePath(rs.getString("image_path"));
-        item.setBrand(rs.getString("attributes")); // Đồng bộ lấy thêm cột attributes
+        item.setBrand(rs.getString("attributes"));
         return item;
     }
 

@@ -16,10 +16,12 @@
     </parent>
 
     <properties>
-        <maven.compiler.source>17</maven.compiler.source>
-        <maven.compiler.target>17</maven.compiler.target>
+        <!-- ✅ Sửa: nâng lên 21 cho khớp với JavaFX 21 -->
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <javafx.version>17.0.6</javafx.version>
+        <!-- ✅ Sửa: nâng JavaFX lên 21.0.3 (LTS, tương thích JDK 21) -->
+        <javafx.version>21.0.3</javafx.version>
         <junit.version>5.10.0</junit.version>
     </properties>
 
@@ -49,6 +51,12 @@
         <dependency>
             <groupId>org.openjfx</groupId>
             <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+        <!-- ✅ Thêm: javafx-graphics cần thiết để render UI đúng -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
             <version>${javafx.version}</version>
         </dependency>
 
@@ -97,9 +105,16 @@
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
+                <!-- ✅ Sửa: nâng plugin lên version mới hơn -->
                 <version>0.0.8</version>
                 <configuration>
                     <mainClass>com.auction.MainApp</mainClass>
+                    <!-- ✅ Thêm: VM args để tránh crash native trên JDK mới -->
+                    <options>
+                        <option>--enable-native-access=ALL-UNNAMED</option>
+                        <option>--add-opens=java.base/sun.misc=ALL-UNNAMED</option>
+                        <option>--add-opens=java.base/java.lang=ALL-UNNAMED</option>
+                    </options>
                 </configuration>
             </plugin>
 

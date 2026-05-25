@@ -3,7 +3,7 @@ package com.auction.client.controller;
 import javafx.fxml.FXML;
 import javafx.scene.layout.VBox;
 
-public class MyProductController {
+public class SidebarController {
 
     @FXML
     private VBox sidebar;

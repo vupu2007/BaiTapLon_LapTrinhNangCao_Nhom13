@@ -6,7 +6,6 @@ import java.util.*;
 
 public class TransactionDAO {
 
-
     public boolean save(int accountId, String type, double amount, String description) {
         String sql = "INSERT INTO Transactions (account_id, type, amount, description) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -25,16 +24,27 @@ public class TransactionDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setInt(1, accountId);
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) {
-                Map<String, Object> row = new HashMap<>();
-                row.put("type", rs.getString("type"));
-                row.put("amount", rs.getDouble("amount"));
-                row.put("description", rs.getString("description"));
-                row.put("created_at", rs.getTimestamp("created_at").toLocalDateTime());
-                list.add(row);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new HashMap<>();
+                    row.put("type", rs.getString("type"));
+                    row.put("amount", rs.getDouble("amount"));
+                    row.put("description", rs.getString("description"));
+
+                    // 🛠️ FIX LỖI: Kiểm tra an toàn trước khi ép kiểu tránh sập luồng mạng
+                    Timestamp timestamp = rs.getTimestamp("created_at");
+                    if (timestamp != null) {
+                        row.put("created_at", timestamp.toLocalDateTime());
+                    } else {
+                        row.put("created_at", java.time.LocalDateTime.now());
+                    }
+                    list.add(row);
+                }
             }
-        } catch (SQLException e) { e.printStackTrace(); }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi getByAccount: " + e.getMessage());
+            e.printStackTrace();
+        }
         return list;
     }
 

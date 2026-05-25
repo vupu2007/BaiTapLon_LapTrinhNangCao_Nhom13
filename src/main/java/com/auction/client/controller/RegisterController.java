@@ -1,11 +1,7 @@
 package com.auction.client.controller;
 
-// Thêm các import cho Network (Bạn hãy điều chỉnh package cho khớp nếu cần)
-import com.auction.shared.network.Request;
+import com.auction.client.service.AuthService;
 import com.auction.shared.network.Response;
-import com.auction.shared.network.MessageType;
-import com.auction.client.network.ClientSocket;
-
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -26,8 +22,8 @@ public class RegisterController {
     @FXML private ToggleButton toggleConfirmPasswordBtn;
     @FXML private TextField emailField;
 
-    // ĐÃ XÓA: private final AccountService accountService = new AccountService();
-    // Client không được khởi tạo trực tiếp Service của Server.
+    // CHUẨN ENTERPRISE: Khởi tạo Service nghiệp vụ riêng tại Client
+    private final AuthService authService = new AuthService();
 
     @FXML
     public void initialize() {
@@ -48,38 +44,28 @@ public class RegisterController {
         String confirm = confirmPasswordField.getText();
         String email = emailField.getText().trim();
 
-        // 1. Kiểm tra (Validate) dữ liệu trực tiếp tại Client để giảm tải cho mạng
+        // 1. Kiểm tra dữ liệu trực tiếp tại Client để tiết kiệm băng thông đường truyền
         if (username.isEmpty() || password.isEmpty() || confirm.isEmpty() || email.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi", "Không được để trống thông tin!");
+            showAlert(Alert.AlertType.WARNING, "Lỗi form", "Vui lòng nhập đầy đủ tất cả các trường dữ liệu!");
             return;
         }
         if (!password.equals(confirm)) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Mật khẩu xác nhận không khớp!");
+            showAlert(Alert.AlertType.ERROR, "Lỗi mật khẩu", "Mật khẩu xác nhận không khớp! Vui lòng kiểm tra lại.");
             return;
         }
 
-        // 2. Đóng gói dữ liệu thành Request
-        String[] registerData = {username, password, email};
-        Request request = new Request(MessageType.REGISTER, registerData);
+        // 2. Giao phó toàn bộ tác vụ mạng cho lớp Service lo chạy ngầm (Background Thread)
+        authService.registerAsync(username, password, email, response -> {
 
-        try {
-            // 3. Gửi qua Socket (Giả sử ClientSocket của bạn dùng Singleton Pattern là getInstance())
-            // Nếu bạn implement khác, hãy sửa dòng này cho phù hợp với class ClientSocket của bạn.
-            Response response = ClientSocket.getInstance().sendRequest(request);
-
-            // 4. Xử lý UI dựa trên Response trả về từ Server
-            if (response.isSuccess()) {
-                // Sử dụng chính câu thông báo từ Server gửi về cho sinh động
-                showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
+            // 3. Nhận kết quả sạch trả về từ luồng mạng và xử lý thông báo lên UI công khai
+            if (response != null && response.isSuccess()) {
+                showAlert(Alert.AlertType.INFORMATION, "Đăng ký thành công", response.getMessage());
                 goToLogin(event);
             } else {
-                showAlert(Alert.AlertType.ERROR, "Thất bại", response.getMessage());
+                String errorMsg = (response != null) ? response.getMessage() : "Mất kết nối với máy chủ.";
+                showAlert(Alert.AlertType.ERROR, "Đăng ký thất bại", errorMsg);
             }
-
-        } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi mạng", "Không thể kết nối đến máy chủ.");
-            e.printStackTrace();
-        }
+        });
     }
 
     @FXML

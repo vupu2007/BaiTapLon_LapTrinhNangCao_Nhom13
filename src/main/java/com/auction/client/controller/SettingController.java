@@ -1,24 +1,17 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
-
-import com.auction.shared.model.Account;
+import com.auction.client.service.SettingService;
 import com.auction.client.util.CurrentAccount;
+import com.auction.shared.model.Account;
+import com.auction.shared.network.Response;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
 
 public class SettingController {
 
-    @FXML private VBox sidebar;
-    @FXML private Button btnHome, btnProducts, btnCreate, btnHistory;
-
     @FXML private TextField txtFullName;
     @FXML private TextField txtEmail;
-    @FXML private TextField txtPhone;
+    @FXML private TextField txtPhone; // Giữ lại theo FXML của nhóm
 
     @FXML private PasswordField txtCurrentPass;
     @FXML private PasswordField txtNewPass;
@@ -29,7 +22,8 @@ public class SettingController {
     @FXML private Label lblDisplayRole;
     @FXML private Label lblDisplayBalance;
 
-    private boolean isCollapsed = false;
+    // Kích hoạt Service trung gian lo việc điều phối Socket mạng
+    private final SettingService settingService = new SettingService();
 
     @FXML
     public void initialize() {
@@ -45,84 +39,77 @@ public class SettingController {
         }
     }
 
+    /**
+     * 📝 XỬ LÝ LƯU THÔNG TIN CÁ NHÂN CHUẨN ENTERPRISE
+     */
     @FXML
     private void handleSaveInfo() {
-        String name = txtFullName.getText();
-        String email = txtEmail.getText();
+        String name = txtFullName.getText().trim();
+        String email = txtEmail.getText().trim();
 
         if (name.isEmpty() || email.isEmpty()) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Vui lòng không để trống Họ tên và Email!");
+            showAlert(Alert.AlertType.ERROR, "Lỗi nhập liệu", "Vui lòng không để trống Họ tên và Email!");
             return;
         }
 
         Account current = CurrentAccount.getAccount();
         if (current != null) {
-            // Truyền vào: ID, Tên mới, Email mới
-            Request req = new Request(MessageType.UPDATE_PROFILE, new String[]{current.getId(), name, email});
-            boolean updated = false;
-            try {
-                Response resp = ClientSocket.getInstance().sendRequest(req);
-                updated = resp != null && resp.isSuccess();
-            } catch (Exception ex) { System.err.println("Lỗi server: " + ex.getMessage()); }
-            if (updated) {
-                // Chỉ khi DB thành công mới cập nhật Session
-                current.setUsername(name);
-                current.setEmail(email);
-                // Cập nhật hiển thị khung bên phải
-                if (lblDisplayUsername != null) lblDisplayUsername.setText(name);
-                if (lblDisplayEmail != null) lblDisplayEmail.setText(email);
+            // Đẩy tác vụ lưu dữ liệu mạng chạy ngầm ra lớp Service
+            settingService.updateProfileAsync(current.getId(), name, email, response -> {
+                if (response != null && response.isSuccess()) {
+                    // Khi DB Server báo thành công -> Mới cập nhật dữ liệu bộ nhớ tạm Client (Session)
+                    current.setUsername(name);
+                    current.setEmail(email);
 
-                showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân vào Database!");
-            } else {
-                showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lưu dữ liệu. Vui lòng thử lại!");
-            }
+                    if (lblDisplayUsername != null) lblDisplayUsername.setText(name);
+                    if (lblDisplayEmail != null) lblDisplayEmail.setText(email);
+
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân hệ thống!");
+                } else {
+                    String errorMsg = (response != null) ? response.getMessage() : "Mất kết nối server.";
+                    showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể lưu dữ liệu: " + errorMsg);
+                }
+            });
         }
     }
+
+    /**
+     * 🔑 XỬ LÝ ĐỔI MẬT KHẨU AN TOÀN BẢO MẬT HỆ THỐNG
+     */
     @FXML
     private void handleChangePassword() {
-        // 1. Lấy dữ liệu từ giao diện
-        String current = txtCurrentPass.getText();
-        String next = txtNewPass.getText();
-        String confirm = txtConfirmPass.getText();
+        String currentPass = txtCurrentPass.getText();
+        String newPass = txtNewPass.getText();
+        String confirmPass = txtConfirmPass.getText();
 
-        // 2. Lấy tài khoản hiện tại từ Session
         Account currentAcc = CurrentAccount.getAccount();
+        if (currentAcc == null) return;
 
-        // 3. Kiểm tra các ô nhập liệu có trống không
-        if (current.isEmpty() || next.isEmpty() || confirm.isEmpty()) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Vui lòng nhập đầy đủ các trường mật khẩu!");
+        // 1. Kiểm tra các ô nhập liệu tại chỗ
+        if (currentPass.isEmpty() || newPass.isEmpty() || confirmPass.isEmpty()) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi form", "Vui lòng nhập đầy đủ các trường mật khẩu!");
             return;
         }
 
-        // 4. Kiểm tra mật khẩu hiện tại nhập vào có khớp với mật khẩu cũ không
-        if (!currentAcc.getPassword().equals(current)) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Mật khẩu hiện tại không chính xác!");
+        // 2. Kiểm tra tính trùng khớp mật khẩu mới tại Client trước
+        if (!newPass.equals(confirmPass)) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi xác nhận", "Mật khẩu mới không khớp! Vui lòng nhập lại.");
             return;
         }
 
-        // 5. Kiểm tra mật khẩu mới và xác nhận mật khẩu
-        if (!next.equals(confirm)) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Mật khẩu mới không khớp!");
-            return;
-        }
+        // 3. CHUẨN BẢO MẬT: Bắn cả mật khẩu cũ lên Server để Server lo việc đối chiếu bằng Bcrypt/SHA trong DB
+        settingService.changePasswordAsync(currentAcc.getId(), currentPass, newPass, response -> {
+            if (response != null && response.isSuccess()) {
+                showAlert(Alert.AlertType.INFORMATION, "Thành công", "Mật khẩu đã được thay đổi và lưu vào hệ thống!");
 
-        // 6. Thực hiện cập nhật vào Database qua DAO
-        Request pwReq = new Request(MessageType.CHANGE_PASSWORD, new String[]{currentAcc.getId(), next});
-        boolean pwUpdated = false;
-        try {
-            Response pwResp = ClientSocket.getInstance().sendRequest(pwReq);
-            pwUpdated = pwResp != null && pwResp.isSuccess();
-        } catch (Exception ex) { System.err.println("Lỗi server: " + ex.getMessage()); }
-        if (pwUpdated) {
-            currentAcc.setPassword(next); // Cập nhật bộ nhớ tạm để đồng bộ
-            showAlert(Alert.AlertType.INFORMATION, "Thành công", "Mật khẩu đã được thay đổi và lưu vào hệ thống!");
-
-            txtCurrentPass.clear();
-            txtNewPass.clear();
-            txtConfirmPass.clear();
-        } else {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể cập nhật mật khẩu vào cơ sở dữ liệu!");
-        }
+                txtCurrentPass.clear();
+                txtNewPass.clear();
+                txtConfirmPass.clear();
+            } else {
+                String errorMsg = (response != null) ? response.getMessage() : "Mật khẩu hiện tại không chính xác hoặc lỗi DB.";
+                showAlert(Alert.AlertType.ERROR, "Lỗi cập nhật", errorMsg);
+            }
+        });
     }
 
     private void showAlert(Alert.AlertType type, String title, String content) {

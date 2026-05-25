@@ -33,7 +33,7 @@ public class ProductCardController {
         }
     }
 
-    // 🔥 ĐÃ NÂNG CẤP: Nhận đầy đủ thông tin chi tiết của sản phẩm từ tầng nạp dữ liệu
+    // 🔥 ĐÃ NÂNG CẤP: Nhận đầy đủ thông tin chi tiết của sản phẩm từ tầng nạp dữ liệu - Giữ nguyên
     public void setData(String name, String price, String time, String imageFileName,
                         String description, String sellerName, String startTime, String endTime) {
 
@@ -50,7 +50,7 @@ public class ProductCardController {
 
         final String finalImageFileName = imageFileName;
 
-        // Tải ảnh đa luồng ngầm
+        // Tải ảnh đa luồng ngầm của bạn - Giữ nguyên vì quá chuẩn
         Thread imageLoadThread = new Thread(() -> {
             try {
                 Image img;
@@ -107,22 +107,24 @@ public class ProductCardController {
         imageLoadThread.setDaemon(true);
         imageLoadThread.start();
 
-        // 🔥 ĐÃ SỬA TẠI ĐÂY: Bắn tất cả các dữ liệu chi tiết sang MainLayoutController để chuyển tiếp sang trang chi tiết
-        actionButton.setOnAction(e -> {
-            if (MainLayoutController.getInstance() != null) {
-                Image currentImg = (productImage != null) ? productImage.getImage() : null;
+        // 🌟 ĐÃ THÊM BIỆN PHÁP AN TOÀN: Chỉ gán sự kiện nếu nút bấm tồn tại trên giao diện FXML
+        if (actionButton != null) {
+            actionButton.setOnAction(e -> {
+                if (MainLayoutController.getInstance() != null) {
+                    Image currentImg = (productImage != null) ? productImage.getImage() : null;
 
-                MainLayoutController.getInstance().openAuctionDetail(
-                        name,
-                        price,
-                        currentImg,
-                        finalImageFileName,
-                        description,
-                        sellerName,
-                        startTime,
-                        endTime
-                );
-            }
-        });
+                    MainLayoutController.getInstance().openAuctionDetail(
+                            name,
+                            price,
+                            currentImg,
+                            finalImageFileName,
+                            description,
+                            sellerName,
+                            startTime,
+                            endTime
+                    );
+                }
+            });
+        }
     }
 }

@@ -7,6 +7,7 @@ import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Account;
 import com.auction.client.util.CurrentAccount;
 
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -28,7 +29,7 @@ public class LoginController {
 
     @FXML
     public void initialize() {
-        // Áp dụng liên kết 2 chiều giống RegisterController để mật khẩu luôn đồng bộ
+        // Áp dụng liên kết 2 chiều của bạn - Giữ nguyên
         visiblePasswordField.textProperty().bindBidirectional(passwordField.textProperty());
 
         visiblePasswordField.setVisible(false);
@@ -38,46 +39,55 @@ public class LoginController {
     @FXML
     void handleLogin(ActionEvent event) {
         String username = (usernameField.getText() != null) ? usernameField.getText().trim() : "";
-        // Vì đã bindBidirectional nên lấy thẳng từ passwordField là luôn chính xác
         String password = (passwordField.getText() != null) ? passwordField.getText() : "";
 
-        // 1. Validate cơ bản ở Client
+        // 1. Validate cơ bản ở Client - Giữ nguyên
         if (username.isEmpty() || password.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
             return;
         }
 
-        // 2. LUỒNG CHẠY THỰC TẾ QUA SERVER BẰNG SOCKET (ĐÃ BỎ BYPASS LỖI)
+        // 2. Đóng gói dữ liệu chuẩn Constructor 2 tham số của bạn
         String[] loginData = {username, password};
         Request request = new Request(MessageType.LOGIN, loginData);
 
-        try {
-            // Gửi Request và nhận Response từ Server thông qua kết nối duy nhất
-            Response response = ClientSocket.getInstance().sendRequest(request);
+        // 🚀 Tách một Thread chạy ngầm để gửi gói tin Đăng nhập, giúp nút bấm không bị đơ cứng
+        Thread loginWorker = new Thread(() -> {
+            try {
+                Response response = ClientSocket.getInstance().sendRequest(request);
 
-            if (response != null && response.isSuccess()) {
-                // Ép kiểu dữ liệu Server trả về thành đối tượng Account (Do DB cấp)
-                Account loggedIn = (Account) response.getData();
-                CurrentAccount.setAccount(loggedIn);
+                // 🚀 Nhận phản hồi xong -> Đẩy logic xử lý giao diện về lại luồng JavaFX UI an toàn
+                Platform.runLater(() -> {
+                    if (response != null && response.isSuccess()) {
+                        Account loggedIn = (Account) response.getData();
+                        CurrentAccount.setAccount(loggedIn);
 
-                System.out.println("-> Đăng nhập thành công! Username: " + loggedIn.getUsername() + " | Role: " + loggedIn.getRole());
+                        System.out.println("-> Đăng nhập thành công! Username: " + loggedIn.getUsername() + " | Role: " + loggedIn.getRole());
 
-                // Phân quyền chuyển màn hình dựa trên Role thực tế trả về từ DB
-                if ("ADMIN".equals(loggedIn.getRole())) {
-                    System.out.println("🚀 Đang chuyển hướng sang giao diện AdminLayoutView...");
-                    switchScene(event, "/view/AdminLayoutView.fxml", "Quản trị hệ thống");
-                } else {
-                    System.out.println("🛒 Đang chuyển hướng sang giao diện khách hàng MainLayout...");
-                    switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá");
-                }
-            } else {
-                String errorMsg = (response != null) ? response.getMessage() : "Sai tài khoản hoặc mật khẩu!";
-                showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
+                        // Phân quyền chuyển màn hình
+                        if ("ADMIN".equals(loggedIn.getRole())) {
+                            System.out.println("🚀 Đang chuyển hướng sang giao diện AdminLayoutView...");
+                            switchScene(event, "/view/AdminLayoutView.fxml", "Quản trị hệ thống");
+                        } else {
+                            System.out.println("🛒 Đang chuyển hướng sang giao diện khách hàng MainLayout...");
+                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá");
+                        }
+                    } else {
+                        String errorMsg = (response != null) ? response.getMessage() : "Sai tài khoản hoặc mật khẩu!";
+                        showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
+                    }
+                });
+
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi mạng", "Không thể kết nối đến máy chủ Server. Hãy chắc chắn Server đang bật!");
+                });
+                e.printStackTrace();
             }
-        } catch (Exception e) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi mạng", "Không thể kết nối đến máy chủ Server. Hãy chắc chắn Server đang bật!");
-            e.printStackTrace();
-        }
+        }, "LoginNetworkWorkerThread");
+
+        loginWorker.setDaemon(true);
+        loginWorker.start();
     }
 
     @FXML
@@ -109,11 +119,22 @@ public class LoginController {
         }
     }
 
+    // Tự động điều phối hiển thị popup an toàn dù gọi từ bất kỳ luồng nào
     private void showAlert(Alert.AlertType type, String title, String message) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        if (Platform.isFxApplicationThread()) {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        } else {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(type);
+                alert.setTitle(title);
+                alert.setHeaderText(null);
+                alert.setContentText(message);
+                alert.showAndWait();
+            });
+        }
     }
 }

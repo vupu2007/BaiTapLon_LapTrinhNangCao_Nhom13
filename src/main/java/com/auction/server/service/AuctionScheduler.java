@@ -19,12 +19,14 @@ public class AuctionScheduler {
     private final AuctionDAO auctionDAO = new AuctionDAO();
     private final ItemDAO itemDAO = new ItemDAO();
     private final AccountDAO accountDAO = new AccountDAO();
-    private final AuctionService auctionService = new AuctionService();
     private final ScheduledExecutorService scheduler = Executors.newSingleThreadScheduledExecutor();
 
     // Singleton
     private static AuctionScheduler instance;
+
+    // Khởi tạo private chuẩn hóa
     private AuctionScheduler() {}
+
     public static AuctionScheduler getInstance() {
         if (instance == null) {
             instance = new AuctionScheduler();
@@ -32,10 +34,10 @@ public class AuctionScheduler {
         return instance;
     }
 
-    // Gọi 1 lần khi khởi động app
+    // Gọi 1 lần khi khởi động app (Chỉ chạy ở ServerMain)
     public void start() {
         scheduler.scheduleAtFixedRate(this::tick, 0, 30, TimeUnit.SECONDS);
-        System.out.println("AuctionScheduler đã khởi động!");
+        System.out.println("AuctionScheduler đã khởi động thành công trên Server!");
     }
 
     // Dừng khi tắt app
@@ -52,26 +54,34 @@ public class AuctionScheduler {
 
     // 1. Mở các phiên OPEN đã đến startTime → RUNNING
     private void openPendingAuctions() {
-        List<Auction> openAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.OPEN);
-        for (Auction auction : openAuctions) {
-            if (auction.getStartTime() != null &&
-                    LocalDateTime.now().isAfter(auction.getStartTime())) {
+        try {
+            List<Auction> openAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.OPEN);
+            if (openAuctions == null) return;
 
-                auctionDAO.updateStatus(auction.getId(), Auction.AuctionStatus.RUNNING);
-                System.out.println("Phiên " + auction.getId() + " bắt đầu!");
+            for (Auction auction : openAuctions) {
+                if (auction.getStartTime() != null && LocalDateTime.now().isAfter(auction.getStartTime())) {
+                    auctionDAO.updateStatus(auction.getId(), Auction.AuctionStatus.RUNNING);
+                    System.out.println("Phiên " + auction.getId() + " bắt đầu!");
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Lỗi Scheduler khi mở phiên: " + e.getMessage());
         }
     }
 
     // 2. Đóng các phiên RUNNING đã hết endTime → FINISHED
     private void closeExpiredAuctions() {
-        List<Auction> runningAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
-        for (Auction auction : runningAuctions) {
-            if (auction.getEndTime() != null &&
-                    LocalDateTime.now().isAfter(auction.getEndTime())) {
+        try {
+            List<Auction> runningAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
+            if (runningAuctions == null) return;
 
-                closeAuction(auction);
+            for (Auction auction : runningAuctions) {
+                if (auction.getEndTime() != null && LocalDateTime.now().isAfter(auction.getEndTime())) {
+                    closeAuction(auction);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("Lỗi Scheduler khi đóng phiên hết hạn: " + e.getMessage());
         }
     }
 
@@ -93,11 +103,15 @@ public class AuctionScheduler {
             System.out.println("Phiên " + auctionId + " kết thúc — Không có người thắng");
         }
 
-        // Bước 3: Notify tất cả màn hình đang xem phiên này
-        auctionService.notifyObservers(auctionId, auction.getCurrentPrice(), "SYSTEM");
+        // Bước 3: Gọi động AuctionService để tránh nghẽn mạch khởi tạo ở Client
+        try {
+            new AuctionService().notifyObservers(auctionId, auction.getCurrentPrice(), "SYSTEM");
+        } catch (Exception e) {
+            System.err.println("Không thể notify observers: " + e.getMessage());
+        }
     }
 
-    /// Trừ tiền winner + cộng tiền seller
+    // Trừ tiền winner + cộng tiền seller
     private void settlePayment(Auction auction) {
         double price = auction.getCurrentPrice();
 
@@ -110,12 +124,9 @@ public class AuctionScheduler {
                 return;
             }
 
-            // Vì người mua (Winner) vừa chi tiền trúng đấu giá, ta tăng Tổng chi tiêu (total_withdraw) của họ lên bằng chính giá trị món hàng.
-            // Giữ nguyên tổng nạp bằng 0.0 hoặc giá trị mặc định để tránh lỗi biên dịch.
             double currentTotalDeposit = 0.0;
             double newTotalWithdraw = price;
 
-            // Gọi hàm DAO truyền đủ 4 tham số
             accountDAO.updateBalance(auction.getWinnerId(), newBalance, currentTotalDeposit, newTotalWithdraw);
             System.out.println("Trừ " + price + " từ winner ID: " + auction.getWinnerId());
         }
@@ -124,11 +135,9 @@ public class AuctionScheduler {
         Account seller = accountDAO.getAccountById(auction.getSellerId());
         if (seller instanceof Seller) {
             double newBalance = ((Seller) seller).getBalance() + price;
-            // Người bán (Seller) vừa nhận được tiền bán hàng, ta tính số tiền này vào Tổng doanh thu/Tổng nạp của họ.
             double newTotalDeposit = price;
             double currentTotalWithdraw = 0.0;
 
-            // Gọi hàm DAO truyền đủ 4 tham số
             accountDAO.updateBalance(auction.getSellerId(), newBalance, newTotalDeposit, currentTotalWithdraw);
             System.out.println("Cộng " + price + " cho seller ID: " + auction.getSellerId());
         }

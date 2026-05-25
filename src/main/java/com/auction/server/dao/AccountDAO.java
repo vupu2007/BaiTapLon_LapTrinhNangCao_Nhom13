@@ -4,14 +4,15 @@ import com.auction.shared.model.Account;
 import com.auction.shared.model.Admin;
 import com.auction.shared.model.Bidder;
 import com.auction.shared.model.Seller;
-import com.auction.shared.model.Transaction; // 🌟 ĐÃ THÊM IMPORT TRANSACTION MODEL
+import com.auction.shared.model.Transaction;
 import com.auction.server.util.DatabaseConnection;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 public class AccountDAO {
-
 
     // 1. Đăng ký tài khoản mới (mặc định role = BIDDER)
     public boolean register(String username, String password, String email) {
@@ -118,86 +119,68 @@ public class AccountDAO {
         }
     }
 
-    private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
-        String id       = String.valueOf(rs.getInt("account_id"));
-        String username = rs.getString("username");
-        String password = rs.getString("password");
-        String email    = rs.getString("email");
-        String role     = rs.getString("role");
-        double balance  = rs.getDouble("balance");
-
-        // Khởi tạo giá trị an toàn mặc định
-        double totalDeposit = 0.0;
-        double totalWithdraw = 0.0;
-
-        // BỌC THỬ AN TOÀN: Đọc dữ liệu thực tế từ MySQL
-        try {
-            totalDeposit = rs.getDouble("total_deposit");
-            totalWithdraw = rs.getDouble("total_withdraw");
-        } catch (SQLException e) {
-            System.err.println("⚠️ CẢNH BÁO: Database MySQL hiện tại chưa được cập nhật cột total_deposit hoặc total_withdraw!");
-        }
-
-        Account acc;
-        switch (role) {
-            case "ADMIN":
-                acc = new Admin(id, username, password, email);
-                break;
-
-            case "SELLER":
-                Seller seller = new Seller(id, username, password, email, balance);
-                seller.setTotalDeposit(totalDeposit);
-                seller.setTotalWithdraw(totalWithdraw);
-                acc = seller;
-                break;
-
-            default: // BIDDER
-                Bidder bidder = new Bidder(id, username, password, email, balance);
-                bidder.setTotalDeposit(totalDeposit);
-                bidder.setTotalWithdraw(totalWithdraw);
-                acc = bidder;
-                break;
-        }
-
-        if (acc != null) {
-            acc.setBalance(balance);
-        }
-        return acc;
-    }
-
-    //---Hàm đổi mật khẩu--
-    public boolean updatePassword(String userId, String newPassword) {
+    // 7. Cập nhật mật khẩu hệ thống
+    public boolean updatePassword(int accountId, String newPassword) {
         String sql = "UPDATE Accounts SET password = ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, newPassword);
-            pstmt.setInt(2, Integer.parseInt(userId));
+            pstmt.setInt(2, accountId);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
-    //-- Hàm đổi profile--
-    public boolean updateProfile(String userId, String newUsername, String newEmail) {
+    // 8. Cập nhật thông tin cá nhân (Profile)
+    public boolean updateProfile(int accountId, String newUsername, String newEmail) {
         String sql = "UPDATE Accounts SET username = ?, email = ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, newUsername);
             pstmt.setString(2, newEmail);
-            pstmt.setInt(3, Integer.parseInt(userId));
+            pstmt.setInt(3, accountId);
 
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
 
+    // 9. Khóa người dùng (Dành cho Quản trị viên Admin)
+    public boolean lockUser(int accountId) {
+        String sql = "UPDATE Accounts SET is_locked = 1 WHERE account_id = ? AND role != 'ADMIN'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, accountId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 10. Lấy tất cả danh sách user (Dùng cho AdminUserMgmt)
+    public List<Account> getAllAccounts() {
+        List<Account> list = new ArrayList<>();
+        String sql = "SELECT * FROM Accounts ORDER BY account_id";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                list.add(mapResultSetToAccount(rs));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return list;
+    }
+
     // =========================================================================
-    // 🚀 LẬP TRÌNH MẠNG: 2 HÀM XỬ LÝ LỊCH SỬ GIAO DỊCH TÍCH HỢP CHO VÍ TIỀN
+    // 🚀 TẦNG NGHIỆP VỤ: XỬ LÝ LỊCH SỬ GIAO DỊCH VÍ ĐỒNG BỘ MODEL
     // =========================================================================
 
     /**
@@ -221,7 +204,7 @@ public class AccountDAO {
     }
 
     /**
-     * Lấy danh sách lịch sử giao dịch từ Database về để Client hiển thị lại
+     * Lấy danh sách lịch sử giao dịch từ Database trả về đối tượng Model Transaction nguyên bản
      */
     public List<Transaction> getTransactionHistory(int accountId) {
         List<Transaction> list = new ArrayList<>();
@@ -254,72 +237,99 @@ public class AccountDAO {
         return list;
     }
 
-    // getAllAccounts: lay tat ca user (dung cho AdminUserMgmt)
-    public List<Account> getAllAccounts() {
-        List<Account> list = new ArrayList<>();
-        String sql = "SELECT * FROM Accounts ORDER BY account_id";
-        try (Connection conn = DatabaseConnection.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) list.add(mapResultSetToAccount(rs));
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
-    }
+    // =========================================================================
+    // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÁP ỨNG MESSAGE_TYPE.GET_TRANSACTIONS CHO CLIENT
+    // =========================================================================
 
-    // updateProfile(int, String, String): overload nhan int thay vi String
-    public boolean updateProfile(int accountId, String newUsername, String newEmail) {
-        return updateProfile(String.valueOf(accountId), newUsername, newEmail);
-    }
+    /**
+     * Lấy lịch sử giao dịch và đóng gói thành dạng List<Map> đúng như Client mong đợi,
+     * tận dụng 100% hàm getTransactionHistory có sẵn của nhóm bạn.
+     */
+    public List<Map<String, Object>> getTransactions(int accountId) {
+        List<Map<String, Object>> resultList = new ArrayList<>();
 
-    // updatePassword(int, String): overload nhan int
-    public boolean updatePassword(int accountId, String newPassword) {
-        return updatePassword(String.valueOf(accountId), newPassword);
-    }
+        // Gọi lại hàm lấy dữ liệu từ bảng Transactions có sẵn của bạn
+        List<Transaction> history = getTransactionHistory(accountId);
 
-    // insertTransaction(int, double, String): signature khop voi AccountService
-    public boolean insertTransaction(int accountId, double amount, String type) {
-        String sql = "INSERT INTO Transactions (account_id, type, amount, balance_after, created_at) VALUES (?, ?, ?, 0, NOW())";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, accountId);
-            pstmt.setString(2, type);
-            pstmt.setDouble(3, amount);
-            return pstmt.executeUpdate() > 0;
-        } catch (SQLException e) { e.printStackTrace(); return false; }
-    }
+        if (history != null) {
+            for (Transaction t : history) {
+                Map<String, Object> txMap = new HashMap<>();
+                txMap.put("type", t.getType()); // "DEPOSIT" hoặc "WITHDRAW"
 
-    // getTransactions: tra ve List<Map> de WalletController hien thi
-    public java.util.List<java.util.Map<String, Object>> getTransactions(int accountId) {
-        java.util.List<java.util.Map<String, Object>> list = new java.util.ArrayList<>();
-        String sql = "SELECT * FROM Transactions WHERE account_id = ? ORDER BY transaction_id DESC";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, accountId);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    java.util.Map<String, Object> map = new java.util.HashMap<>();
-                    map.put("type",        rs.getString("type"));
-                    map.put("amount",      rs.getDouble("amount"));
-                    map.put("description", rs.getString("type").equals("DEPOSIT") ? "Nap tien" : "Rut tien");
-                    Timestamp ts = rs.getTimestamp("created_at");
-                    map.put("created_at", ts != null ? ts.toLocalDateTime() : null);
-                    list.add(map);
-                }
+                // Map mô tả thân thiện sang cho Client đọc
+                String desc = "DEPOSIT".equalsIgnoreCase(t.getType()) ? "Chuyển khoản / Nạp tiền" : "Ví điện tử / Rút tiền";
+                txMap.put("description", desc);
+
+                txMap.put("amount", t.getAmount());
+                txMap.put("created_at", t.getCreatedAt()); // LocalDateTime nguyên bản
+
+                resultList.add(txMap);
             }
-        } catch (SQLException e) { e.printStackTrace(); }
-        return list;
+        }
+        return resultList;
     }
 
-    // lockUser: cap nhat trang thai tai khoan (them cot is_locked vao DB neu chua co)
-    public boolean lockUser(int accountId) {
-        String sql = "UPDATE Accounts SET is_locked = 1 WHERE account_id = ? AND role != 'ADMIN'";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, accountId);
-            return pstmt.executeUpdate() > 0;
+    // =========================================================================
+    // 🔀 CÁC HÀM OVERLOAD TƯƠNG THÍCH ĐỂ KHÔNG LÀM LỖI CODE CŨ CỦA DỰ ÁN
+    // =========================================================================
+
+    public boolean updateProfile(String userId, String newUsername, String newEmail) {
+        return updateProfile(Integer.parseInt(userId), newUsername, newEmail);
+    }
+
+    public boolean updatePassword(String userId, String newPassword) {
+        return updatePassword(Integer.parseInt(userId), newPassword);
+    }
+
+    public boolean insertTransaction(int accountId, double amount, String type) {
+        // Tự động tính toán số dư sau giao dịch bằng cách lấy số dư hiện tại của tài khoản
+        Account acc = getAccountById(accountId);
+        double currentBalance = (acc != null) ? acc.getBalance() : 0.0;
+        double balanceAfter = "DEPOSIT".equalsIgnoreCase(type) ? (currentBalance + amount) : (currentBalance - amount);
+        return insertTransaction(accountId, type, amount, balanceAfter);
+    }
+
+    // Helper map dữ liệu sạch từ ResultSet MySQL lên Object Java
+    private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
+        String id       = String.valueOf(rs.getInt("account_id"));
+        String username = rs.getString("username");
+        String password = rs.getString("password");
+        String email    = rs.getString("email");
+        String role     = rs.getString("role");
+        double balance  = rs.getDouble("balance");
+
+        double totalDeposit = 0.0;
+        double totalWithdraw = 0.0;
+
+        try {
+            totalDeposit = rs.getDouble("total_deposit");
+            totalWithdraw = rs.getDouble("total_withdraw");
         } catch (SQLException e) {
-            e.printStackTrace();
-            return false;
+            System.err.println("⚠️ CẢNH BÁO: Database MySQL chưa có cột total_deposit hoặc total_withdraw!");
         }
+
+        Account acc;
+        switch (role) {
+            case "ADMIN":
+                acc = new Admin(id, username, password, email);
+                break;
+            case "SELLER":
+                Seller seller = new Seller(id, username, password, email, balance);
+                seller.setTotalDeposit(totalDeposit);
+                seller.setTotalWithdraw(totalWithdraw);
+                acc = seller;
+                break;
+            default:
+                Bidder bidder = new Bidder(id, username, password, email, balance);
+                bidder.setTotalDeposit(totalDeposit);
+                bidder.setTotalWithdraw(totalWithdraw);
+                acc = bidder;
+                break;
+        }
+
+        if (acc != null) {
+            acc.setBalance(balance);
+        }
+        return acc;
     }
 }

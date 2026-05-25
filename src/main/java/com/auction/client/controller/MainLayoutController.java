@@ -47,6 +47,10 @@ public class MainLayoutController {
 
     @FXML private Label nameLabel;
 
+    public static MainLayoutController getInstance() {
+        return instance;
+    }
+
     @FXML
     public void initialize() {
         instance = this;
@@ -54,11 +58,9 @@ public class MainLayoutController {
             nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
         }
         startRealtimeClock();
-        openHome();
-    }
 
-    public static MainLayoutController getInstance() {
-        return instance;
+        // Tự động mở trang chủ ngay khi giao diện cha sẵn sàng
+        Platform.runLater(this::openHome);
     }
 
     private void startRealtimeClock() {
@@ -75,6 +77,9 @@ public class MainLayoutController {
         clockTimeline.play();
     }
 
+    /**
+     * 🚀 TỐI ƯU HÀM TẢI TRANG: Tự động co giãn kích thước theo Panel cha
+     */
     private FXMLLoader loadPage(String fxmlPath) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
@@ -92,12 +97,15 @@ public class MainLayoutController {
 
             return loader;
         } catch (Exception e) {
-            System.err.println("Lỗi tải trang: " + fxmlPath);
+            System.err.println("❌ Lỗi tải trang: " + fxmlPath);
             e.printStackTrace();
             return null;
         }
     }
 
+    /**
+     * Đồng bộ đổi màu thanh Menu đang chọn chủ động
+     */
     private void setActive(Button activeButton) {
         Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings};
         for (Button btn : buttons) {
@@ -116,86 +124,10 @@ public class MainLayoutController {
         }
     }
 
-    /**
-     * Khởi tạo thông tin chi tiết cuộc đấu giá và điều hướng sang giao diện hiển thị
-     */
-    public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName,
-                                  String description, String sellerName, String startTime, String endTime) {
-
-        Platform.runLater(() -> {
-            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
-            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
-
-            setActive(btnAuction);
-
-            if (loader != null) {
-                AuctionDetailController detailController = loader.getController();
-                if (detailController != null) {
-                    com.auction.shared.model.Auction mockAuction = new com.auction.shared.model.Auction();
-                    mockAuction.setProductName(name);
-
-                    // Trích xuất thông tin giá từ chuỗi ký tự dữ liệu
-                    try {
-                        String cleanPrice = price.replaceAll("[^0-9]", "");
-                        if (!cleanPrice.isEmpty()) {
-                            mockAuction.setCurrentPrice(Double.parseDouble(cleanPrice));
-                            mockAuction.setStartPrice(Double.parseDouble(cleanPrice));
-                        }
-                    } catch (Exception e) {
-                        mockAuction.setStartPrice(0.0);
-                    }
-
-                    mockAuction.setStatus(com.auction.shared.model.Auction.AuctionStatus.RUNNING);
-
-                    // Đồng bộ định dạng thời gian
-                    LocalDateTime start = null;
-                    LocalDateTime end = null;
-                    DateTimeFormatter[] formatters = {
-                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"),
-                            DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"),
-                            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"),
-                            DateTimeFormatter.ISO_LOCAL_DATE_TIME
-                    };
-
-                    if (startTime != null && !startTime.trim().isEmpty() && !startTime.contains("--")) {
-                        for (DateTimeFormatter fmt : formatters) {
-                            try { start = LocalDateTime.parse(startTime.trim(), fmt); break; } catch (Exception ignored) {}
-                        }
-                    }
-                    if (endTime != null && !endTime.trim().isEmpty() && !endTime.contains("--")) {
-                        for (DateTimeFormatter fmt : formatters) {
-                            try { end = LocalDateTime.parse(endTime.trim(), fmt); break; } catch (Exception ignored) {}
-                        }
-                    }
-
-                    mockAuction.setStartTime(start != null ? start : LocalDateTime.now());
-                    mockAuction.setEndTime(end != null ? end : LocalDateTime.now().plusHours(2));
-
-                    if (imageFileName != null) {
-                        String cleanImageName = imageFileName.replaceAll("(?i)\\.(png|jpg|jpeg|gif)$", "");
-                        mockAuction.setItemId(cleanImageName);
-                    } else {
-                        mockAuction.setItemId("default");
-                    }
-
-                    // Khởi tạo tài khoản người bán với cấu hình constructor 5 tham số định dạng chính xác
-                    String finalSellerName = (sellerName != null && !sellerName.trim().isEmpty()) ? sellerName : "Ẩn danh";
-                    com.auction.shared.model.Seller sellerAccount = new com.auction.shared.model.Seller("", finalSellerName, "", "", 0.0);
-                    mockAuction.setAccount(sellerAccount);
-
-                    // Nạp dữ liệu vào giao diện chi tiết cuộc đấu giá
-                    detailController.loadProductDetail(mockAuction);
-
-                    if (detailController.lblInfoDescription != null && description != null) {
-                        detailController.lblInfoDescription.setText(description);
-                    }
-                }
-            }
-        });
-    }
+    // ================= CHUYỂN TRANG CHI TIẾT ĐẤU GIÁ =================
 
     /**
-     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Auction
+     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Auction gốc
      */
     public void openAuctionDetailWithObject(com.auction.shared.model.Auction auction) {
         if (auction == null) return;
@@ -210,14 +142,14 @@ public class MainLayoutController {
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
                     detailController.loadProductDetail(auction);
-                    System.out.println("✅ Hệ thống đã chuyển tiếp thông tin đối tượng Đấu giá thành công.");
+                    System.out.println("✅ Đã chuyển tiếp đối tượng Đấu giá (Auction) sang trang chi tiết.");
                 }
             }
         });
     }
 
     /**
-     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Item
+     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Item gốc
      */
     public void openAuctionDetailWithObject(com.auction.shared.model.Item item) {
         if (item == null) return;
@@ -232,77 +164,92 @@ public class MainLayoutController {
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
                     detailController.loadProductDetail(item);
-                    System.out.println("✅ Hệ thống đã chuyển tiếp thông tin đối tượng Sản phẩm thành công.");
+                    System.out.println("✅ Đã chuyển tiếp đối tượng Vật phẩm (Item) sang trang chi tiết.");
                 }
             }
         });
     }
 
-    @FXML
-    public void openHome() {
-        FXMLLoader loader = loadPage("/view/MainView.fxml");
-        setActive(btnHome);
+    /**
+     * Hàm bóc tách dữ liệu chuỗi thô (Giữ lại để tương thích ngược với các Card cũ nếu cần)
+     */
+    public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName,
+                                  String description, String sellerName, String startTime, String endTime) {
+        Platform.runLater(() -> {
+            com.auction.shared.model.Auction mockAuction = new com.auction.shared.model.Auction();
+            mockAuction.setProductName(name);
 
-        if (loader != null) {
-            // Sử dụng kỹ thuật Reflection để cập nhật trang chủ một cách an toàn và tối ưu độc lập
-            Object controller = loader.getController();
-            if (controller != null) {
-                try {
-                    java.lang.reflect.Method refreshMethod = controller.getClass().getMethod("refreshDashboard");
-                    refreshMethod.invoke(controller);
-                } catch (Exception e) {
-                    System.out.println("ℹ️ Không thực thi phương thức refreshDashboard() tại View chính.");
+            try {
+                String cleanPrice = price.replaceAll("[^0-9]", "");
+                if (!cleanPrice.isEmpty()) {
+                    mockAuction.setCurrentPrice(Double.parseDouble(cleanPrice));
+                    mockAuction.setStartPrice(Double.parseDouble(cleanPrice));
                 }
+            } catch (Exception e) {
+                mockAuction.setStartPrice(0.0);
             }
-        }
+
+            mockAuction.setStatus(com.auction.shared.model.Auction.AuctionStatus.RUNNING);
+            mockAuction.setDescription(description);
+            mockAuction.setImagePath(imageFileName);
+
+            com.auction.shared.model.Seller sellerAccount = new com.auction.shared.model.Seller("", sellerName, "", "", 0.0);
+            mockAuction.setAccount(sellerAccount);
+
+            openAuctionDetailWithObject(mockAuction);
+        });
     }
 
-    @FXML private void openWallet() { loadPage("/view/WalletView.fxml"); setActive(btnWallet); }
-    @FXML private void openAuction() { loadPage("/view/ActiveAuctions.fxml"); setActive(btnAuction); }
+    // ================= CÁC SỰ KIỆN MENU ĐIỀU HƯỚNG SẠCH SẼ =================
+
+    @FXML
+    public void openHome() {
+        // CHUẨN: Chỉ gọi nạp giao diện, việc tải mạng hãy để class con MainController tự kích hoạt trong hàm initialize() của nó
+        loadPage("/view/MainView.fxml");
+        setActive(btnHome);
+    }
 
     @FXML
     public void openSelling() {
-        FXMLLoader loader = loadPage("/view/MyProducts.fxml");
+        // CHUẨN: Chỉ gọi nạp giao diện, việc quét DB hãy để MyProductsController tự lo khi được vẽ lên
+        loadPage("/view/MyProducts.fxml");
         setActive(btnSelling);
-
-        if (loader != null) {
-            Object myProductsController = loader.getController();
-            if (myProductsController != null) {
-                try {
-                    java.lang.reflect.Method loadMethod = myProductsController.getClass().getMethod("loadMyProductsData");
-                    loadMethod.invoke(myProductsController);
-                } catch (Exception e) {
-                    System.out.println("ℹ️ Không tìm thấy phương thức loadMyProductsData().");
-                }
-            }
-        }
     }
 
-    @FXML private void openCreateAuction() { loadPage("/view/CreateAuction.fxml"); setActive(btnCreateAuction); }
-    @FXML private void openHistory() { loadPage("/view/HistoryView.fxml"); setActive(btnHistory); }
-    @FXML private void openSettings() { loadPage("/view/Settings.fxml"); setActive(btnSettings); }
+    @FXML private void openWallet() { Platform.runLater(() -> { loadPage("/view/WalletView.fxml"); setActive(btnWallet); }); }
+    @FXML private void openAuction() { Platform.runLater(() -> { loadPage("/view/ActiveAuctions.fxml"); setActive(btnAuction); }); }
+    @FXML private void openCreateAuction() { Platform.runLater(() -> { loadPage("/view/CreateAuction.fxml"); setActive(btnCreateAuction); }); }
+    @FXML private void openHistory() { Platform.runLater(() -> { loadPage("/view/HistoryView.fxml"); setActive(btnHistory); }); }
+    @FXML private void openSettings() { Platform.runLater(() -> { loadPage("/view/Settings.fxml"); setActive(btnSettings); }); }
+
     public void showCreateProductView() { openCreateAuction(); }
+
+    // ================= QUẢN LÝ VAI TRÒ GIAO DIỆN MÀN HÌNH =================
 
     @FXML
     private void switchToBuyer() {
-        lblRoleSidebar.setText("🛒 Người mua");
-        roleMenuButton.setText("🔄 Người mua");
-        roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
-        lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-size: 18; -fx-font-weight: bold;");
-        roleMenuButton.setStyle("-fx-background-color: #A21CAF; -fx-background-radius: 10; -fx-text-fill: white;");
-        buyerMenu.setVisible(true); buyerMenu.setManaged(true);
-        sellerMenu.setVisible(false); sellerMenu.setManaged(false);
+        Platform.runLater(() -> {
+            lblRoleSidebar.setText("🛒 Người mua");
+            roleMenuButton.setText("🔄 Người mua");
+            roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
+            lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-size: 18; -fx-font-weight: bold;");
+            roleMenuButton.setStyle("-fx-background-color: #A21CAF; -fx-background-radius: 10; -fx-text-fill: white;");
+            buyerMenu.setVisible(true); buyerMenu.setManaged(true);
+            sellerMenu.setVisible(false); sellerMenu.setManaged(false);
+        });
     }
 
     @FXML
     private void switchToSeller() {
-        lblRoleSidebar.setText("🏪 Người bán");
-        roleMenuButton.setText("🔄 Người bán");
-        roleBox.setStyle("-fx-background-color: #dbeafe; -fx-background-radius: 15; -fx-padding: 20;");
-        lblRoleSidebar.setStyle("-fx-text-fill: #1d4ed8; -fx-font-size: 18; -fx-font-weight: bold;");
-        roleMenuButton.setStyle("-fx-background-color: #2563eb; -fx-background-radius: 10; -fx-text-fill: white;");
-        sellerMenu.setVisible(true); sellerMenu.setManaged(true);
-        buyerMenu.setVisible(false); buyerMenu.setManaged(false);
+        Platform.runLater(() -> {
+            lblRoleSidebar.setText("🏪 Người bán");
+            roleMenuButton.setText("🔄 Người bán");
+            roleBox.setStyle("-fx-background-color: #dbeafe; -fx-background-radius: 15; -fx-padding: 20;");
+            lblRoleSidebar.setStyle("-fx-text-fill: #1d4ed8; -fx-font-size: 18; -fx-font-weight: bold;");
+            roleMenuButton.setStyle("-fx-background-color: #2563eb; -fx-background-radius: 10; -fx-text-fill: white;");
+            sellerMenu.setVisible(true); sellerMenu.setManaged(true);
+            buyerMenu.setVisible(false); buyerMenu.setManaged(false);
+        });
     }
 
     @FXML
@@ -319,6 +266,6 @@ public class MainLayoutController {
     }
 
     public void setContent(Node content) {
-        contentArea.getChildren().setAll(content);
+        Platform.runLater(() -> contentArea.getChildren().setAll(content));
     }
 }

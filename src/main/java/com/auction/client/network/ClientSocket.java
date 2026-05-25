@@ -5,26 +5,18 @@ import com.auction.shared.network.Response;
 
 import java.io.*;
 import java.net.Socket;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 /**
  * ClientSocket — Singleton quản lý kết nối TCP đến Server.
- *
- * THIẾT KẾ QUAN TRỌNG:
- * - writeLock: chỉ dùng khi ghi vào `out` (send)
- * - readLock:  chỉ dùng khi đọc từ `in` (receive)
- * - Hai lock TÁCH BIỆT để listenerThread đọc push trong khi
- *   sendRequest() đang ghi — không deadlock nhau.
- *
- * LUỒNG HOẠT ĐỘNG:
- *   sendRequest()      → writeLock(ghi) → readLock(đọc response đồng bộ)
- *   listenerThread     → readLock(đọc push bất đồng bộ)
- *   → Khi sendRequest đang đọc response, listenerThread chờ readLock.
- *   → Khi listenerThread đang đọc push, sendRequest chờ readLock.
- *   → KHÔNG BAO GIỜ xung đột stream.
+ * PHIÊN BẢN BẤT ĐỒNG BỘ: Cách ly hộp thư biệt lập, lỗi luồng này không ảnh hưởng luồng khác!
  */
 public class ClientSocket {
 
-    // ── Singleton ─────────────────────────────────────────────────────────────
     private static ClientSocket instance;
     private ClientSocket() {}
 
@@ -33,16 +25,15 @@ public class ClientSocket {
         return instance;
     }
 
-    // ── Socket & Stream ───────────────────────────────────────────────────────
-    private Socket           socket;
+    private Socket socket;
     private ObjectOutputStream out;
-    private ObjectInputStream  in;
+    private ObjectInputStream in;
 
-    // ── 2 lock riêng biệt — KHÔNG dùng synchronized(this) toàn cục ──────────
     private final Object writeLock = new Object();
-    private final Object readLock  = new Object();
 
-    // ── Realtime listener ─────────────────────────────────────────────────────
+    // Hệ thống hộp thư biệt lập 100% cho từng loại Request khác nhau
+    private final ConcurrentHashMap<String, LinkedBlockingQueue<Response>> responseMap = new ConcurrentHashMap<>();
+
     public interface BidUpdateListener {
         void onBidUpdate(int auctionId, double newPrice, String username);
     }
@@ -50,105 +41,142 @@ public class ClientSocket {
     private volatile BidUpdateListener bidUpdateListener = null;
     private Thread listenerThread = null;
 
-    // ── Kết nối ───────────────────────────────────────────────────────────────
     public void connect() throws Exception {
-        // Dùng writeLock để tránh 2 thread cùng khởi tạo socket
         synchronized (writeLock) {
             if (socket == null || socket.isClosed()) {
                 socket = new Socket("localhost", 12345);
-                // Output TRƯỚC Input — tránh deadlock Java serialization
                 out = new ObjectOutputStream(socket.getOutputStream());
-                in  = new ObjectInputStream(socket.getInputStream());
+                in = new ObjectInputStream(socket.getInputStream());
                 System.out.println("Ket noi Server thanh cong!");
+
+                startDispatcherThread();
             }
         }
     }
 
-    // ── Ghi (chỉ lock writeLock) ──────────────────────────────────────────────
     private void sendInternal(Request request) throws Exception {
         synchronized (writeLock) {
-            connect(); // đảm bảo đã kết nối
+            connect();
             out.writeObject(request);
             out.flush();
-            out.reset(); // QUAN TRỌNG: xóa cache object cũ trong stream
-        }
-    }
-
-    // ── Đọc đồng bộ (chỉ lock readLock) ──────────────────────────────────────
-    private Response receiveInternal() throws Exception {
-        synchronized (readLock) {
-            return (Response) in.readObject();
+            out.reset();
         }
     }
 
     /**
-     * Gửi Request và chờ Response đồng bộ.
-     * Dùng cho mọi Controller (Login, Register, CreateProduct, v.v.)
-     *
-     * Ghi và đọc dùng 2 lock khác nhau →
-     * listenerThread có thể đọc push TRONG KHI sendRequest đang ghi,
-     * nhưng KHÔNG THỂ đọc cùng lúc với readLock của sendRequest.
+     * GỬI NHẬN BẤT ĐỒNG BỘ (ASYNCHRONOUS):
+     * Đọc ghi độc lập trên từng hộp thư của luồng, không khóa luồng đọc chung, chống nghẽn chéo tuyệt đối.
      */
     public Response sendRequest(Request request) throws Exception {
+        String routeKey = request.getType().name();
+
+        // Chuẩn bị hộp thư riêng cho Request này
+        LinkedBlockingQueue<Response> queue = responseMap.computeIfAbsent(routeKey, k -> new LinkedBlockingQueue<>());
+        queue.clear(); // Dọn dẹp thư cũ tồn đọng
+
+        // Gửi lệnh lên Server
         sendInternal(request);
-        return receiveInternal();
+
+        // Thằng nào gửi thì tự vào hàng đợi của mình mà móng tin, tối đa 4 giây không có thì bỏ qua
+        Response res = queue.poll(4, TimeUnit.SECONDS);
+        if (res == null) {
+            throw new IOException("Server phản hồi quá lâu (Timeout 4s) hoặc mất kết nối tại luồng: " + routeKey);
+        }
+        return res;
     }
 
-    /**
-     * Gửi fire-and-forget (SUBSCRIBE, UNSUBSCRIBE) — không cần đọc response.
-     */
     public void send(Request request) throws Exception {
         sendInternal(request);
     }
 
-    // ── Realtime listener thread ──────────────────────────────────────────────
-
     /**
-     * Đăng ký nhận BID_UPDATE push từ Server.
-     * listenerThread chạy nền, liên tục đọc stream.
-     * Khi có BID_UPDATE → gọi callback.
-     * Controller tự gọi Platform.runLater() trong callback để update UI.
+     * LUỒNG ĐỌC TẬP TRUNG (Dispatcher) - Phân phối gói tin về đúng làn hộp thư biệt lập
      */
-    public void setBidUpdateListener(BidUpdateListener listener) {
-        this.bidUpdateListener = listener;
+    private void startDispatcherThread() {
+        if (listenerThread != null && listenerThread.isAlive()) return;
 
-        if (listenerThread == null || !listenerThread.isAlive()) {
-            listenerThread = new Thread(() -> {
+        listenerThread = new Thread(() -> {
+            try {
                 while (!Thread.currentThread().isInterrupted()) {
-                    try {
-                        // readLock — sẽ chờ nếu sendRequest đang đọc response
-                        Response resp = receiveInternal();
+                    Object obj = in.readObject();
+                    if (obj instanceof Response resp) {
 
-                        if (resp != null && "BID_UPDATE".equals(resp.getMessage())) {
+                        // 1. Xử lý gói tin Realtime (Đấu giá đẩy từ Server)
+                        if ("BID_UPDATE".equals(resp.getMessage())) {
                             BidUpdateListener cb = bidUpdateListener;
                             if (cb != null) {
                                 Object[] data = (Object[]) resp.getData();
                                 cb.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
                             }
                         }
-                        // Response không phải BID_UPDATE → bỏ qua
-                        // (đây là push từ Server, không phải response của sendRequest)
+                        // 2. Phân loại phản hồi dựa trên cấu trúc ruột dữ liệu để đưa về đúng hộp thư
+                        else {
+                            Object data = resp.getData();
 
-                    } catch (EOFException | java.net.SocketException e) {
-                        System.out.println("Listener: ket noi dong.");
-                        break;
-                    } catch (Exception e) {
-                        if (bidUpdateListener != null) {
-                            System.err.println("Listener loi: " + e.getMessage());
+                            if (data instanceof Map) {
+                                // Kiểu dữ liệu Map chắc chắn là kết quả Dashboard Stats
+                                pushToQueue("GET_DASHBOARD_STATS", resp);
+                            }
+                            else if (data instanceof List) {
+                                List<?> list = (List<?>) data;
+                                if (!list.isEmpty() && list.get(0) instanceof Map) {
+                                    // Danh sách các dòng lịch sử ví tiền (Thường lưu kiểu List<Map> hoặc List<Transaction>)
+                                    pushToQueue("GET_TRANSACTIONS", resp);
+                                } else {
+                                    // Phân phối danh sách sản phẩm
+                                    // Ưu tiên ném vào luồng đang mở và đang đợi thực tế
+                                    if (hasWaiter("GET_HOT_AUCTIONS")) {
+                                        pushToQueue("GET_HOT_AUCTIONS", resp);
+                                    } else if (hasWaiter("GET_PRODUCTS")) {
+                                        pushToQueue("GET_PRODUCTS", resp);
+                                    } else {
+                                        // Nếu không rõ luồng nào đợi, đưa đều vào cả 2 để giải phóng UI
+                                        pushToQueue("GET_PRODUCTS", resp);
+                                        pushToQueue("GET_HOT_AUCTIONS", resp);
+                                    }
+                                }
+                            }
+                            else {
+                                // Mặc định dành cho luồng Đăng nhập / Đăng ký
+                                if (hasWaiter("REGISTER")) {
+                                    pushToQueue("REGISTER", resp);
+                                } else {
+                                    pushToQueue("LOGIN", resp);
+                                }
+                            }
                         }
                     }
                 }
-            }, "bid-update-listener");
-            listenerThread.setDaemon(true);
-            listenerThread.start();
-        }
+            } catch (EOFException | java.net.SocketException e) {
+                System.out.println("Dispatcher: Kết nối tới server đã đóng.");
+            } catch (Exception e) {
+                System.err.println("Dispatcher lỗi hệ thống stream: " + e.getMessage());
+            }
+        }, "socket-dispatcher-thread");
+
+        listenerThread.setDaemon(true);
+        listenerThread.start();
+    }
+
+    private void pushToQueue(String routeKey, Response resp) throws InterruptedException {
+        LinkedBlockingQueue<Response> queue = responseMap.computeIfAbsent(routeKey, k -> new LinkedBlockingQueue<>());
+        queue.put(resp);
+    }
+
+    private boolean hasWaiter(String routeKey) {
+        LinkedBlockingQueue<Response> queue = responseMap.get(routeKey);
+        return queue != null;
+    }
+
+    public void setBidUpdateListener(BidUpdateListener listener) {
+        this.bidUpdateListener = listener;
+        try { connect(); } catch (Exception ignored) {}
     }
 
     public void clearBidUpdateListener() {
         this.bidUpdateListener = null;
     }
 
-    // ── Đóng kết nối ──────────────────────────────────────────────────────────
     public void disconnect() {
         if (listenerThread != null) listenerThread.interrupt();
         synchronized (writeLock) {
@@ -156,10 +184,9 @@ public class ClientSocket {
             try { if (socket != null) socket.close(); } catch (IOException ignored) {}
             out = null; socket = null;
         }
-        synchronized (readLock) {
-            try { if (in != null) in.close(); } catch (IOException ignored) {}
-            in = null;
-        }
+        try { if (in != null) in.close(); } catch (IOException ignored) {}
+        in = null;
         instance = null;
+        responseMap.clear();
     }
 }

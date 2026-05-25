@@ -1,4 +1,3 @@
-
 package com.auction.shared.network;
 
 public enum MessageType {
@@ -19,6 +18,7 @@ public enum MessageType {
     GET_ITEMS_BY_OWNER,
     UPDATE_ITEM,
     DELETE_ITEM,
+    GET_PRODUCTS,        // 🌟 THÊM DÒNG NÀY VÀO ĐỂ HỢP THỨC HOÁ CODE CLIENT
 
     // ── Auction ───────────────────────────────────────
     CREATE_AUCTION,

@@ -5,14 +5,10 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Auction implements Serializable  {
+public class Auction implements Serializable {
     private static final long serialVersionUID = 1L;
-    private String productName;
-    private String imagePath;
-    public String getImagePath() { return imagePath; }
-    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
 
-    // THAY ĐỔI: cập nhật enum khớp với DB
+    // Các trạng thái phiên đấu giá đồng bộ khớp chuẩn cơ sở dữ liệu
     public enum AuctionStatus {
         OPEN,      // Chờ bắt đầu
         RUNNING,   // Đang diễn ra
@@ -22,18 +18,29 @@ public class Auction implements Serializable  {
     }
 
     private int id;                     // ID phiên đấu giá
-    private String itemId;              // THAY ĐỔI: int → String (item_id là VARCHAR trong DB)
+    private String itemId;              // ID vật phẩm (VARCHAR trong DB)
     private int sellerId;               // ID người tạo phiên đấu giá
     private double startPrice;          // Giá khởi điểm
     private double currentPrice;        // Giá cao nhất hiện tại
-    private double minIncrement;        // THÊM: bước giá tối thiểu
-    private Integer winnerId;           // THAY ĐỔI: highestBidderId → winnerId khớp DB
+    private double minIncrement;        // Bước giá tối thiểu
+    private Integer winnerId;           // ID người thắng cuộc
     private LocalDateTime startTime;    // Thời gian bắt đầu
     private LocalDateTime endTime;      // Thời gian kết thúc
     private AuctionStatus status;       // Trạng thái phiên đấu giá
-    private Account account;            // Thông tin tài khoản người bán đính kèm từ DB
-    private List<Observer> observers = new ArrayList<>();// danh sách ng nhân đc thông báo
 
+    // Thông tin bổ trợ phục vụ hiển thị trực tiếp trên giao diện Client Card
+    private String productName;
+    private String imagePath;
+    private String description;         // 🔥 THÊM: Sửa lỗi "Cannot resolve method 'setDescription'" cho MainLayoutController
+
+    private Account account;            // Thông tin tài khoản người bán đính kèm từ DB
+
+    /**
+     * 🔥 SỬA KIẾN TRÚC: Thêm từ khóa 'transient'
+     * Từ khóa này báo hiệu cho Java biết KHÔNG mã hóa danh sách này khi truyền qua Socket,
+     * tránh tuyệt đối lỗi sập luồng mạng (NotSerializableException) khi chạy ứng dụng lớn.
+     */
+    private transient List<Observer> observers = new ArrayList<>();
 
     public Auction() {}
 
@@ -52,6 +59,8 @@ public class Auction implements Serializable  {
         this.status = status;
         this.account = account;
     }
+
+    // ================= GETTER VÀ SETTER CHUẨN HÓA =================
 
     public int getId() { return id; }
     public void setId(int id) { this.id = id; }
@@ -86,12 +95,21 @@ public class Auction implements Serializable  {
     public String getProductName() { return productName; }
     public void setProductName(String productName) { this.productName = productName; }
 
-    // 🔥 THÊM MỚI: Hàm Getter và Setter cho thuộc tính Account để lấy tên người bán ("mhuyen") bên Controller
+    public String getImagePath() { return imagePath; }
+    public void setImagePath(String imagePath) { this.imagePath = imagePath; }
+
+    public String getDescription() { return description; } // 🔥 THÊM ĐỂ ĐỒNG BỘ LOGIC LAYOUT
+    public void setDescription(String description) { this.description = description; }
+
     public Account getAccount() { return account; }
     public void setAccount(Account account) { this.account = account; }
 
-    // 🔥 THÊM MỚI: Hàm Getter và Setter cho danh sách bộ quan sát Observer
-    public List<Observer> getObservers() { return observers; }
+    public List<Observer> getObservers() {
+        if (observers == null) { // Đề phòng trường hợp sau khi truyền qua mạng bị gán thành null
+            observers = new ArrayList<>();
+        }
+        return observers;
+    }
     public void setObservers(List<Observer> observers) { this.observers = observers; }
 
     // Kiểm tra phiên đấu giá còn hiệu lực không

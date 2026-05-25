@@ -1,13 +1,8 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
-
+import com.auction.client.service.MyProductsService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Item;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -26,51 +21,40 @@ public class MyProductsController {
     @FXML private Label lblTotalAuctions;   // Ô số "Tổng phiên"
     @FXML private Label lblActiveAuctions;  // Ô số "Đang diễn ra"
     @FXML private Label lblTotalValue;     // Ô số "Tổng giá trị"
-    @FXML private VBox emptyStateView;      // VBox chứa thông báo "Bạn chưa có sản phẩm nào"
-    @FXML private FlowPane productsGrid;    // Lưới FlowPane chứa các card sản phẩm
+    @FXML private VBox emptyStateView;      // VBox chứa thông báo rỗng
+    @FXML private FlowPane productsGrid;    // Lưới chứa các card sản phẩm
 
-    @FXML
-    public void initialize() {
-        instance = this;
-        // Tự động tải dữ liệu khi giao diện được nạp
-        loadMyProductsData();
-    }
+    // Khởi tạo tầng nghiệp vụ chuyên biệt kết nối dữ liệu
+    private final MyProductsService productsService = new MyProductsService();
 
     public static MyProductsController getInstance() {
         return instance;
     }
 
+    @FXML
+    public void initialize() {
+        instance = this;
+        loadMyProductsData();
+    }
+
     /**
-     * 🚀 TỐI ƯU ĐA LUỒNG: Quét dữ liệu từ Database chạy ngầm, không gây đơ lag UI
+     * 🚀 ĐÃ CHUẨN HÓA: Chỉ làm nhiệm vụ điều phối giao diện hiển thị dữ liệu
      */
     public void loadMyProductsData() {
         if (CurrentAccount.getAccount() == null) return;
 
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        // Tạo một Task chạy ngầm lấy danh sách vật phẩm từ DB
-        Task<List<Item>> loadTask = new Task<>() {
-            @Override
-            protected List<Item> call() throws Exception {
-                Request req = new Request(MessageType.GET_ITEMS_BY_OWNER, ownerId);
-                Response resp;
-                try { resp = ClientSocket.getInstance().sendRequest(req); }
-                catch (Exception ex) { return null; }
-                return (resp != null && resp.isSuccess()) ? (java.util.List<com.auction.shared.model.Item>) resp.getData() : null;
-            }
-        };
+        // Ủy quyền lấy dữ liệu mạng chạy ngầm cho lớp Service xử lý hoàn toàn
+        productsService.loadOwnerProductsAsync(ownerId, myItems -> {
+            if (productsGrid == null) return;
 
-        // XỬ LÝ KHI TRUY VẤN DATABASE THÀNH CÔNG
-        loadTask.setOnSucceeded(event -> {
-            List<Item> myItems = loadTask.getValue();
-
-            // Trường hợp không có sản phẩm nào hoặc danh sách rỗng
-            if (myItems == null || myItems.isEmpty()) {
+            // Kiểm tra nếu danh sách rỗng, đưa giao diện về trạng thái Empty State
+            if (myItems.isEmpty()) {
                 lblTotalAuctions.setText("0");
                 lblActiveAuctions.setText("0");
                 lblTotalValue.setText("0 đ");
 
-                // Hiển thị giao diện trống rỗng, ẩn lưới sản phẩm đi
                 emptyStateView.setVisible(true);
                 emptyStateView.setManaged(true);
                 productsGrid.setVisible(false);
@@ -78,7 +62,7 @@ public class MyProductsController {
                 return;
             }
 
-            // Nếu có sản phẩm, bắt đầu ẩn vùng trống rỗng và hiện lưới FlowPane lên
+            // Ngược lại, kích hoạt lưới hiển thị danh sách sản phẩm
             emptyStateView.setVisible(false);
             emptyStateView.setManaged(false);
             productsGrid.setVisible(true);
@@ -88,14 +72,12 @@ public class MyProductsController {
             int activeCount = 0;
             int totalAuctions = myItems.size();
 
-            // Xóa sạch các thẻ sản phẩm cũ trên lưới trước khi nạp danh sách mới
             productsGrid.getChildren().clear();
 
-            // Duyệt qua danh sách sản phẩm lấy từ DB về
+            // Tiến hành duyệt danh sách và nạp các Card đồ họa con lên màn hình
             for (Item item : myItems) {
                 totalValue += item.getStartingPrice();
 
-                // Tính toán số phiên đang chạy dựa vào trạng thái vật phẩm
                 if ("IN_AUCTION".equalsIgnoreCase(item.getStatus())) {
                     activeCount++;
                 }
@@ -108,79 +90,50 @@ public class MyProductsController {
                     if (cardController != null) {
                         String priceStr = String.format("%,.0f đ", item.getStartingPrice());
                         String statusStr = "IN_AUCTION".equalsIgnoreCase(item.getStatus()) ? "Đang diễn ra" : "Đã kết thúc";
-
-                        // 🔥 TRÍCH XUẤT THÊM DỮ LIỆU ĐỂ ĐỦ 8 THAM SỐ CHUYỂN SANG SANG TRANG CHI TIẾT
                         String description = item.getDescription() != null ? item.getDescription() : "Không có mô tả.";
-
-                        // Lấy tên người bán của chính mình (Vì đây là màn hình "Sản phẩm của tôi")
                         String sellerName = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Tôi";
-
-                        // Ép ngày giờ sang chuỗi chữ nếu DB của má có lưu, nếu không có sẵn trường này trong Item model thì tạm để chuỗi trống/mặc định
-                        // (Thường thời gian này sẽ đồng bộ từ phiên đấu giá hoặc lấy mặc định thời gian tạo sản phẩm)
                         String startTimeStr = "--/--/---- --:--";
                         String endTimeStr = "--/--/---- --:--";
 
-                        // 🔥 ĐÃ SỬA: Nạp đầy đủ 8 tham số mới cho hàm setData của ProductCard
                         cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
                                 description, sellerName, startTimeStr, endTimeStr);
 
-                        // Kích hoạt phân quyền nút bấm Sửa / Xóa cho riêng màn hình quản lý này
                         cardController.setSellerMode(
-                                () -> handleEditProduct(item),   // Hành động khi nhấn nút Sửa
-                                () -> handleDeleteProduct(item)  // Hành động khi nhấn nút Xóa
+                                () -> handleEditProduct(item),
+                                () -> handleDeleteProduct(item)
                         );
                     }
 
-                    // Thêm card sản phẩm vào lưới FlowPane
                     productsGrid.getChildren().add(card);
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi nạp card sản phẩm: " + e.getMessage());
-                    e.printStackTrace();
                 }
             }
 
-            // Đổ các con số thống kê lên các ô màu sắc phía trên
+            // Gán các thông số thống kê sạch lên UI
             lblTotalAuctions.setText(String.valueOf(totalAuctions));
             lblActiveAuctions.setText(String.valueOf(activeCount));
             lblTotalValue.setText(String.format("%,.0f đ", totalValue));
         });
-
-        // XỬ LÝ KHI GẶP LỖI TRUY VẤN
-        loadTask.setOnFailed(e -> {
-            Throwable exception = loadTask.getException();
-            System.err.println("❌ Lỗi tải danh sách sản phẩm ngầm: " + exception.getMessage());
-        });
-
-        // Kích hoạt chạy ngầm lập tức
-        Thread thread = new Thread(loadTask);
-        thread.setDaemon(true);
-        thread.start();
     }
 
     /**
-     * 📝 XỬ LÝ KHI BẤM NÚT SỬA SẢN PHẨM
+     * XỬ LÝ CHỈNH SỬA SẢN PHẨM KHÔNG THAY ĐỔI
      */
     private void handleEditProduct(Item item) {
         System.out.println("👉 Yêu cầu chỉnh sửa sản phẩm: " + item.getName());
-
         try {
-            // 1. Nạp file FXML của cái Form Tạo/Sửa sản phẩm
             FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/CreateProduct.fxml"));
             javafx.scene.Parent root = loader.load();
 
-            // 2. Khởi tạo một Stage mới làm Popup Modal chui lên giữa màn hình
             javafx.stage.Stage popupStage = new javafx.stage.Stage();
             popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
-
-            // Ngăn không cho click ra ngoài khi chưa tắt popup
             popupStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             popupStage.initOwner(productsGrid.getScene().getWindow());
-
             popupStage.setScene(new javafx.scene.Scene(root));
 
-            // 4. Khi người dùng đóng popup, tự động refresh lại lưới
             popupStage.showAndWait();
-            loadMyProductsData();
+            loadMyProductsData(); // Tải lại lưới mượt mà sau khi đóng form sửa
 
         } catch (Exception e) {
             System.err.println("❌ Không mở được form sửa: " + e.getMessage());
@@ -189,12 +142,11 @@ public class MyProductsController {
     }
 
     /**
-     * 🗑️ XỬ LÝ KHI BẤM NÚT XÓA SẢN PHẨM (Có xác nhận an toàn)
+     * 🗑️ ĐÃ CHUẨN HÓA: Hàm xóa gọi qua lớp Service trung gian độc lập
      */
     private void handleDeleteProduct(Item item) {
         System.out.println("👉 Yêu cầu xóa sản phẩm: " + item.getName());
 
-        // Hiện hộp thoại xác nhận xóa cho chắc chắn, tránh bấm nhầm
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmAlert.setTitle("Xác nhận xóa");
         confirmAlert.setHeaderText("Bạn có chắc chắn muốn xóa sản phẩm này không?");
@@ -202,31 +154,23 @@ public class MyProductsController {
 
         Optional<ButtonType> result = confirmAlert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            // Thực hiện xóa ngầm dưới DB thông qua ItemDAO
-            try {
-                Request delReq = new Request(MessageType.DELETE_ITEM, item.getId());
-                Response delResp;
-                try { delResp = ClientSocket.getInstance().sendRequest(delReq); }
-                catch (Exception ex) { delResp = null; }
-                boolean isDeleted = delResp != null && delResp.isSuccess();
 
+            // Gọi Service thực thi lệnh xóa ngầm, nhận kết quả để đẩy giao diện đồ họa
+            productsService.deleteProductAsync(item.getId(), isDeleted -> {
                 if (isDeleted) {
                     System.out.println("✅ Đã xóa sản phẩm thành công khỏi DB!");
-                    // Tự quét lại DB và vẽ lại giao diện mới tinh, không còn sản phẩm vừa xóa
-                    loadMyProductsData();
+                    loadMyProductsData(); // Refresh lưới hiển thị
                 } else {
-                    System.err.println("❌ Xóa thất bại, có thể sản phẩm đã có người vào đấu giá.");
+                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
+                    errorAlert.setTitle("Lỗi xóa sản phẩm");
+                    errorAlert.setHeaderText(null);
+                    errorAlert.setContentText("Xóa thất bại! Sản phẩm này có thể đã được đưa vào phiên đấu giá.");
+                    errorAlert.showAndWait();
                 }
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi xảy ra khi xóa sản phẩm: " + e.getMessage());
-                e.printStackTrace();
-            }
+            });
         }
     }
 
-    /**
-     * Sự kiện khi người dùng bấm nút "Tạo sản phẩm ngay" lúc màn hình trống hoặc nút ở Header mới
-     */
     @FXML
     private void handleGoToCreateProduct() {
         if (MainLayoutController.getInstance() != null) {

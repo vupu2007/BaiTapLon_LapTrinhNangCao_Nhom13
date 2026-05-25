@@ -7,7 +7,8 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.net.URL;
 
-import com.auction.server.service.AuctionScheduler;
+// ❌ XÓA BỎ IMPORT THẰNG SERVER NÀY ĐI
+// import com.auction.server.service.AuctionScheduler;
 
 public class MainApp {
     public static class AppUI extends Application {
@@ -15,8 +16,7 @@ public class MainApp {
         @Override
         public void start(Stage primaryStage) throws Exception {
 
-            // Khởi động scheduler ngay khi app bắt đầu
-            AuctionScheduler.getInstance().start();
+            // 🌟 ĐÃ XÓA dòng AuctionScheduler.getInstance().start(); ở đây!
 
             URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
             if (fxmlLocation == null) {
@@ -35,10 +35,11 @@ public class MainApp {
 
         @Override
         public void stop() {
-            // Dừng scheduler khi tắt app
-            AuctionScheduler.getInstance().stop();
+            // 🌟 ĐÃ XÓA dòng AuctionScheduler.getInstance().stop(); ở đây!
+            System.out.println("Ứng dụng Client đã đóng an toàn.");
         }
     }
+
     public static void main(String[] args) {
         Application.launch(AppUI.class, args);
     }
