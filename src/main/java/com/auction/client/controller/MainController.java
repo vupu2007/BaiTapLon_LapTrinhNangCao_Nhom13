@@ -25,6 +25,8 @@ import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.util.List;
+import java.util.Map;
 
 public class MainController {
 
@@ -35,7 +37,6 @@ public class MainController {
     private static MainController instance;
     private String currentFilter = "ALL";
 
-    // Khởi tạo lớp tầng nghiệp vụ chuyên biệt phục vụ cấu trúc Enterprise
     private final MainDashboardService dashboardService = new MainDashboardService();
 
     public MainController() {}
@@ -46,6 +47,7 @@ public class MainController {
         Account current = CurrentAccount.getAccount();
         if (current != null) {
             if (welcomeLabel != null) welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
+            // Đảm bảo lệnh làm tươi màn hình luôn được khởi động an toàn
             Platform.runLater(this::refreshDashboard);
         }
     }
@@ -54,9 +56,6 @@ public class MainController {
         return instance;
     }
 
-    /**
-     * 🚀 ĐÃ CHUẨN HÓA: Ủy quyền lấy dữ liệu mạng hoàn toàn cho tầng Service
-     */
     public void refreshDashboard() {
         Account current = CurrentAccount.getAccount();
         if (current == null) return;
@@ -64,36 +63,40 @@ public class MainController {
         // Hiển thị số dư tiền mặt tài khoản
         if (balanceLabel != null) {
             balanceLabel.setText(current instanceof User
-                    ? String.format("%.0f VND", ((User) current).getBalance()) : "N/A");
+                    ? String.format("%,.0f VND", ((User) current).getBalance()) : "N/A");
         }
 
-        // Gọi dịch vụ Service chạy ngầm, nhận dữ liệu sạch thông qua cơ chế Callback lambda
+        // Gọi dịch vụ mạng chạy ngầm xử lý bất đồng bộ
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
-            if (flowPane == null) return;
 
-            // 1. Cập nhật các con số thống kê lên màn hình
-            if (stats != null) {
-                if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
-                if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
-            }
+            // 🌟 CRITICAL FIX: Đẩy toàn bộ luồng dựng Card đồ họa về JavaFX Thread để chống sập ứng dụng
+            Platform.runLater(() -> {
+                if (flowPane == null) return;
 
-            // 2. Kích hoạt hiệu ứng sáng tối cho các nút bộ lọc phân loại
-            switch (currentFilter) {
-                case "ALL" -> setButtonActive(btnFilterAll);
-                case "ACTIVE" -> setButtonActive(btnFilterActive);
-                case "UPCOMING" -> setButtonActive(btnFilterUpcoming);
-            }
-
-            // 3. Xóa giao diện cũ và vẽ loạt card sản phẩm mới tinh
-            flowPane.getChildren().clear();
-            String statusLabelText = currentFilter.equals("UPCOMING") ? "Sắp diễn ra" : "Đang diễn ra";
-
-            for (Item item : items) {
-                if (item != null) {
-                    flowPane.getChildren().add(createItemCardWithStatus(item, statusLabelText));
+                // 1. Cập nhật các con số thống kê lên màn hình
+                if (stats != null) {
+                    if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
+                    if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
                 }
-            }
-            System.out.println("=== [UI] Đã hiển thị mượt mà " + flowPane.getChildren().size() + " thẻ đấu giá.");
+
+                // 2. Kích hoạt hiệu ứng sáng tối cho các nút bộ lọc phân loại
+                switch (currentFilter) {
+                    case "ALL" -> setButtonActive(btnFilterAll);
+                    case "ACTIVE" -> setButtonActive(btnFilterActive);
+                    case "UPCOMING" -> setButtonActive(btnFilterUpcoming);
+                }
+
+                // 3. Xóa giao diện cũ và vẽ loạt card sản phẩm mới tinh an toàn
+                flowPane.getChildren().clear();
+                String statusLabelText = currentFilter.equals("UPCOMING") ? "Sắp diễn ra" : "Đang diễn ra";
+
+                for (Item item : items) {
+                    if (item != null) {
+                        flowPane.getChildren().add(createItemCardWithStatus(item, statusLabelText));
+                    }
+                }
+                System.out.println("=== [UI] Đã hiển thị mượt mà " + flowPane.getChildren().size() + " thẻ đấu giá.");
+            });
         });
     }
 
@@ -111,9 +114,6 @@ public class MainController {
     @FXML private void handleFilterActive() { currentFilter = "ACTIVE"; refreshDashboard(); }
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
 
-    /**
-     * Dựng giao diện Card sản phẩm thủ công từ Item
-     */
     private VBox createItemCardWithStatus(Item item, String statusText) {
         VBox card = new VBox();
         card.setPrefWidth(300);
@@ -139,7 +139,6 @@ public class MainController {
             }
         }
 
-        // SỬA: Ủy quyền tải ảnh qua lớp tiện ích độc lập
         ImageLoader.tryLoadImageToView(imgView, preferredName);
 
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
@@ -149,9 +148,10 @@ public class MainController {
         imageHolder.getChildren().add(imgView);
 
         Label statusLabel = new Label(statusText);
+        // 🌟 FIX CÚ PHÁP CSS: Xóa bỏ chữ "格式" thừa thãi lỗi font ở cuối chuỗi
         statusLabel.setStyle(statusText.equals("Sắp diễn ra") ?
                 "-fx-background-color: #dbeafe; -fx-text-fill: #2563eb; -fx-background-radius: 20; -fx-font-weight: bold;" :
-                "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold格式;");
+                "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
         statusLabel.setPadding(new Insets(5, 12, 5, 12));
         StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
         StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
@@ -191,9 +191,6 @@ public class MainController {
         return card;
     }
 
-    /**
-     * Đồng bộ nhận gói tin ra giá Realtime đẩy từ Server
-     */
     public void addAuctionToRealtimeUI(Auction newAuction) {
         Platform.runLater(() -> {
             if (flowPane != null && (currentFilter.equals("ALL") || currentFilter.equals("UPCOMING"))) {
@@ -224,7 +221,6 @@ public class MainController {
             preferredName = "default.png";
         }
 
-        // Ủng quyền tiện ích tải ảnh ngoài
         ImageLoader.tryLoadImageToView(imgView, preferredName);
 
         javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
@@ -277,12 +273,21 @@ public class MainController {
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentAccount.logOut();
-        try {
-            Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
-            ((Stage) ((Node) event.getSource()).getScene().getWindow()).getScene().setRoot(root);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+
+        // 🚀 TỐI ƯU LUỒNG: Đẩy việc đọc file FXML đăng xuất sang một luồng Worker ngầm để không bị đơ UI
+        Thread logoutWorker = new Thread(() -> {
+            try {
+                Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
+                Platform.runLater(() -> {
+                    Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
+                    stage.getScene().setRoot(root);
+                });
+            } catch (IOException e) {
+                System.err.println("❌ Không thể chuyển cảnh đăng xuất: " + e.getMessage());
+            }
+        });
+        logoutWorker.setDaemon(true);
+        logoutWorker.start();
     }
 
     public void showAuctionDetail(Object productData) {

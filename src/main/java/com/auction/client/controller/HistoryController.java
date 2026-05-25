@@ -16,17 +16,15 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.net.URL;
 import java.util.Map;
 
 public class HistoryController {
 
-    // --- KHAI BÁO UI ---
     @FXML private Label totalSessionsLabel;
     @FXML private Label wonSessionsLabel;
     @FXML private Label lostSessionsLabel;
     @FXML private Button btnHistory;
-
-    private int currentUserId = 1;
 
     @FXML
     public void initialize() {
@@ -34,22 +32,27 @@ public class HistoryController {
     }
 
     private void loadHistoryStats() {
-        if (CurrentAccount.getAccount() == null) return;
+        // 🌟 SỬA: Nếu chưa đăng nhập, đưa nhãn về số 0 trước khi return để UI sạch sẽ
+        if (CurrentAccount.getAccount() == null) {
+            setDefaultLabels();
+            return;
+        }
+
         int userId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        // 🚀 Tách một luồng ngầm xử lý gọi Socket, giúp màn hình lịch sử hiển thị lên ngay lập tức mà không bị đơ
         Thread networkWorker = new Thread(() -> {
             try {
                 Request request = new Request(MessageType.GET_BID_HISTORY_STATS, userId);
                 Response response = ClientSocket.getInstance().sendRequest(request);
 
-                // 🚀 Khi có dữ liệu trả về, đẩy việc hiển thị chữ lên Label về lại luồng UI an toàn
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
-                        Map<String, Integer> stats = (Map<String, Integer>) response.getData();
-                        totalSessionsLabel.setText(String.valueOf(stats.getOrDefault("total", 0)));
-                        wonSessionsLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
-                        lostSessionsLabel.setText(String.valueOf(stats.getOrDefault("lost", 0)));
+                        // 🌟 CRITICAL FIX: Ép kiểu thô (Wildcard) để tránh lỗi ClassCastException do sai lệch Long/Integer
+                        Map<?, ?> stats = (Map<?, ?>) response.getData();
+
+                        totalSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("total"))));
+                        wonSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("won"))));
+                        lostSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("lost"))));
                     } else {
                         setDefaultLabels();
                     }
@@ -64,7 +67,16 @@ public class HistoryController {
         networkWorker.start();
     }
 
-    // Tiện ích reset nhãn về 0 khi có lỗi hoặc thất bại
+    /**
+     * Tiện ích chuyển đổi dữ liệu an toàn từ Object sang int, chấp nhận cả Long/Double từ Server gửi về
+     */
+    private int getSafeInt(Object obj) {
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        }
+        return 0;
+    }
+
     private void setDefaultLabels() {
         if (totalSessionsLabel != null) totalSessionsLabel.setText("0");
         if (wonSessionsLabel != null) wonSessionsLabel.setText("0");
@@ -74,8 +86,20 @@ public class HistoryController {
     @FXML
     private void handleHistoryClick() {
         try {
-            // Giữ nguyên logic chuyển trang của bạn
-            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/auction/view/HistoryView.fxml"));
+            // 🌟 CHUẨN HÓA: Quét đường dẫn thông minh tránh lỗi sai cấu trúc thư mục tài nguyên giữa các máy
+            String path = "/view/HistoryView.fxml";
+            URL fxmlLocation = getClass().getResource(path);
+            if (fxmlLocation == null) {
+                // Thử đường dẫn dự phòng nếu cấu trúc của bạn nằm sâu trong package com.auction
+                path = "/com/auction/view/HistoryView.fxml";
+                fxmlLocation = getClass().getResource(path);
+            }
+
+            if (fxmlLocation == null) {
+                throw new IOException("Không tìm thấy file HistoryView.fxml ở bất kỳ vị trí nào.");
+            }
+
+            FXMLLoader loader = new FXMLLoader(fxmlLocation);
             Parent root = loader.load();
 
             Stage stage = (Stage) btnHistory.getScene().getWindow();
@@ -84,16 +108,25 @@ public class HistoryController {
 
         } catch (IOException e) {
             e.printStackTrace();
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể mở trang Lịch sử!");
+            showAlert(Alert.AlertType.ERROR, "Lỗi", "Không thể khởi tạo màn hình chi tiết lịch sử!");
         }
     }
 
-    // Thêm hàm showAlert để không bị lỗi symbol 'showAlert' - Giữ nguyên
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+        if (Platform.isFxApplicationThread()) {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(content);
+            alert.showAndWait();
+        } else {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(type);
+                alert.setTitle(title);
+                alert.setHeaderText(null);
+                alert.setContentText(content);
+                alert.showAndWait();
+            });
+        }
     }
 }

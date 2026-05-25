@@ -1,7 +1,7 @@
 package com.auction.client.controller;
 
-import com.auction.client.service.AuthService;
 import com.auction.shared.network.Response;
+import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -22,8 +22,8 @@ public class RegisterController {
     @FXML private ToggleButton toggleConfirmPasswordBtn;
     @FXML private TextField emailField;
 
-    // CHUẨN ENTERPRISE: Khởi tạo Service nghiệp vụ riêng tại Client
-    private final AuthService authService = new AuthService();
+    // 🌟 ĐỒNG BỘ KIẾN TRÚC: Tái sử dụng AccountController đã chuẩn hóa ở tầng Client
+    private final AccountController accountController = new AccountController();
 
     @FXML
     public void initialize() {
@@ -44,7 +44,7 @@ public class RegisterController {
         String confirm = confirmPasswordField.getText();
         String email = emailField.getText().trim();
 
-        // 1. Kiểm tra dữ liệu trực tiếp tại Client để tiết kiệm băng thông đường truyền
+        // 1. Kiểm tra dữ liệu trực tiếp tại Client
         if (username.isEmpty() || password.isEmpty() || confirm.isEmpty() || email.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi form", "Vui lòng nhập đầy đủ tất cả các trường dữ liệu!");
             return;
@@ -54,18 +54,33 @@ public class RegisterController {
             return;
         }
 
-        // 2. Giao phó toàn bộ tác vụ mạng cho lớp Service lo chạy ngầm (Background Thread)
-        authService.registerAsync(username, password, email, response -> {
+        // 🚀 2. TÁCH THREAD CHẠY NGẦM: Đưa tác vụ mạng xuống luồng riêng giống hệt LoginController
+        Thread registerWorker = new Thread(() -> {
+            try {
+                // Gọi xử lý qua AccountController thay vì gọi Socket lẻ tẻ
+                Response response = accountController.registerUser(username, password, email);
 
-            // 3. Nhận kết quả sạch trả về từ luồng mạng và xử lý thông báo lên UI công khai
-            if (response != null && response.isSuccess()) {
-                showAlert(Alert.AlertType.INFORMATION, "Đăng ký thành công", response.getMessage());
-                goToLogin(event);
-            } else {
-                String errorMsg = (response != null) ? response.getMessage() : "Mất kết nối với máy chủ.";
-                showAlert(Alert.AlertType.ERROR, "Đăng ký thất bại", errorMsg);
+                // 🌟 3. ĐƯA VỀ LUỒNG UI: Đảm bảo hiển thị popup và chuyển cảnh không bị crash
+                Platform.runLater(() -> {
+                    if (response != null && response.isSuccess()) {
+                        showAlert(Alert.AlertType.INFORMATION, "Đăng ký thành công", "Tài khoản của bạn đã được tạo thành công!");
+                        goToLogin(event);
+                    } else {
+                        String errorMsg = (response != null) ? response.getMessage() : "Đăng ký thất bại.";
+                        showAlert(Alert.AlertType.ERROR, "Đăng ký thất bại", errorMsg);
+                    }
+                });
+
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Đã xảy ra sự cố mạng ngầm: " + e.getMessage());
+                });
+                e.printStackTrace();
             }
-        });
+        }, "RegisterNetworkWorkerThread");
+
+        registerWorker.setDaemon(true);
+        registerWorker.start();
     }
 
     @FXML
@@ -106,17 +121,30 @@ public class RegisterController {
 
             stage.getScene().setRoot(root);
             stage.setTitle(title);
+            stage.centerOnScreen();
 
         } catch (IOException e) {
+            System.err.println("Không tìm thấy file FXML: " + fxmlPath);
             e.printStackTrace();
         }
     }
 
+    // 🌟 TỰ ĐỘNG BẢO VỆ THREAD: Đảm bảo Alert luôn hiển thị an toàn dù gọi ở bất kỳ đâu
     private void showAlert(Alert.AlertType type, String title, String message) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+        if (Platform.isFxApplicationThread()) {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(message);
+            alert.showAndWait();
+        } else {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(type);
+                alert.setTitle(title);
+                alert.setHeaderText(null);
+                alert.setContentText(message);
+                alert.showAndWait();
+            });
+        }
     }
 }

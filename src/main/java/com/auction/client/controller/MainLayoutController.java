@@ -21,6 +21,7 @@ import javafx.util.Duration;
 import javafx.application.Platform;
 
 import java.io.IOException;
+import java.net.URL;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
@@ -47,6 +48,9 @@ public class MainLayoutController {
 
     @FXML private Label nameLabel;
 
+    // Quản lý vòng đời luồng hệ thống chống rò rỉ RAM
+    private Timeline clockTimeline;
+
     public static MainLayoutController getInstance() {
         return instance;
     }
@@ -64,8 +68,12 @@ public class MainLayoutController {
     }
 
     private void startRealtimeClock() {
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
+
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm:ss");
-        Timeline clockTimeline = new Timeline(
+        clockTimeline = new Timeline(
                 new KeyFrame(Duration.seconds(1), event -> {
                     String currentTime = LocalDateTime.now().format(formatter);
                     if (lblClock != null) {
@@ -84,39 +92,41 @@ public class MainLayoutController {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Node page = loader.load();
-            contentArea.getChildren().clear();
 
-            if (page instanceof Region region) {
-                region.prefWidthProperty().bind(contentArea.widthProperty());
-                region.prefHeightProperty().bind(contentArea.heightProperty());
-                region.setMaxWidth(Double.MAX_VALUE);
-                region.setMaxHeight(Double.MAX_VALUE);
+            if (contentArea != null) {
+                contentArea.getChildren().clear();
+
+                if (page instanceof Region region) {
+                    region.prefWidthProperty().bind(contentArea.widthProperty());
+                    region.prefHeightProperty().bind(contentArea.heightProperty());
+                    region.setMaxWidth(Double.MAX_VALUE);
+                    region.setMaxHeight(Double.MAX_VALUE);
+                }
+                StackPane.setAlignment(page, Pos.TOP_CENTER);
+                contentArea.getChildren().add(page);
             }
-            StackPane.setAlignment(page, Pos.TOP_CENTER);
-            contentArea.getChildren().add(page);
 
             return loader;
         } catch (Exception e) {
-            System.err.println("❌ Lỗi tải trang: " + fxmlPath);
-            e.printStackTrace();
+            System.err.println("❌ Lỗi tải trang: " + fxmlPath + " -> " + e.getMessage());
             return null;
         }
     }
 
     /**
-     * Đồng bộ đổi màu thanh Menu đang chọn chủ động
+     * Đồng bộ đổi màu thanh Menu đang chọn chủ động một cách an toàn
      */
     private void setActive(Button activeButton) {
         Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings};
         for (Button btn : buttons) {
-            if (btn != null) {
+            if (btn != null && btn.getStyleClass() != null) {
                 btn.getStyleClass().remove("nav-button-active");
                 if (!btn.getStyleClass().contains("nav-button")) {
                     btn.getStyleClass().add("nav-button");
                 }
             }
         }
-        if (activeButton != null) {
+        if (activeButton != null && activeButton.getStyleClass() != null) {
             activeButton.getStyleClass().remove("nav-button");
             if (!activeButton.getStyleClass().contains("nav-button-active")) {
                 activeButton.getStyleClass().add("nav-button-active");
@@ -127,15 +137,22 @@ public class MainLayoutController {
     // ================= CHUYỂN TRANG CHI TIẾT ĐẤU GIÁ =================
 
     /**
-     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Auction gốc
+     * Tìm đường dẫn FXML chuẩn xác trước khi ra lệnh nạp trang để tránh lỗi đè Node giao diện
      */
+    private FXMLLoader loadAuctionDetailPage() {
+        String primaryPath = "/view/AuctionDetailView.fxml";
+        URL location = getClass().getResource(primaryPath);
+        if (location == null) {
+            primaryPath = "/view/AuctionDetail.fxml";
+        }
+        return loadPage(primaryPath);
+    }
+
     public void openAuctionDetailWithObject(com.auction.shared.model.Auction auction) {
         if (auction == null) return;
 
         Platform.runLater(() -> {
-            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
-            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
-
+            FXMLLoader loader = loadAuctionDetailPage();
             setActive(btnAuction);
 
             if (loader != null) {
@@ -148,16 +165,11 @@ public class MainLayoutController {
         });
     }
 
-    /**
-     * Điều hướng sang trang chi tiết bằng cách truyền trực tiếp đối tượng Item gốc
-     */
     public void openAuctionDetailWithObject(com.auction.shared.model.Item item) {
         if (item == null) return;
 
         Platform.runLater(() -> {
-            FXMLLoader loader = loadPage("/view/AuctionDetailView.fxml");
-            if (loader == null) loader = loadPage("/view/AuctionDetail.fxml");
-
+            FXMLLoader loader = loadAuctionDetailPage();
             setActive(btnAuction);
 
             if (loader != null) {
@@ -170,9 +182,6 @@ public class MainLayoutController {
         });
     }
 
-    /**
-     * Hàm bóc tách dữ liệu chuỗi thô (Giữ lại để tương thích ngược với các Card cũ nếu cần)
-     */
     public void openAuctionDetail(String name, String price, javafx.scene.image.Image fxImage, String imageFileName,
                                   String description, String sellerName, String startTime, String endTime) {
         Platform.runLater(() -> {
@@ -204,14 +213,12 @@ public class MainLayoutController {
 
     @FXML
     public void openHome() {
-        // CHUẨN: Chỉ gọi nạp giao diện, việc tải mạng hãy để class con MainController tự kích hoạt trong hàm initialize() của nó
         loadPage("/view/MainView.fxml");
         setActive(btnHome);
     }
 
     @FXML
     public void openSelling() {
-        // CHUẨN: Chỉ gọi nạp giao diện, việc quét DB hãy để MyProductsController tự lo khi được vẽ lên
         loadPage("/view/MyProducts.fxml");
         setActive(btnSelling);
     }
@@ -224,36 +231,53 @@ public class MainLayoutController {
 
     public void showCreateProductView() { openCreateAuction(); }
 
-    // ================= QUẢN LÝ VAI TRÒ GIAO DIỆN MÀN HÌNH =================
+    // ================= CẤU HÌNH PHÂN QUYỀN VAI TRÒ GIAO DIỆN =================
 
     @FXML
     private void switchToBuyer() {
         Platform.runLater(() -> {
-            lblRoleSidebar.setText("🛒 Người mua");
-            roleMenuButton.setText("🔄 Người mua");
-            roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
-            lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-size: 18; -fx-font-weight: bold;");
-            roleMenuButton.setStyle("-fx-background-color: #A21CAF; -fx-background-radius: 10; -fx-text-fill: white;");
-            buyerMenu.setVisible(true); buyerMenu.setManaged(true);
-            sellerMenu.setVisible(false); sellerMenu.setManaged(false);
+            if (lblRoleSidebar != null) {
+                lblRoleSidebar.setText("🛒 Người mua");
+                lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-size: 18; -fx-font-weight: bold;");
+            }
+            if (roleMenuButton != null) {
+                roleMenuButton.setText("🔄 Người mua");
+                roleMenuButton.setStyle("-fx-background-color: #A21CAF; -fx-background-radius: 10; -fx-text-fill: white;");
+            }
+            if (roleBox != null) {
+                roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
+            }
+            if (buyerMenu != null) { buyerMenu.setVisible(true); buyerMenu.setManaged(true); }
+            if (sellerMenu != null) { sellerMenu.setVisible(false); sellerMenu.setManaged(false); }
         });
     }
 
     @FXML
     private void switchToSeller() {
         Platform.runLater(() -> {
-            lblRoleSidebar.setText("🏪 Người bán");
-            roleMenuButton.setText("🔄 Người bán");
-            roleBox.setStyle("-fx-background-color: #dbeafe; -fx-background-radius: 15; -fx-padding: 20;");
-            lblRoleSidebar.setStyle("-fx-text-fill: #1d4ed8; -fx-font-size: 18; -fx-font-weight: bold;");
-            roleMenuButton.setStyle("-fx-background-color: #2563eb; -fx-background-radius: 10; -fx-text-fill: white;");
-            sellerMenu.setVisible(true); sellerMenu.setManaged(true);
-            buyerMenu.setVisible(false); buyerMenu.setManaged(false);
+            if (lblRoleSidebar != null) {
+                lblRoleSidebar.setText("🏪 Người bán");
+                lblRoleSidebar.setStyle("-fx-text-fill: #1d4ed8; -fx-font-size: 18; -fx-font-weight: bold;");
+            }
+            if (roleMenuButton != null) {
+                roleMenuButton.setText("🔄 Người bán");
+                roleMenuButton.setStyle("-fx-background-color: #2563eb; -fx-background-radius: 10; -fx-text-fill: white;");
+            }
+            if (roleBox != null) {
+                roleBox.setStyle("-fx-background-color: #dbeafe; -fx-background-radius: 15; -fx-padding: 20;");
+            }
+            if (sellerMenu != null) { sellerMenu.setVisible(true); sellerMenu.setManaged(true); }
+            if (buyerMenu != null) { buyerMenu.setVisible(false); buyerMenu.setManaged(false); }
         });
     }
 
     @FXML
     private void handleLogout(ActionEvent event) {
+        // 🌟 CRITICAL FIX: Giải phóng bộ nhớ, dập tắt luồng đồng hồ chạy ngầm hoàn toàn trước khi chuyển Scene
+        if (clockTimeline != null) {
+            clockTimeline.stop();
+        }
+
         try {
             CurrentAccount.setAccount(null);
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
@@ -261,11 +285,13 @@ public class MainLayoutController {
             stage.getScene().setRoot(root);
             stage.setTitle("Đăng nhập");
         } catch (IOException e) {
-            e.printStackTrace();
+            System.err.println("❌ Lỗi đăng xuất hệ thống: " + e.getMessage());
         }
     }
 
     public void setContent(Node content) {
-        Platform.runLater(() -> contentArea.getChildren().setAll(content));
+        if (contentArea != null && content != null) {
+            Platform.runLater(() -> contentArea.getChildren().setAll(content));
+        }
     }
 }

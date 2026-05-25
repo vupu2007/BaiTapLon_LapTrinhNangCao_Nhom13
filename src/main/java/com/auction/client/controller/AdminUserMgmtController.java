@@ -1,22 +1,25 @@
 package com.auction.client.controller;
 
 import com.auction.client.network.ClientSocket;
-import com.auction.client.util.CurrentAccount;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 
-import com.auction.shared.model.Account;
+import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 
+import java.util.List;
+import java.util.Map;
+
 public class AdminUserMgmtController {
 
-    @FXML private TableView<AdminUserRow> userTable; // Đổi kiểu dữ liệu hiển thị thành lớp Row an toàn
+    @FXML private TableView<AdminUserRow> userTable;
     @FXML private TableColumn<AdminUserRow, String> colUsername;
     @FXML private TableColumn<AdminUserRow, String> colRole;
     @FXML private TableColumn<AdminUserRow, String> colBalance;
@@ -29,8 +32,8 @@ public class AdminUserMgmtController {
     @FXML
     public void initialize() {
         setupTableColumns();
-        loadUserDatabase();
         setupSearchFilter();
+        loadUserDatabase();
     }
 
     private void setupTableColumns() {
@@ -39,18 +42,18 @@ public class AdminUserMgmtController {
         colBalance.setCellValueFactory(cellData -> cellData.getValue().balanceProperty());
         colStatus.setCellValueFactory(cellData -> cellData.getValue().statusProperty());
 
+        // 🌟 CHUẨN HÓA: Tạo Cell Factory thông minh tự động hoán đổi Khóa / Mở khóa
         colAction.setCellFactory(param -> new TableCell<AdminUserRow, Void>() {
-            private final Button btnLock = new Button("Khóa tài khoản");
-            {
-                btnLock.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
-                btnLock.setOnAction(event -> {
-                    AdminUserRow selected = getTableView().getItems().get(getIndex());
+            private final Button btnAction = new Button();
 
-                    Alert alert = new Alert(Alert.AlertType.INFORMATION,
-                            "Hệ thống đã thực hiện khóa tài khoản [" + selected.getUsername() + "] thành công!", ButtonType.OK);
-                    alert.setHeaderText(null);
-                    alert.setTitle("Quản trị viên thông báo");
-                    alert.showAndWait();
+            {
+                btnAction.setPrefWidth(120);
+                btnAction.setPrefHeight(25);
+                btnAction.setStyle("-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
+
+                btnAction.setOnAction(event -> {
+                    AdminUserRow selected = getTableView().getItems().get(getIndex());
+                    toggleUserStatus(selected); // Gọi hàm xử lý mạng ngầm
                 });
             }
 
@@ -60,22 +63,100 @@ public class AdminUserMgmtController {
                 if (empty) {
                     setGraphic(null);
                 } else {
-                    setGraphic(btnLock);
+                    AdminUserRow currentRow = getTableView().getItems().get(getIndex());
+                    // Đổi giao diện nút bấm dựa trên trạng thái thực tế của User
+                    if ("BANNED".equalsIgnoreCase(currentRow.getStatus()) || "LOCKED".equalsIgnoreCase(currentRow.getStatus())) {
+                        btnAction.setText("Mở khóa");
+                        btnAction.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
+                    } else {
+                        btnAction.setText("Khóa tài khoản");
+                        btnAction.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #ef4444; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
+                    }
+                    setGraphic(btnAction);
                 }
             }
         });
     }
 
+    /**
+     * 🚀 XỬ LÝ LIÊN KẾT MẠNG: Khóa hoặc Mở khóa tài khoản chạy bất đồng bộ
+     */
+    private void toggleUserStatus(AdminUserRow userRow) {
+        String currentStatus = userRow.getStatus();
+        // Xác định trạng thái mới sẽ cập nhật lên DB
+        String newStatus = ("BANNED".equalsIgnoreCase(currentStatus) || "LOCKED".equalsIgnoreCase(currentStatus)) ? "ACTIVE" : "BANNED";
+        String actionName = "ACTIVE".equals(newStatus) ? "mở khóa" : "khóa";
+
+        // Tạo mảng dữ liệu đẩy lên Server xử lý (Khớp với cấu trúc Server nhận diện)
+        String[] updateData = { userRow.getId(), newStatus };
+        Request request = new Request(MessageType.UPDATE_USER_STATUS, updateData);
+
+        Thread statusWorker = new Thread(() -> {
+            try {
+                Response response = ClientSocket.getInstance().sendRequest(request);
+
+                Platform.runLater(() -> {
+                    if (response != null && response.isSuccess()) {
+                        // Cập nhật trạng thái ngay lập tức trên bảng UI mà không cần tải lại toàn bộ DB
+                        userRow.setStatus(newStatus);
+                        userTable.refresh();
+
+                        showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                                "Hệ thống đã thực hiện " + actionName + " tài khoản [" + userRow.getUsername() + "] thành công!");
+                    } else {
+                        String msg = (response != null) ? response.getMessage() : "Server từ chối yêu cầu.";
+                        showAlert(Alert.AlertType.ERROR, "Thất bại", "Không thể thay đổi trạng thái: " + msg);
+                    }
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", "Lỗi gửi lệnh lên hệ thống: " + e.getMessage());
+                });
+            }
+        });
+        statusWorker.setDaemon(true);
+        statusWorker.start();
+    }
+
     private void loadUserDatabase() {
         masterData.clear();
 
-        // Nạp dữ liệu thông qua lớp Row helper, né hoàn toàn việc khởi tạo Abstract Class 'Account'
-        masterData.add(new AdminUserRow("1", "admin_teamcode", "ADMIN", "0 đ", "Đang hoạt động"));
-        masterData.add(new AdminUserRow("2", "seller_vip99", "SELLER", "15,000,000 đ", "Đang hoạt động"));
-        masterData.add(new AdminUserRow("3", "nguoimua_anDanh", "BIDDER", "550,000 đ", "Đang hoạt động"));
-        masterData.add(new AdminUserRow("4", "macbook_fan", "BIDDER", "2,400,000 đ", "Đang hoạt động"));
+        Task<List<Map<String, String>>> loadDataTask = new Task<>() {
+            @Override
+            @SuppressWarnings("unchecked")
+            protected List<Map<String, String>> call() throws Exception {
+                Request request = new Request(MessageType.GET_ALL_USERS, null);
+                Response response = ClientSocket.getInstance().sendRequest(request);
 
-        userTable.setItems(masterData);
+                if (response != null && response.isSuccess()) {
+                    return (List<Map<String, String>>) response.getData();
+                }
+                return null;
+            }
+        };
+
+        loadDataTask.setOnSucceeded(event -> {
+            List<Map<String, String>> users = loadDataTask.getValue();
+            if (users != null) {
+                for (Map<String, String> userMap : users) {
+                    masterData.add(new AdminUserRow(
+                            userMap.get("id"),
+                            userMap.get("username"),
+                            userMap.get("role"),
+                            userMap.get("balance"),
+                            userMap.get("status")
+                    ));
+                }
+            }
+        });
+
+        loadDataTask.setOnFailed(event -> {
+            System.err.println("❌ Lỗi lấy danh sách thành viên từ Server: " + loadDataTask.getException().getMessage());
+        });
+
+        Thread thread = new Thread(loadDataTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void setupSearchFilter() {
@@ -95,10 +176,15 @@ public class AdminUserMgmtController {
         userTable.setItems(filteredData);
     }
 
-    /**
-     * LỚP TRỢ GIÚP (INNER CLASS) - Định nghĩa cấu trúc dữ liệu hiển thị cho bảng Admin
-     * Giúp cô lập dữ liệu UI với Model Core bị dính lỗi Abstract của hệ thống.
-     */
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    // ── LỚP TRỢ GIÚP (ĐÃ THÊM SETTER ĐỂ ĐỒNG BỘ UI) ──────────────────────────────────────────
     public static class AdminUserRow {
         private final SimpleStringProperty id;
         private final SimpleStringProperty username;
@@ -114,6 +200,8 @@ public class AdminUserMgmtController {
             this.status = new SimpleStringProperty(status);
         }
 
+        public String getId() { return id.get(); }
+
         public String getUsername() { return username.get(); }
         public SimpleStringProperty usernameProperty() { return username; }
 
@@ -124,6 +212,7 @@ public class AdminUserMgmtController {
         public SimpleStringProperty balanceProperty() { return balance; }
 
         public String getStatus() { return status.get(); }
+        public void setStatus(String value) { this.status.set(value); } // 🌟 Thêm hàm set để cập nhật trực tiếp tại chỗ
         public SimpleStringProperty statusProperty() { return status; }
     }
 }

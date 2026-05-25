@@ -1,9 +1,6 @@
 package com.auction.client.controller;
 
-import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
-import com.auction.shared.network.MessageType;
-import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Account;
 import com.auction.client.util.CurrentAccount;
 
@@ -25,6 +22,8 @@ public class LoginController {
     @FXML private PasswordField passwordField;
     @FXML private TextField visiblePasswordField;
 
+    // 🌟 KHỞI TẠO TẦNG CONTROLLER: Để xử lý logic mạng thay vì gọi Socket trực tiếp
+    private final AccountController accountController = new AccountController();
     private boolean isPasswordVisible = false;
 
     @FXML
@@ -47,16 +46,13 @@ public class LoginController {
             return;
         }
 
-        // 2. Đóng gói dữ liệu chuẩn Constructor 2 tham số của bạn
-        String[] loginData = {username, password};
-        Request request = new Request(MessageType.LOGIN, loginData);
-
-        // 🚀 Tách một Thread chạy ngầm để gửi gói tin Đăng nhập, giúp nút bấm không bị đơ cứng
+        // 🚀 Tách một Thread chạy ngầm để gửi lệnh đăng nhập qua AccountController
         Thread loginWorker = new Thread(() -> {
             try {
-                Response response = ClientSocket.getInstance().sendRequest(request);
+                // 🌟 THAY ĐỔI CỐT LÕI: Giao diện chỉ ra lệnh, việc kết nối cứ để AccountController lo
+                Response response = accountController.loginUser(username, password);
 
-                // 🚀 Nhận phản hồi xong -> Đẩy logic xử lý giao diện về lại luồng JavaFX UI an toàn
+                // Nhận phản hồi xong -> Đẩy logic xử lý giao diện về lại luồng JavaFX UI an toàn
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
                         Account loggedIn = (Account) response.getData();
@@ -73,14 +69,15 @@ public class LoginController {
                             switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá");
                         }
                     } else {
-                        String errorMsg = (response != null) ? response.getMessage() : "Sai tài khoản hoặc mật khẩu!";
+                        // Lấy chuẩn câu báo lỗi từ Server dội về (Ví dụ: "Mật khẩu không đúng!")
+                        String errorMsg = (response != null) ? response.getMessage() : "Đăng nhập thất bại!";
                         showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
                     }
                 });
 
             } catch (Exception e) {
                 Platform.runLater(() -> {
-                    showAlert(Alert.AlertType.ERROR, "Lỗi mạng", "Không thể kết nối đến máy chủ Server. Hãy chắc chắn Server đang bật!");
+                    showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Đã xảy ra sự cố ngoài ý muốn: " + e.getMessage());
                 });
                 e.printStackTrace();
             }
