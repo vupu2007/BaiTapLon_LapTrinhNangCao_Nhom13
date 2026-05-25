@@ -35,6 +35,7 @@ public enum MessageType {
     PLACE_BID,
     GET_BID_HISTORY_STATS,
     SET_AUTO_BID,
+    GET_BID_HISTORY,
 
     // ── Realtime (Observer qua Socket) ────────────────
     SUBSCRIBE_AUCTION,

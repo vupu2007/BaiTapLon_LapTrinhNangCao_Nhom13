@@ -84,8 +84,6 @@ public class WalletController {
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền nạp vào phải lớn hơn 0 đ!"); return; }
 
             // Cập nhật số dư trên RAM
-            CurrentAccount.deposit(amount);
-
             int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
             Object[] data = {accountId, amount, "DEPOSIT"};
             Request request = new Request(MessageType.WALLET_TRANSACTION, data);

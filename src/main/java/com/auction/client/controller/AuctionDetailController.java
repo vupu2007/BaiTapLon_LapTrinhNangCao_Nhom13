@@ -235,18 +235,42 @@ public class AuctionDetailController {
                 return;
             }
 
-            String activeUser = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Ẩn danh";
-            processValidBidUpdate(activeUser, bidAmount);
-
-            if (isAutoBidEnabled) {
-                triggerAutoBidSimulation(bidAmount);
+            if (currentAuction == null || CurrentAccount.getAccount() == null) {
+                showAlert("Lỗi", "Không xác định được phiên đấu giá hoặc tài khoản!");
+                return;
             }
+
+            String activeUser = CurrentAccount.getAccount().getUsername();
+
+            // Gửi PLACE_BID lên Server trên background thread
+            new Thread(() -> {
+                try {
+                    String userId = CurrentAccount.getAccount().getId();
+                    Request req = new Request(MessageType.PLACE_BID,
+                            new Object[]{currentAuction.getId(), bidAmount, userId});
+                    Response resp = ClientSocket.getInstance().sendRequest(req);
+
+                    Platform.runLater(() -> {
+                        if (resp != null && resp.isSuccess()) {
+                            // Server xác nhận → cập nhật UI
+                            processValidBidUpdate(activeUser, bidAmount);
+                            txtBidAmount.clear();
+                            if (isAutoBidEnabled) triggerAutoBidSimulation(bidAmount);
+                        } else {
+                            showAlert("Đặt giá thất bại",
+                                    resp != null ? resp.getMessage() : "Lỗi kết nối Server!");
+                        }
+                    });
+                } catch (Exception e) {
+                    Platform.runLater(() ->
+                            showAlert("Lỗi mạng", "Không thể gửi yêu cầu đến Server!"));
+                }
+            }).start();
 
         } catch (NumberFormatException e) {
             showAlert("Lỗi dữ liệu", "Vui lòng nhập định dạng số!");
         }
     }
-
     private void processValidBidUpdate(String username, double amount) {
         Platform.runLater(() -> {
             if (lblCurrentPrice != null) lblCurrentPrice.setText(String.format("%,.0f đ", amount));

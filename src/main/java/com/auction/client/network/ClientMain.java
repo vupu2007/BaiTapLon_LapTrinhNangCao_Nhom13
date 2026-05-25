@@ -17,11 +17,9 @@ public class ClientMain {
             Request msg = new Request(MessageType.REGISTER, testData);
 
             System.out.println("Client đang gửi yêu cầu Đăng ký thử nghiệm...");
-            client.send(msg);
 
             // 3. Nhận phản hồi dạng Response từ Server gửi về
-            Response response = client.receive();
-
+            Response response = client.sendRequest(msg); // ✅ gộp send + receive vào 1 lần
             System.out.println("Server phản hồi thành công? -> " + response.isSuccess());
             System.out.println("Thông báo từ Server: " + response.getMessage());
 

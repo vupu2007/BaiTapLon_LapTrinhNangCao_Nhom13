@@ -73,10 +73,11 @@ public class MainController {
         Account current = CurrentAccount.getAccount();
         if (balanceLabel != null) {
             balanceLabel.setText(current instanceof User
-                    ? String.format("%.0f VNĐ", ((User) current).getBalance()) : "N/A");
+                    ? String.format("%.0f VND", ((User) current).getBalance()) : "N/A");
         }
-        // Dua xuong background thread tranh block UI
+
         Thread t = new Thread(() -> {
+            // Buoc 1: Lay stats
             try {
                 Request statsReq = new Request(MessageType.GET_DASHBOARD_STATS,
                         CurrentAccount.getAccount().getId());
@@ -92,9 +93,48 @@ public class MainController {
                     });
                 }
             } catch (Exception e) {
-                System.err.println("Loi load dashboard stats: " + e.getMessage());
+                System.err.println("Loi load stats: " + e.getMessage());
             }
-            Platform.runLater(this::handleFilterAll);
+
+            // Buoc 2: Lay danh sach auction — cung thread, khong deadlock
+            java.util.List<Item> items = new java.util.ArrayList<>();
+            try {
+                Request req = new Request(MessageType.GET_HOT_AUCTIONS, currentFilter);
+                Response resp = ClientSocket.getInstance().sendRequest(req);
+                System.out.println("=== GET_HOT_AUCTIONS response: " + resp);
+                if (resp != null) {
+                    System.out.println("=== isSuccess: " + resp.isSuccess());
+                    System.out.println("=== data: " + resp.getData());
+                } else {
+                    System.out.println("=== resp NULL — server không trả về!");
+                }
+                if (resp != null && resp.isSuccess()) {
+                    items.addAll((java.util.List<Item>) resp.getData());
+                }
+            } catch (Exception e) {
+                System.err.println("Loi load hot auctions: " + e.getMessage());
+                e.printStackTrace();
+            }
+
+            // Buoc 3: Cap nhat UI tren JavaFX thread
+            final java.util.List<Item> finalItems = items;
+            final String filterSnapshot = currentFilter;
+            Platform.runLater(() -> {
+                System.out.println("=== flowPane: " + flowPane);
+                System.out.println("=== finalItems size: " + finalItems.size());
+                setButtonActive(btnFilterAll);
+                if (flowPane == null) {
+                    System.out.println("=== flowPane NULL!");
+                    return;
+                }
+                flowPane.getChildren().clear();
+                String label = filterSnapshot.equals("UPCOMING") ? "Sap dien ra" : "Dang dien ra";
+                for (Item item : finalItems) {
+                    flowPane.getChildren().add(createItemCardWithStatus(item, label));
+                }
+                System.out.println("=== Da render: " + flowPane.getChildren().size() + " card");
+            });
+
         }, "DashboardLoader");
         t.setDaemon(true);
         t.start();
@@ -172,34 +212,19 @@ public class MainController {
     @FXML
     private void handleFilterAll() {
         currentFilter = "ALL";
-        setButtonActive(btnFilterAll);
-        if (flowPane == null) return;
-        flowPane.getChildren().clear();
-        for (Item item : loadHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
-        }
+        refreshDashboard();
     }
 
     @FXML
     private void handleFilterActive() {
         currentFilter = "ACTIVE";
-        setButtonActive(btnFilterActive);
-        if (flowPane == null) return;
-        flowPane.getChildren().clear();
-        for (Item item : loadHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Đang diễn ra"));
-        }
+        refreshDashboard();
     }
 
     @FXML
     private void handleFilterUpcoming() {
         currentFilter = "UPCOMING";
-        setButtonActive(btnFilterUpcoming);
-        if (flowPane == null) return;
-        flowPane.getChildren().clear();
-        for (Item item : loadHotAuctions()) {
-            flowPane.getChildren().add(createItemCardWithStatus(item, "Sắp diễn ra"));
-        }
+        refreshDashboard();
     }
 
     private VBox createItemCardWithStatus(Item item, String statusText) {
@@ -303,18 +328,7 @@ public class MainController {
         imgView.setFitHeight(180);
         imgView.setPreserveRatio(false);
 
-        String preferredName = null;
-        try {
-            java.lang.reflect.Method getImgMethod = auction.getClass().getMethod("getImage");
-            preferredName = (String) getImgMethod.invoke(auction);
-        } catch (Exception e) {
-            try {
-                java.lang.reflect.Method getImgUrlMethod = auction.getClass().getMethod("getImageUrl");
-                preferredName = (String) getImgUrlMethod.invoke(auction);
-            } catch (Exception ex) {
-                preferredName = auction.getItemId();
-            }
-        }
+        String preferredName = auction.getImagePath();
 
         if (preferredName == null || preferredName.trim().isEmpty()) {
             preferredName = "default.png";
