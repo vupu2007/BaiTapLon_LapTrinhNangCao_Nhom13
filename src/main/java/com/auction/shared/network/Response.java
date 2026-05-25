@@ -7,16 +7,17 @@ public class Response implements Serializable {
     private boolean success;
     private String message;
     private Object data;
+    private String type; // ← THÊM DÒNG NÀY
 
-    // BẠN HÃY SỬA LẠI CONSTRUCTOR THEO ĐÚNG THỨ TỰ NÀY: (boolean, String, Object)
     public Response(boolean success, String message, Object data) {
         this.success = success;
         this.message = message;
         this.data = data;
     }
 
-    // Các Getters và Setters giữ nguyên
     public boolean isSuccess() { return success; }
     public String getMessage() { return message; }
     public Object getData() { return data; }
+    public String getType() { return type; }         // ← THÊM
+    public void setType(String type) { this.type = type; } // ← THÊM
 }
