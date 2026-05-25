@@ -311,17 +311,23 @@ public class AuctionService {
         }
     }
 
-    // getDashboardStats: thong ke cho man hinh chinh cua Bidder
-    public java.util.Map<String, Integer> getDashboardStats(int userId) {
-        java.util.Map<String, Integer> stats = new java.util.HashMap<>();
+    // getDashboardStats: khong can userId, tra tong quan he thong
+    public java.util.Map<String, Object> getDashboardStats() {
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
         try {
-            int ongoing = getAuctionsByBidder(userId).size();
-            int won     = auctionDAO.countWonAuctions(userId);
-            stats.put("ongoing", ongoing);
-            stats.put("won",     won);
+            List<Auction> all = auctionDAO.getAllAuctions();
+            long running = all.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.RUNNING).count();
+            long open    = all.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.OPEN).count();
+            stats.put("totalAuctions", all.size());
+            stats.put("ongoing", (int) running); // thêm dòng này
+            stats.put("running", (int) running);
+            stats.put("open",    (int) open);
+            stats.put("won",     0); // thêm dòng này
         } catch (Exception e) {
-            stats.put("ongoing", 0);
-            stats.put("won",     0);
+            System.err.println("getDashboardStats loi: " + e.getMessage());
+            stats.put("totalAuctions", 0);
+            stats.put("running", 0);
+            stats.put("open",    0);
         }
         return stats;
     }
@@ -329,5 +335,19 @@ public class AuctionService {
     // getAuctionsByStatus_wrapper: expose getAuctionsByStatus cho ClientHandler
     public List<Auction> getAuctionsByStatus_wrapper(Auction.AuctionStatus status) {
         return auctionDAO.getAuctionsByStatus(status);
+    }
+    // getHotAuctions: lay cac phien OPEN + RUNNING
+    public List<Auction> getHotAuctions() {
+        try {
+            List<Auction> open    = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.OPEN);
+            List<Auction> running = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
+            List<Auction> all = new java.util.ArrayList<>();
+            all.addAll(running); // running len truoc
+            all.addAll(open);
+            return all;
+        } catch (Exception e) {
+            System.err.println("getHotAuctions loi: " + e.getMessage());
+            return new java.util.ArrayList<>();
+        }
     }
 }

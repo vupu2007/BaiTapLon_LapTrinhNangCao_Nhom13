@@ -143,7 +143,7 @@ public class CreateProductController {
                 newItem.setStartingPrice(finalStartPrice);
                 newItem.setCategoryId(1);
                 newItem.setOwnerId(ownerId);
-                newItem.setStatus("IN_AUCTION");
+                newItem.setStatus("AVAILABLE");
                 newItem.setBrand("");
 
                 if (productImgFile != null) {
@@ -155,16 +155,26 @@ public class CreateProductController {
 
                 Request insertReq = new Request(MessageType.CREATE_ITEM, newItem);
                 Response insertResp;
-                try { insertResp = ClientSocket.getInstance().sendRequest(insertReq); }
-                catch (Exception ex) { return false; }
+                try {
+                    insertResp = ClientSocket.getInstance().sendRequest(insertReq);
+                    System.out.println("=== CREATE_ITEM: " + (insertResp != null ? insertResp.isSuccess() + " | " + insertResp.getMessage() : "NULL"));
+                } catch (Exception ex) {
+                    System.out.println("=== CREATE_ITEM EXCEPTION: " + ex.getMessage());
+                    return false;
+                }
                 boolean isItemSaved = insertResp != null && insertResp.isSuccess();
                 if (!isItemSaved) return false;
 
                 Object[] auctionData = {itemId, ownerId, finalStartPrice, startTimeStr, endTimeStr};
                 Request auctionReq = new Request(MessageType.CREATE_AUCTION, auctionData);
                 Response auctionResp;
-                try { auctionResp = ClientSocket.getInstance().sendRequest(auctionReq); }
-                catch (Exception ex) { return false; }
+                try {
+                    auctionResp = ClientSocket.getInstance().sendRequest(auctionReq);
+                    System.out.println("=== CREATE_AUCTION: " + (auctionResp != null ? auctionResp.isSuccess() + " | " + auctionResp.getMessage() : "NULL"));
+                } catch (Exception ex) {
+                    System.out.println("=== CREATE_AUCTION EXCEPTION: " + ex.getMessage());
+                    return false;
+                }
                 return auctionResp != null && auctionResp.isSuccess();
             }
         };
@@ -205,22 +215,6 @@ public class CreateProductController {
                     if (MainLayoutController.getInstance() != null) {
                         System.out.println("🔄 Đang chuyển hướng trực tiếp sang màn hình Chi tiết sản phẩm...");
                         MainLayoutController.getInstance().openAuctionDetailWithObject(auctionToNavigate);
-
-                        // 🌟 ĐÃ SỬA: Gọi trực tiếp, dọn sạch đống FXMLLoader thừa thãi gây báo đỏ
-                        try {
-                            MainLayoutController.getInstance().openAuctionDetail(
-                                    name,
-                                    String.format("%,.0f đ", finalStartPrice),
-                                    null,
-                                    finalProductImage,
-                                    "Trạng thái phiên: OPEN",
-                                    CurrentAccount.getAccount().getUsername(),
-                                    startTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
-                                    endTime.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
-                            );
-                        } catch (Exception err) {
-                            err.printStackTrace();
-                        }
                     }
                 });
                 pause.play();
