@@ -327,6 +327,7 @@ public class AuctionDetailController {
     }
 
      // AUTO-BID
+
     /**
      * Xử lý khi người dùng bật/tắt auto-bid.
      * Nếu bật: hỏi mức giá tối đa, mặc định tăng 50,000đ mỗi lần.

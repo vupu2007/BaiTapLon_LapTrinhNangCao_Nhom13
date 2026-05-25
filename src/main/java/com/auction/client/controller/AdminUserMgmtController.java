@@ -1,6 +1,11 @@
 package com.auction.client.controller;
 
-import com.auction.server.service.MainService;
+import com.auction.client.network.ClientSocket;
+import com.auction.client.util.CurrentAccount;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import com.auction.shared.model.Account;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -20,11 +25,6 @@ public class AdminUserMgmtController {
     @FXML private TextField txtSearch;
 
     private ObservableList<AdminUserRow> masterData = FXCollections.observableArrayList();
-    private MainService mainService;
-
-    public AdminUserMgmtController() {
-        this.mainService = new MainService();
-    }
 
     @FXML
     public void initialize() {

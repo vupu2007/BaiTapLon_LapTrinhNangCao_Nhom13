@@ -1,5 +1,11 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
+import com.auction.client.util.CurrentAccount;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import javafx.fxml.FXML;
 import javafx.scene.control.Label;
 import javafx.scene.control.Button; // Thêm import này
@@ -14,6 +20,8 @@ import javafx.scene.Parent;
 import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.util.Map;
+
 
 public class HistoryController {
 
@@ -21,7 +29,6 @@ public class HistoryController {
     @FXML private Label totalSessionsLabel;
     @FXML private Label wonSessionsLabel;
     @FXML private Label lostSessionsLabel;
-
     @FXML private Button btnHistory;
 
     private int currentUserId = 1;
@@ -32,25 +39,25 @@ public class HistoryController {
     }
 
     private void loadHistoryStats() {
-        String query = "SELECT " +
-                "COUNT(*) AS total, " +
-                "SUM(CASE WHEN status = 'WON' THEN 1 ELSE 0 END) AS won, " +
-                "SUM(CASE WHEN status = 'LOST' THEN 1 ELSE 0 END) AS lost " +
-                "FROM user_bids WHERE user_id = ?";
+        if (CurrentAccount.getAccount() == null) return;
+        int userId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(query)) {
+        try {
+            Request request = new Request(MessageType.GET_BID_HISTORY_STATS, userId);
+            Response response = ClientSocket.getInstance().sendRequest(request);
 
-            stmt.setInt(1, currentUserId);
-            ResultSet rs = stmt.executeQuery();
-
-            if (rs.next()) {
-                totalSessionsLabel.setText(String.valueOf(rs.getInt("total")));
-                wonSessionsLabel.setText(String.valueOf(rs.getInt("won")));
-                lostSessionsLabel.setText(String.valueOf(rs.getInt("lost")));
+            if (response != null && response.isSuccess()) {
+                Map<String, Integer> stats = (Map<String, Integer>) response.getData();
+                totalSessionsLabel.setText(String.valueOf(stats.getOrDefault("total", 0)));
+                wonSessionsLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
+                lostSessionsLabel.setText(String.valueOf(stats.getOrDefault("lost", 0)));
+            } else {
+                totalSessionsLabel.setText("0");
+                wonSessionsLabel.setText("0");
+                lostSessionsLabel.setText("0");
             }
-        } catch (SQLException e) {
-            e.printStackTrace();
+        } catch (Exception e) {
+            System.err.println("Lỗi lấy lịch sử: " + e.getMessage());
         }
     }
 

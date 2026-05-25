@@ -1,7 +1,11 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import com.auction.client.util.CurrentAccount;
-import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Electronics;
 import javafx.collections.FXCollections;
@@ -37,7 +41,6 @@ public class CreateProductController {
     @FXML private ComboBox<String> endMinuteCombo;
 
     private File productImgFile = null;
-    private final ItemDAO itemDAO = new ItemDAO();
 
     @FXML
     public void initialize() {
@@ -150,10 +153,19 @@ public class CreateProductController {
                 }
                 newItem.setImagePath(sharedImageHolder[0]);
 
-                boolean isItemSaved = itemDAO.insertItem(newItem);
+                Request insertReq = new Request(MessageType.CREATE_ITEM, newItem);
+                Response insertResp;
+                try { insertResp = ClientSocket.getInstance().sendRequest(insertReq); }
+                catch (Exception ex) { return false; }
+                boolean isItemSaved = insertResp != null && insertResp.isSuccess();
                 if (!isItemSaved) return false;
 
-                return itemDAO.startAuction(itemId, ownerId, finalStartPrice, startTimeStr, endTimeStr);
+                Object[] auctionData = {itemId, ownerId, finalStartPrice, startTimeStr, endTimeStr};
+                Request auctionReq = new Request(MessageType.CREATE_AUCTION, auctionData);
+                Response auctionResp;
+                try { auctionResp = ClientSocket.getInstance().sendRequest(auctionReq); }
+                catch (Exception ex) { return false; }
+                return auctionResp != null && auctionResp.isSuccess();
             }
         };
 

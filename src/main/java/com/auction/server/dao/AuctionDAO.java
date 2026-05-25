@@ -244,4 +244,17 @@ public class AuctionDAO {
             return false;
         }
     }
+
+    // countWonAuctions: dem so phien bidder thang (dung cho getBidHistoryStats)
+    public int countWonAuctions(int bidderId) {
+        String sql = "SELECT COUNT(*) FROM Auctions WHERE winner_id = ? AND status = 'FINISHED'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, bidderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
 }

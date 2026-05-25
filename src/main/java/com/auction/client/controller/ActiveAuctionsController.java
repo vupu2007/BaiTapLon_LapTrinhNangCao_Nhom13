@@ -1,11 +1,13 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.util.CurrentAccount;
-import com.auction.server.dao.AuctionDAO;
-import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.layout.FlowPane;
@@ -21,9 +23,6 @@ public class ActiveAuctionsController {
 
     @FXML private VBox emptyStateBox;
     @FXML private FlowPane cardsContainer;
-
-    private final AuctionDAO auctionDAO = new AuctionDAO();
-    private final ItemDAO itemDAO = new ItemDAO();
 
     // Bộ định dạng ngày giờ để hiển thị cho đẹp: dd/MM/yyyy HH:mm
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
@@ -50,8 +49,17 @@ public class ActiveAuctionsController {
             // Đã sửa: Ép kiểu ID tài khoản từ String sang int để gọi khớp với AuctionDAO
             int bidderIdInt = Integer.parseInt(currentAcc.getId());
 
+            // Gửi request lấy danh sách phiên đấu giá theo bidder qua Socket
+            Request request = new Request(MessageType.GET_AUCTIONS_BY_BIDDER, bidderIdInt);
+            Response response = ClientSocket.getInstance().sendRequest(request);
+
+            if (response == null || !response.isSuccess()) {
+                showEmptyState(true);
+                return;
+            }
+
             // Chỉ lấy những phiên mà tài khoản này ĐÃ ĐẶT GIÁ THÀNH CÔNG
-            List<Auction> auctions = auctionDAO.getAuctionsByBidder(bidderIdInt);
+            List<Auction> auctions = (List<Auction>) response.getData();
 
             if (auctions == null || auctions.isEmpty()) {
                 showEmptyState(true);
@@ -62,23 +70,25 @@ public class ActiveAuctionsController {
 
             for (Auction auction : auctions) {
                 try {
+                    // Lấy thông tin Item qua Socket
+                    Request itemRequest = new Request(MessageType.GET_ITEM_BY_ID, auction.getItemId());
+                    Response itemResponse = ClientSocket.getInstance().sendRequest(itemRequest);
+                    Item item = (itemResponse != null && itemResponse.isSuccess())
+                            ? (Item) itemResponse.getData() : null;
+
                     // Load ProductCard.fxml
                     FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
                     Node card = loader.load();
                     ProductCardController controller = loader.getController();
 
-                    // Đã sửa: Truyền thẳng auction.getItemId() (vì nó là String sẵn rồi), fix triệt để lỗi Incompatible types
-                    Item item = itemDAO.getItemById(auction.getItemId());
-                    String name  = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
-                    String image = (item != null) ? item.getImagePath() : null;
-
-                    // Trích xuất dữ liệu nâng cao đầy đủ tham số
+                    String name        = (item != null) ? item.getName()        : "Sản phẩm #" + auction.getItemId();
+                    String image       = (item != null) ? item.getImagePath()   : null;
                     String description = (item != null) ? item.getDescription() : "Không có mô tả.";
-                    String sellerName = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
+                    String sellerName  = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
 
                     // Định dạng ngày giờ bắt đầu và kết thúc của phiên đấu giá thành chuỗi chữ
                     String startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                    String endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                    String endTimeStr   = (auction.getEndTime()   != null) ? auction.getEndTime().format(dateTimeFormatter)   : "--/--/---- --:--";
 
                     // Tính thời gian còn lại hiển thị ở ngoài card
                     long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
@@ -87,9 +97,8 @@ public class ActiveAuctionsController {
                     // Định dạng giá tiền
                     String price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
 
-                    // Nạp chuẩn đét ĐỦ 8 THAM SỐ vào hàm setData của Card
+                    // Nạp ĐỦ 8 THAM SỐ vào hàm setData của Card
                     controller.setData(name, price, time, image, description, sellerName, startTimeStr, endTimeStr);
-
                     cardsContainer.getChildren().add(card);
 
                 } catch (Exception e) {
@@ -97,7 +106,10 @@ public class ActiveAuctionsController {
                 }
             }
         } catch (NumberFormatException e) {
-            System.err.println("❌ ID Tài khoản không hợp lệ (Không phải số nguyên): " + currentAcc.getId());
+            System.err.println("❌ ID Tài khoản không hợp lệ: " + currentAcc.getId());
+            showEmptyState(true);
+        } catch (Exception e) {
+            System.err.println("❌ Lỗi kết nối server: " + e.getMessage());
             showEmptyState(true);
         }
     }
@@ -112,6 +124,7 @@ public class ActiveAuctionsController {
             cardsContainer.setManaged(!isEmpty);
         }
     }
+
     @FXML
     private void openHome() {
         if (MainLayoutController.getInstance() != null) {

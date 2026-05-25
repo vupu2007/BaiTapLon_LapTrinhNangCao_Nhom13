@@ -1,7 +1,11 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+
 import com.auction.client.util.CurrentAccount;
-import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.Item;
 import javafx.concurrent.Task;
 import javafx.fxml.FXML;
@@ -24,8 +28,6 @@ public class MyProductsController {
     @FXML private Label lblTotalValue;     // Ô số "Tổng giá trị"
     @FXML private VBox emptyStateView;      // VBox chứa thông báo "Bạn chưa có sản phẩm nào"
     @FXML private FlowPane productsGrid;    // Lưới FlowPane chứa các card sản phẩm
-
-    private final ItemDAO itemDAO = new ItemDAO();
 
     @FXML
     public void initialize() {
@@ -50,7 +52,11 @@ public class MyProductsController {
         Task<List<Item>> loadTask = new Task<>() {
             @Override
             protected List<Item> call() throws Exception {
-                return itemDAO.getItemsByOwner(ownerId);
+                Request req = new Request(MessageType.GET_ITEMS_BY_OWNER, ownerId);
+                Response resp;
+                try { resp = ClientSocket.getInstance().sendRequest(req); }
+                catch (Exception ex) { return null; }
+                return (resp != null && resp.isSuccess()) ? (java.util.List<com.auction.shared.model.Item>) resp.getData() : null;
             }
         };
 
@@ -198,7 +204,11 @@ public class MyProductsController {
         if (result.isPresent() && result.get() == ButtonType.OK) {
             // Thực hiện xóa ngầm dưới DB thông qua ItemDAO
             try {
-                boolean isDeleted = itemDAO.deleteItem(item.getId());
+                Request delReq = new Request(MessageType.DELETE_ITEM, item.getId());
+                Response delResp;
+                try { delResp = ClientSocket.getInstance().sendRequest(delReq); }
+                catch (Exception ex) { delResp = null; }
+                boolean isDeleted = delResp != null && delResp.isSuccess();
 
                 if (isDeleted) {
                     System.out.println("✅ Đã xóa sản phẩm thành công khỏi DB!");

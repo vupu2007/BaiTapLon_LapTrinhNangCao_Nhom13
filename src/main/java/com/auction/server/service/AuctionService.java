@@ -5,6 +5,7 @@ import com.auction.server.dao.AutoBidDAO;
 import com.auction.server.dao.BidDAO;
 import com.auction.server.dao.ItemDAO;
 import com.auction.shared.model.*;
+import com.auction.shared.network.Response;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -235,5 +236,98 @@ public class AuctionService {
     // 7. Lấy lịch sử bid của một phiên
     public List<BidTransaction> getBidHistory(int auctionId) {
         return bidDAO.getBidsByAuction(auctionId);
+    }
+
+    // ── Alias/wrapper methods cho ClientHandler ───────────────────────────────
+
+    // createAuction(String itemId, int sellerId, double startPrice, String startTimeStr, String endTimeStr)
+    // ClientHandler truyen tham so roi, khong truyen Auction object
+    public boolean createAuction(String itemId, int sellerId, double startPrice,
+                                 String startTimeStr, String endTimeStr) {
+        java.time.format.DateTimeFormatter fmt =
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        Auction auction = new Auction();
+        auction.setItemId(itemId);
+        auction.setSellerId(sellerId);
+        auction.setStartPrice(startPrice);
+        auction.setCurrentPrice(startPrice);
+        auction.setStartTime(java.time.LocalDateTime.parse(startTimeStr, fmt));
+        auction.setEndTime(java.time.LocalDateTime.parse(endTimeStr, fmt));
+        auction.setStatus(Auction.AuctionStatus.OPEN);
+        return createAuction(auction);
+    }
+
+    // getAllAuctions: lay tat ca phien (OPEN + RUNNING + FINISHED)
+    public List<Auction> getAllAuctions() {
+        return auctionDAO.getAllAuctions();
+    }
+
+    // getAuctionsByBidder: lay danh sach phien bidder da tham gia
+    public List<Auction> getAuctionsByBidder(int bidderId) {
+        return auctionDAO.getAuctionsByBidder(bidderId);
+    }
+
+    // placeBid(int, double, String userId) — ClientHandler truyen userId la String
+    // Wrapper lay Account tu DB roi goi placeBid goc
+    public Response placeBid(int auctionId, double amount, String userId) {
+        try {
+            com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
+            Account account = accountDAO.getAccountById(Integer.parseInt(userId));
+            if (account == null)
+                return new com.auction.shared.network.Response(false, "Tai khoan khong ton tai!", null);
+
+            boolean ok = placeBid(auctionId, amount, account);
+            return ok
+                    ? new com.auction.shared.network.Response(true,  "Dat gia thanh cong!", null)
+                    : new com.auction.shared.network.Response(false, "Dat gia that bai!", null);
+        } catch (Exception e) {
+            return new com.auction.shared.network.Response(false, "Loi server: " + e.getMessage(), null);
+        }
+    }
+
+    // getBidHistoryStats: tra ve Map {total, won, lost} cho HistoryController
+    public java.util.Map<String, Integer> getBidHistoryStats(int userId) {
+        java.util.Map<String, Integer> stats = new java.util.HashMap<>();
+        try {
+            int total = bidDAO.countBidsByUser(userId);
+            int won   = auctionDAO.countWonAuctions(userId);
+            stats.put("total", total);
+            stats.put("won",   won);
+            stats.put("lost",  Math.max(0, total - won));
+        } catch (Exception e) {
+            stats.put("total", 0);
+            stats.put("won",   0);
+            stats.put("lost",  0);
+        }
+        return stats;
+    }
+
+    // setAutoBid: wrapper cho registerAutoBid, ClientHandler truyen String userId
+    public boolean setAutoBid(int auctionId, String userId, double maxBid, double increment) {
+        try {
+            return registerAutoBid(auctionId, Integer.parseInt(userId), maxBid);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    // getDashboardStats: thong ke cho man hinh chinh cua Bidder
+    public java.util.Map<String, Integer> getDashboardStats(int userId) {
+        java.util.Map<String, Integer> stats = new java.util.HashMap<>();
+        try {
+            int ongoing = getAuctionsByBidder(userId).size();
+            int won     = auctionDAO.countWonAuctions(userId);
+            stats.put("ongoing", ongoing);
+            stats.put("won",     won);
+        } catch (Exception e) {
+            stats.put("ongoing", 0);
+            stats.put("won",     0);
+        }
+        return stats;
+    }
+
+    // getAuctionsByStatus_wrapper: expose getAuctionsByStatus cho ClientHandler
+    public List<Auction> getAuctionsByStatus_wrapper(Auction.AuctionStatus status) {
+        return auctionDAO.getAuctionsByStatus(status);
     }
 }

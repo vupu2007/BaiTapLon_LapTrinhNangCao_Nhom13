@@ -87,4 +87,17 @@ public class ItemService {
     public List<Item> getItemsByOwner(int ownerId) {
         return itemDAO.getItemsByOwner(ownerId);
     }
+
+    // ── Alias methods cho ClientHandler ──────────────────────────────────────
+
+    // createItem: alias cua addItem (ClientHandler goi ten nay)
+    public boolean createItem(Item item) {
+        return addItem(item);
+    }
+
+    // deleteItem(int): ClientHandler truyen int id, nhung DAO dung String
+    // requesterId mac dinh la owner (da kiem tra o ClientHandler)
+    public boolean deleteItem(int itemId) {
+        return itemDAO.deleteItem(String.valueOf(itemId));
+    }
 }

@@ -253,4 +253,73 @@ public class AccountDAO {
         }
         return list;
     }
+
+    // getAllAccounts: lay tat ca user (dung cho AdminUserMgmt)
+    public List<Account> getAllAccounts() {
+        List<Account> list = new ArrayList<>();
+        String sql = "SELECT * FROM Accounts ORDER BY account_id";
+        try (Connection conn = DatabaseConnection.getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) list.add(mapResultSetToAccount(rs));
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    // updateProfile(int, String, String): overload nhan int thay vi String
+    public boolean updateProfile(int accountId, String newUsername, String newEmail) {
+        return updateProfile(String.valueOf(accountId), newUsername, newEmail);
+    }
+
+    // updatePassword(int, String): overload nhan int
+    public boolean updatePassword(int accountId, String newPassword) {
+        return updatePassword(String.valueOf(accountId), newPassword);
+    }
+
+    // insertTransaction(int, double, String): signature khop voi AccountService
+    public boolean insertTransaction(int accountId, double amount, String type) {
+        String sql = "INSERT INTO Transactions (account_id, type, amount, balance_after, created_at) VALUES (?, ?, ?, 0, NOW())";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, accountId);
+            pstmt.setString(2, type);
+            pstmt.setDouble(3, amount);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) { e.printStackTrace(); return false; }
+    }
+
+    // getTransactions: tra ve List<Map> de WalletController hien thi
+    public java.util.List<java.util.Map<String, Object>> getTransactions(int accountId) {
+        java.util.List<java.util.Map<String, Object>> list = new java.util.ArrayList<>();
+        String sql = "SELECT * FROM Transactions WHERE account_id = ? ORDER BY transaction_id DESC";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, accountId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    java.util.Map<String, Object> map = new java.util.HashMap<>();
+                    map.put("type",        rs.getString("type"));
+                    map.put("amount",      rs.getDouble("amount"));
+                    map.put("description", rs.getString("type").equals("DEPOSIT") ? "Nap tien" : "Rut tien");
+                    Timestamp ts = rs.getTimestamp("created_at");
+                    map.put("created_at", ts != null ? ts.toLocalDateTime() : null);
+                    list.add(map);
+                }
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return list;
+    }
+
+    // lockUser: cap nhat trang thai tai khoan (them cot is_locked vao DB neu chua co)
+    public boolean lockUser(int accountId) {
+        String sql = "UPDATE Accounts SET is_locked = 1 WHERE account_id = ? AND role != 'ADMIN'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, accountId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

@@ -100,4 +100,89 @@ public class AccountService {
         // ĐÃ SỬA: Gọi hàm updateBalance với đầy đủ tham số để đồng bộ MySQL vĩnh viễn
         return accountDAO.updateBalance(accountId, newBalance, newTotalDeposit, currentTotalWithdraw);
     }
+
+    // ── Các method bổ sung cho ClientHandler ─────────────────────────────────
+
+    // Lấy tất cả user dạng Map để Admin hiển thị
+    public java.util.List<java.util.Map<String, String>> getAllUsersAsMap() {
+        java.util.List<Account> accounts = accountDAO.getAllAccounts();
+        java.util.List<java.util.Map<String, String>> result = new java.util.ArrayList<>();
+        for (Account acc : accounts) {
+            java.util.Map<String, String> map = new java.util.HashMap<>();
+            map.put("id",       acc.getId());
+            map.put("username", acc.getUsername());
+            map.put("role",     acc.getRole());
+            double bal = 0.0;
+            if (acc instanceof com.auction.shared.model.Bidder)
+                bal = ((com.auction.shared.model.Bidder) acc).getBalance();
+            else if (acc instanceof com.auction.shared.model.Seller)
+                bal = ((com.auction.shared.model.Seller) acc).getBalance();
+            map.put("balance", String.format("%,.0f d", bal));
+            map.put("status",  "Dang hoat dong");
+            result.add(map);
+        }
+        return result;
+    }
+
+    // Cap nhat thong tin ca nhan
+    public boolean updateProfile(String id, String newUsername, String newEmail) {
+        if (id == null || newUsername == null || newUsername.isBlank()) return false;
+        return accountDAO.updateProfile(Integer.parseInt(id), newUsername, newEmail);
+    }
+
+    // Doi mat khau - Server verify current password truoc
+    public boolean changePassword(String id, String currentPassword, String newPassword) {
+        if (id == null || currentPassword == null || newPassword == null) return false;
+        if (newPassword.length() < 6) return false;
+        Account acc = accountDAO.getAccountById(Integer.parseInt(id));
+        if (acc == null) return false;
+        if (!acc.getPassword().equals(currentPassword)) return false;
+        return accountDAO.updatePassword(Integer.parseInt(id), newPassword);
+    }
+
+    // Lay username theo id (dung cho push realtime sau PLACE_BID)
+    public String getUsernameById(String id) {
+        try {
+            Account acc = accountDAO.getAccountById(Integer.parseInt(id));
+            return acc != null ? acc.getUsername() : "An danh";
+        } catch (Exception e) {
+            return "An danh";
+        }
+    }
+
+    // Giao dich vi: DEPOSIT hoac WITHDRAW
+    public boolean walletTransaction(int accountId, double amount, String type) {
+        if (amount <= 0) return false;
+        Account acc = accountDAO.getAccountById(accountId);
+        if (acc == null) return false;
+
+        double currentBalance = 0.0;
+        if (acc instanceof com.auction.shared.model.Bidder)
+            currentBalance = ((com.auction.shared.model.Bidder) acc).getBalance();
+        else if (acc instanceof com.auction.shared.model.Seller)
+            currentBalance = ((com.auction.shared.model.Seller) acc).getBalance();
+
+        double newBalance;
+        double totalDeposit = 0.0, totalWithdraw = 0.0;
+
+        if ("DEPOSIT".equals(type)) {
+            newBalance = currentBalance + amount;
+            totalDeposit = amount;
+        } else if ("WITHDRAW".equals(type)) {
+            if (currentBalance < amount) return false;
+            newBalance = currentBalance - amount;
+            totalWithdraw = amount;
+        } else {
+            return false;
+        }
+
+        boolean ok = accountDAO.updateBalance(accountId, newBalance, totalDeposit, totalWithdraw);
+        if (ok) accountDAO.insertTransaction(accountId, amount, type);
+        return ok;
+    }
+
+    // Lay lich su giao dich vi
+    public java.util.List<java.util.Map<String, Object>> getTransactions(int accountId) {
+        return accountDAO.getTransactions(accountId);
+    }
 }

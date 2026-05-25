@@ -99,4 +99,17 @@ public class BidDAO {
         bid.setBidTime(rs.getObject("bid_time", LocalDateTime.class));
         return bid;
     }
+
+    // countBidsByUser: dem tong so lan dat gia cua 1 user (dung cho getBidHistoryStats)
+    public int countBidsByUser(int bidderId) {
+        String sql = "SELECT COUNT(DISTINCT auction_id) FROM Bids WHERE bidder_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, bidderId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
+    }
 }
