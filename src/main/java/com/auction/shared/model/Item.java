@@ -1,7 +1,7 @@
 package com.auction.shared.model;
 
 // THAY ĐỔI: đổi thành abstract vì Electronics/Art/Vehicle mới là class cụ thể
-public abstract class Item implements Entity {
+public abstract class Item implements Entity, java.io.Serializable {
     protected String imagePath;
     protected String itemId;
     protected String name;

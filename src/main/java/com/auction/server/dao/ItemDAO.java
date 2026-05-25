@@ -1,8 +1,11 @@
 package com.auction.server.dao;
 
+import com.auction.shared.model.Art;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Electronics;
 import com.auction.server.util.DatabaseConnection;
+import com.auction.shared.model.Vehicle;
+
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -171,16 +174,30 @@ public class ItemDAO {
 
     // --- Helper: map ResultSet sang Item object ---
     private Item mapResultSetToItem(ResultSet rs) throws SQLException {
-        Electronics item = new Electronics();
+        Item item;
+        int categoryId = rs.getInt("category_id");
+
+        // Tùy theo logic phân loại category của database nhóm bạn:
+        if (categoryId == 1) {
+            item = new Electronics();
+        } else if (categoryId == 2) {
+            item = new Art(); // Ví dụ
+        } else {
+            item = new Vehicle(); // Hoặc một class mặc định nào đó
+        }
+
         item.setItemId(rs.getString("item_id"));
         item.setName(rs.getString("name"));
         item.setDescription(rs.getString("description"));
         item.setStartingPrice(rs.getDouble("starting_price"));
-        item.setCategoryId(rs.getInt("category_id"));
+        item.setCategoryId(categoryId);
         item.setOwnerId(rs.getInt("owner_id"));
         item.setStatus(rs.getString("status"));
         item.setImagePath(rs.getString("image_path"));
-        item.setBrand(rs.getString("attributes"));
+
+        // Nếu các class con có thuộc tính riêng, bạn cần ép kiểu ở đây
+        // Ví dụ: if (item instanceof Electronics) ((Electronics)item).setBrand(rs.getString("attributes"));
+
         return item;
     }
 
