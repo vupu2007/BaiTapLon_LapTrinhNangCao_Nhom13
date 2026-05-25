@@ -9,15 +9,11 @@ import java.net.URL;
 
 // ❌ XÓA BỎ IMPORT THẰNG SERVER NÀY ĐI
 // import com.auction.server.service.AuctionScheduler;
-
 public class MainApp {
     public static class AppUI extends Application {
-
         @Override
         public void start(Stage primaryStage) throws Exception {
-
             // 🌟 ĐÃ XÓA dòng AuctionScheduler.getInstance().start(); ở đây!
-
             URL fxmlLocation = getClass().getResource("/view/LoginView.fxml");
             if (fxmlLocation == null) {
                 System.err.println("LỖI: Không tìm thấy file LoginView.fxml!");
@@ -32,7 +28,6 @@ public class MainApp {
             primaryStage.setMaximized(true);
             primaryStage.show();
         }
-
         @Override
         public void stop() {
             // 🌟 ĐÃ XÓA dòng AuctionScheduler.getInstance().stop(); ở đây!
