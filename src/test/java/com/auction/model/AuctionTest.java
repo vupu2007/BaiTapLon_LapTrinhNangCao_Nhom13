@@ -22,19 +22,20 @@ class AuctionTest {
 
     @BeforeEach
     void setUp() {
-        auction = new Auction(
-                1,
-                "ITEM_001",
-                10,
-                500_000.0,
-                500_000.0,
-                50_000.0,
-                null,
-                LocalDateTime.now().minusMinutes(10),
-                FUTURE,
-                Auction.AuctionStatus.RUNNING,
-                null
-        );
+        // 🚀 KHỞI TẠO QUA BUILDER: Vừa sạch code, vừa không lo lỗi lệch tham số constructor!
+        auction = Auction.builder()
+                .id(1)
+                .title("ITEM_001") // Nếu trong class đặt tên là itemId thì sửa thành .itemId("ITEM_001")
+                .sellerId(10)
+                .startPrice(500000.0)
+                .currentPrice(500000.0)
+                .minIncrement(50000.0)
+                .winnerId(null)
+                .startTime(LocalDateTime.now().minusMinutes(10))
+                .endTime(FUTURE)
+                .status(Auction.AuctionStatus.RUNNING)
+                // .thuocTinhThu11(null) // Đền bù nốt thuộc tính số 11 của ông vào đây nếu cần
+                .build();
     }
 
     // ───────── Constructor & Getter ─────────

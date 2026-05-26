@@ -10,7 +10,7 @@
            prefWidth="500.0"
            style="-fx-background-color: #f0f7ff;"
            stylesheets="@../css/login.css"
-           xmlns="http://javafx.com/javafx/17"
+           xmlns="http://javafx.com/javafx/21"
            xmlns:fx="http://javafx.com/fxml/1"
            fx:controller="com.auction.client.controller.LoginController">
     <children>

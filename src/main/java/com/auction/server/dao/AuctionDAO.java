@@ -11,13 +11,13 @@ import java.util.List;
 
 public class AuctionDAO {
 
-    // 1. Tạo phiên đấu giá mới (🌟 ĐÃ SỬA: Lưu thêm original_end_time)
+    // 1. Tạo phiên đấu giá mới (Lưu thêm original_end_time)
     public boolean insertAuction(Auction auction) {
         String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, min_increment, start_time, end_time, original_end_time, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // ✅ ĐÃ SỬA: Đưa conn vào try() để tự động giải phóng về Pool
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, auction.getItemId());
             pstmt.setInt(2, auction.getSellerId());
             pstmt.setDouble(3, auction.getStartPrice());
@@ -25,7 +25,7 @@ public class AuctionDAO {
             pstmt.setDouble(5, auction.getMinIncrement());
             pstmt.setObject(6, auction.getStartTime());
             pstmt.setObject(7, auction.getEndTime());
-            pstmt.setObject(8, auction.getEndTime()); // Lưu gốc bằng đúng endTime lúc mới tạo
+            pstmt.setObject(8, auction.getEndTime());
             pstmt.setString(9, auction.getStatus().name());
 
             return pstmt.executeUpdate() > 0;
@@ -40,7 +40,6 @@ public class AuctionDAO {
         String sql = "SELECT * FROM Auctions WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -60,7 +59,6 @@ public class AuctionDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-
             while (rs.next()) {
                 list.add(mapResultSetToAuction(rs));
             }
@@ -76,7 +74,6 @@ public class AuctionDAO {
         String sql = "SELECT * FROM Auctions WHERE status = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, status.name());
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -95,7 +92,6 @@ public class AuctionDAO {
         String sql = "SELECT * FROM Auctions WHERE seller_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, sellerId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -108,53 +104,48 @@ public class AuctionDAO {
         return list;
     }
 
-    // 6. THÊM: insertBid + updateCurrentPrice trong 1 transaction (Rất tốt, giữ nguyên)
+    // 6. insertBid + updateCurrentPrice trong 1 transaction (Chống Race Condition)
     public boolean placeBidTransaction(BidTransaction bid, double newPrice, int bidderId) {
         String insertBidSql    = "INSERT INTO Bids (auction_id, bidder_id, bid_amount) VALUES (?, ?, ?)";
         String updatePriceSql  = "UPDATE Auctions SET current_price = ?, winner_id = ? " +
                 "WHERE auction_id = ? AND status = 'RUNNING' AND current_price < ?";
 
-        Connection conn = null;
-        try {
-            conn = DatabaseConnection.getConnection();
+        // ✅ ĐÃ SỬA: Đóng gói conn trong try lớn để auto-close tránh nghẽn luồng khi rollback/commit
+        try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
 
-            try (PreparedStatement ps1 = conn.prepareStatement(insertBidSql)) {
-                ps1.setInt(1, bid.getAuctionId());
-                ps1.setInt(2, bid.getBidderId());
-                ps1.setDouble(3, bid.getBidAmount());
-                ps1.executeUpdate();
-            }
-
-            try (PreparedStatement ps2 = conn.prepareStatement(updatePriceSql)) {
-                ps2.setDouble(1, newPrice);
-                ps2.setInt(2, bidderId);
-                ps2.setInt(3, bid.getAuctionId());
-                ps2.setDouble(4, newPrice);
-                int rows = ps2.executeUpdate();
-                if (rows == 0) {
-                    conn.rollback();
-                    System.err.println("Giá vừa bị vượt qua bởi người khác, vui lòng thử lại!");
-                    return false;
+            try {
+                try (PreparedStatement ps1 = conn.prepareStatement(insertBidSql)) {
+                    ps1.setInt(1, bid.getAuctionId());
+                    ps1.setInt(2, bid.getBidderId());
+                    ps1.setDouble(3, bid.getBidAmount());
+                    ps1.executeUpdate();
                 }
+
+                try (PreparedStatement ps2 = conn.prepareStatement(updatePriceSql)) {
+                    ps2.setDouble(1, newPrice);
+                    ps2.setInt(2, bidderId);
+                    ps2.setInt(3, bid.getAuctionId());
+                    ps2.setDouble(4, newPrice);
+                    int rows = ps2.executeUpdate();
+                    if (rows == 0) {
+                        conn.rollback();
+                        System.err.println("Giá vừa bị vượt qua bởi người khác, vui lòng thử lại!");
+                        return false;
+                    }
+                }
+
+                conn.commit();
+                return true;
+            } catch (SQLException e) {
+                conn.rollback();
+                throw e; // Ném ra ngoài để khối catch tổng xử lý log
+            } finally {
+                conn.setAutoCommit(true); // Đưa về trạng thái ban đầu trước khi trả lại cho Pool
             }
-
-            conn.commit();
-            return true;
-
         } catch (SQLException e) {
-            if (conn != null) {
-                try { conn.rollback(); } catch (SQLException ex) { ex.printStackTrace(); }
-            }
             e.printStackTrace();
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) { e.printStackTrace(); }
-            }
         }
     }
 
@@ -163,10 +154,8 @@ public class AuctionDAO {
         String sql = "UPDATE Auctions SET status = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, newStatus.name());
             pstmt.setInt(2, auctionId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -179,10 +168,8 @@ public class AuctionDAO {
         String sql = "UPDATE Auctions SET end_time = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setObject(1, newEndTime);
             pstmt.setInt(2, auctionId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -190,12 +177,11 @@ public class AuctionDAO {
         }
     }
 
-    // 🌟 9. Lấy thời gian kết thúc nguyên bản (Phục vụ AuctionService Anti-Sniping)
+    // 9. Lấy thời gian kết thúc nguyên bản
     public LocalDateTime getOriginalEndTime(int auctionId) {
         String sql = "SELECT original_end_time FROM Auctions WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -214,10 +200,8 @@ public class AuctionDAO {
         String sql = "SELECT DISTINCT a.* FROM Auctions a " +
                 "JOIN Bids b ON a.auction_id = b.auction_id " +
                 "WHERE a.status = 'RUNNING' AND b.bidder_id = ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, bidderId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -231,6 +215,7 @@ public class AuctionDAO {
         return list;
     }
 
+    // 11. Cập nhật giá hiện tại trực tiếp
     public boolean updateCurrentPrice(int auctionId, double newPrice, int winnerId) {
         String sql = "UPDATE Auctions SET current_price = ?, winner_id = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -245,6 +230,7 @@ public class AuctionDAO {
         }
     }
 
+    // 12. Đếm số phiên đấu giá đã thắng
     public int countWonAuctions(int bidderId) {
         String sql = "SELECT COUNT(*) FROM Auctions WHERE winner_id = ? AND status = 'FINISHED'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -257,7 +243,23 @@ public class AuctionDAO {
         return 0;
     }
 
-    // --- Helper: map ResultSet sang Auction object ---
+    // ⚡ 13. TỐI ƯU TỐC ĐỘ: Đếm số lượng phiên active bằng COUNT
+    public int countActiveAuctionsByUser(int userId) {
+        String sql = "SELECT COUNT(DISTINCT auction_id) FROM Bids WHERE bidder_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi đếm số phiên hoạt động trong AuctionDAO: " + e.getMessage());
+        }
+        return 0;
+    }
+
     private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
         Auction auction = new Auction();
         auction.setId(rs.getInt("auction_id"));
@@ -270,12 +272,14 @@ public class AuctionDAO {
         auction.setEndTime(rs.getObject("end_time", LocalDateTime.class));
         auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
 
-        // 🌟 ĐÃ SỬA: Parse sang String để đồng bộ với kiểu dữ liệu của lớp Model
+        try {
+            auction.setOriginalEndTime(rs.getObject("original_end_time", LocalDateTime.class));
+        } catch (Exception ignored) {}
+
         int winnerId = rs.getInt("winner_id");
         if (!rs.wasNull()) {
             auction.setWinnerId(winnerId);
         }
-
         return auction;
     }
 }

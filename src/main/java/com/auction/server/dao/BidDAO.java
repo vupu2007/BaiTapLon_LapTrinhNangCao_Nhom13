@@ -15,9 +15,9 @@ public class BidDAO {
     // 1. Lưu một lần đặt giá mới vào DB
     public boolean insertBid(BidTransaction bid) {
         String sql = "INSERT INTO Bids (auction_id, bidder_id, bid_amount) VALUES (?, ?, ?)";
+        // ✅ ĐÃ SỬA: Đưa conn vào try() để tự động giải phóng kết nối về Pool
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, bid.getAuctionId());
             pstmt.setInt(2, bid.getBidderId());
             pstmt.setDouble(3, bid.getBidAmount());
@@ -57,7 +57,6 @@ public class BidDAO {
         String sql = "SELECT * FROM Bids WHERE auction_id = ? ORDER BY bid_amount DESC LIMIT 1";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -76,7 +75,6 @@ public class BidDAO {
         String sql = "SELECT * FROM Bids WHERE bidder_id = ? ORDER BY bid_time DESC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, bidderId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -89,18 +87,7 @@ public class BidDAO {
         return list;
     }
 
-    // --- Helper: map ResultSet sang BidTransaction object ---
-    private BidTransaction mapResultSetToBid(ResultSet rs) throws SQLException {
-        BidTransaction bid = new BidTransaction();
-        bid.setId(rs.getInt("bid_id"));
-        bid.setAuctionId(rs.getInt("auction_id"));
-        bid.setBidderId(rs.getInt("bidder_id"));
-        bid.setBidAmount(rs.getDouble("bid_amount"));
-        bid.setBidTime(rs.getObject("bid_time", LocalDateTime.class));
-        return bid;
-    }
-
-    // countBidsByUser: dem tong so lan dat gia cua 1 user (dung cho getBidHistoryStats)
+    // ⚡ 5. TỐI ƯU DASHBOARD: Đếm tổng số lần đặt giá của 1 user (Tự động giải phóng kết nối)
     public int countBidsByUser(int bidderId) {
         String sql = "SELECT COUNT(DISTINCT auction_id) FROM Bids WHERE bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -111,5 +98,16 @@ public class BidDAO {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
+    }
+
+    // --- Helper: map ResultSet sang BidTransaction object ---
+    private BidTransaction mapResultSetToBid(ResultSet rs) throws SQLException {
+        BidTransaction bid = new BidTransaction();
+        bid.setId(rs.getInt("bid_id"));
+        bid.setAuctionId(rs.getInt("auction_id"));
+        bid.setBidderId(rs.getInt("bidder_id"));
+        bid.setBidAmount(rs.getDouble("bid_amount"));
+        bid.setBidTime(rs.getObject("bid_time", LocalDateTime.class));
+        return bid;
     }
 }

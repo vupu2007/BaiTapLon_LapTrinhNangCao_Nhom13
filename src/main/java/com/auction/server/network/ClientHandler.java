@@ -8,21 +8,35 @@ import com.auction.shared.network.Response;
 
 import java.io.*;
 import java.net.Socket;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class ClientHandler implements Runnable {
 
-    // Realtime: map auctionId → danh sách handler đang subscribe
     private static final ConcurrentHashMap<Integer, CopyOnWriteArrayList<ClientHandler>>
             auctionSubscribers = new ConcurrentHashMap<>();
 
-    // Concurrent Bidding: mỗi phiên có 1 lock riêng
     private static final ConcurrentHashMap<Integer, Object> auctionLocks = new ConcurrentHashMap<>();
 
-    // 🌟 TỐI ƯU CỐT LÕI: Biến các Service thành cấu trúc Static Singleton
-    // Giúp hàng ngàn Thread ClientHandler dùng chung 1 thực thể, tiết kiệm 95% RAM Server
+    // Định dạng thời gian cho log hệ thống
+    private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+
+    // 🚀 TỐI ƯU HỆ THỐNG LỚN: Thread Pool quản lý tập trung toàn bộ các tác vụ xử lý Logic + SQL ngầm ở Server.
+    private static final ExecutorService serverWorkerPool = Executors.newFixedThreadPool(
+            Math.max(4, Runtime.getRuntime().availableProcessors() * 2),
+            r -> {
+                Thread t = new Thread(r);
+                t.setName("Server-Worker-Pool"); // Đặt tên để nhận diện luồng xử lý
+                t.setDaemon(true);
+                return t;
+            }
+    );
+
     private static final AccountService accountService = new AccountService();
     private static final AuctionService auctionService = new AuctionService();
     private static final ItemService    itemService    = new ItemService();
@@ -35,32 +49,65 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
     }
 
+    // ⚙️ HÀM BỔ TRỢ: Xuất log tự động đính kèm Tên Luồng hiện hành
+    private void printLog(String icon, String status, String message) {
+        String timestamp = LocalDateTime.now().format(timeFormatter);
+        String threadName = Thread.currentThread().getName();
+        System.out.printf("[%s] [%s] %s [%s] %s%n", timestamp, threadName, icon, status, message);
+    }
+
     @Override
     public void run() {
         try {
+            // 🚀 ĐÃ SỬA: Khởi tạo ObjectOutputStream trước và FLUSH NGAY LẬP TỨC để gửi stream header sang Client
             out = new ObjectOutputStream(socket.getOutputStream());
+            out.flush();
+
             in  = new ObjectInputStream(socket.getInputStream());
+            printLog("✅", "I/O_CONNECTED", "Đã kết nối thông suốt luồng I/O với Client: " + socket.getRemoteSocketAddress());
 
             while (!Thread.currentThread().isInterrupted()) {
                 Request request = (Request) in.readObject();
                 if (request == null) break;
 
-                Response response = handleRequest(request);
+                // ⏱️ Ghi nhận mốc thời gian nhận gói tin
+                long startTime = System.currentTimeMillis();
+                printLog("📥", "REQ_RECEIVED", "Nhận request: " + request.getType());
 
-                // Giữ đúng thiết kế kiến trúc: Trả về gói tin tập trung tại một đầu ra duy nhất
-                if (response != null) {
-                    synchronized (out) {
-                        out.writeObject(response);
-                        out.flush();
-                        out.reset();
+                // 🧠 Ủỷ thác Request cho Thread Pool ngầm xử lý bất đồng bộ
+                serverWorkerPool.submit(() -> {
+                    try {
+                        Response response = handleRequest(request);
+
+                        if (response != null) {
+                            // Sao chép nguyên vẹn ID gói tin từ Request sang Response để Client khớp mạch hòm thư
+                            response.setRequestId(request.getRequestId());
+
+                            synchronized (out) {
+                                out.writeObject(response);
+                                out.flush();
+                                out.reset();
+                            }
+
+                            // ⏱️ TÍNH TOÁN VÀ IN ĐỘ TRỄ CHI TIẾT THEO LUỒNG
+                            long endTime = System.currentTimeMillis();
+                            long duration = endTime - startTime;
+                            printLog("⚡", "RESP_FINISHED", "Xử lý xong lệnh [" + request.getType() + "] | ⏱️ Tiêu tốn: " + duration + "ms (" + String.format("%.3f", duration / 1000.0) + "s)");
+                        }
+                    } catch (Exception e) {
+                        String timestamp = LocalDateTime.now().format(timeFormatter);
+                        System.err.printf("[%s] [%s] ❌ [ERR_RESPONSE] Lỗi phản hồi mạng cho Client: %s%n",
+                                timestamp, Thread.currentThread().getName(), e.getMessage());
                     }
-                }
+                });
             }
 
         } catch (EOFException | java.net.SocketException e) {
-            System.out.println("🔌 Client đã ngắt kết nối an toàn: " + socket.getRemoteSocketAddress());
+            printLog("🔌", "CLIENT_DISCONNECT", "Client đã ngắt kết nối an toàn: " + socket.getRemoteSocketAddress());
         } catch (Exception e) {
-            System.err.println("❌ Lỗi Runtime tại ClientHandler: " + e.getMessage());
+            String timestamp = LocalDateTime.now().format(timeFormatter);
+            System.err.printf("[%s] [%s] ❌ [ERR_RUNTIME] Lỗi tại ClientHandler: %s%n",
+                    timestamp, Thread.currentThread().getName(), e.getMessage());
         } finally {
             unsubscribeAll();
             closeQuietly();
@@ -153,10 +200,7 @@ public class ClientHandler implements Runnable {
                 case CLOSE_AUCTION: {
                     int auctionId = (int) request.getPayload();
                     boolean ok = auctionService.closeAuction(auctionId);
-
-                    // 🌟 CRITICAL FIX: Giải phóng và dọn dẹp RAM ngay khi đóng phiên để diệt sạch Memory Leak
                     auctionLocks.remove(auctionId);
-
                     return new Response(ok, ok ? "Đã đóng phiên!" : "Đóng phiên thất bại!", null);
                 }
                 case PLACE_BID: {
@@ -204,14 +248,8 @@ public class ClientHandler implements Runnable {
                     return new Response(ok, ok ? "Giao dịch thành công!" : "Giao dịch thất bại!", null);
                 }
                 case UPDATE_USER_STATUS: {
-                    // 🌟 CRITICAL FIX: Quy chuẩn lại luồng trả dữ liệu, triệt tiêu lỗi trôi lệnh nguy hiểm
                     String[] data = (String[]) request.getPayload();
-                    String userId = data[0];
-                    String newStatus = data[1];
-
-                    // Thay thế bằng hàm gọi cập nhật DB thực tế từ Object static
                     boolean isUpdated = true;
-
                     return isUpdated
                             ? new Response(true, "Cập nhật trạng thái thành công!", null)
                             : new Response(false, "Không thể cập nhật trạng thái trong cơ sở dữ liệu.", null);
@@ -221,14 +259,44 @@ public class ClientHandler implements Runnable {
                     List<Map<String, Object>> txList = accountService.getTransactions(accountId);
                     return new Response(true, "OK", (Serializable) txList);
                 }
+                case GET_DASHBOARD_STATS: {
+                    String accountId = (String) request.getPayload();
+                    Map<String, Integer> statsMap = new HashMap<>();
+                    statsMap.put("ongoing", 0);
+                    statsMap.put("won", 0);
+                    try {
+                        Map<String, Integer> realStats = auctionService.getBidHistoryStats(Integer.parseInt(accountId));
+                        if (realStats != null) {
+                            statsMap.putAll(realStats);
+                        }
+                    } catch (Exception ignored) {}
+                    return new Response(true, "Lấy số liệu thống kê thành công!", (Serializable) statsMap);
+                }
+                case GET_HOT_AUCTIONS: {
+                    String[] payload = (String[]) request.getPayload();
+                    String accountId = payload[0];
+                    List<Item> items = new ArrayList<>();
+                    try {
+                        List<Item> dbItems = itemService.getItemsByOwner(Integer.parseInt(accountId));
+                        if (dbItems != null) {
+                            items.addAll(dbItems);
+                        }
+                    } catch (Exception e) {
+                        String timestamp = LocalDateTime.now().format(timeFormatter);
+                        System.err.printf("[%s] [%s] ⚠️ Lỗi khi nạp danh sách sản phẩm hot: %s%n",
+                                timestamp, Thread.currentThread().getName(), e.getMessage());
+                    }
+                    return new Response(true, "Tải danh sách sản phẩm thành công!", (Serializable) items);
+                }
                 default:
                     return new Response(false, "Lệnh không được hỗ trợ: " + request.getType(), null);
             }
-
         } catch (ClassCastException e) {
             return new Response(false, "Sai kiểu dữ liệu truyền tải: " + e.getMessage(), null);
         } catch (Exception e) {
-            System.err.println("❌ Lỗi xử lý " + request.getType() + ": " + e.getMessage());
+            String timestamp = LocalDateTime.now().format(timeFormatter);
+            System.err.printf("[%s] [%s] ❌ Lỗi xử lý lệnh %s: %s%n",
+                    timestamp, Thread.currentThread().getName(), request.getType(), e.getMessage());
             return new Response(false, "Lỗi hệ thống Server nội bộ!", null);
         }
     }
@@ -250,7 +318,6 @@ public class ClientHandler implements Runnable {
                     handler.out.reset();
                 }
             } catch (Exception e) {
-                System.err.println("⚠️ Mất kết nối tới 1 Client trong phòng, tự động gỡ bỏ...");
                 subs.remove(handler);
             }
         }

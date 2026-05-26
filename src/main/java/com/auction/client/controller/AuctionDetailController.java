@@ -7,8 +7,10 @@ import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Observer;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
+
+// 🌟 ĐÃ THÊM ĐỦ IMPORT KHẮC PHỤC LỖI ĐỎ BIÊN DỊCH
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.application.Platform;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
@@ -24,7 +26,6 @@ import javafx.util.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-// 🌟 ĐÃ CẬP NHẬT: Triển khai Observer để nhận dữ liệu Real-time chuẩn từ Server
 public class AuctionDetailController implements Observer {
 
     @FXML public Label lblProductTitle, lblTimeRemaining, lblInfoName, lblInfoDescription,
@@ -44,10 +45,9 @@ public class AuctionDetailController implements Observer {
     private XYChart.Series<Number, Number> priceSeries;
     private int bidCount = 0;
 
-    // Cấu hình Auto-Bid chuẩn Enterprise
     private boolean isAutoBidEnabled = false;
     private double maxAutoBidAmount = 0.0;
-    private final double autoBidIncrement = 50000.0; // Bước nhảy cố định 50k
+    private final double autoBidIncrement = 50000.0;
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final AuctionDetailService detailService = new AuctionDetailService();
@@ -71,17 +71,12 @@ public class AuctionDetailController implements Observer {
         }
     }
 
-    /**
-     * 🌟 HÀM NHẬN TIN REAL-TIME DUY NHẤT: Bắt gói tin Server phát về cho phòng này
-     */
     @Override
     public void update(double newPrice, String username) {
         Platform.runLater(() -> {
-            // 1. Cập nhật UI hiển thị giá và người đặt cao nhất
             if (lblCurrentPrice != null) lblCurrentPrice.setText(String.format("%,.0f đ", newPrice));
             if (lblTopBidder != null) lblTopBidder.setText(username);
 
-            // 2. Thêm dòng lịch sử đấu giá
             if (vboxBidHistoryContainer != null) {
                 Label log = new Label(String.format("• [%s] Người dùng %s đặt mức giá %,.0f đ",
                         LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), username, newPrice));
@@ -89,11 +84,9 @@ public class AuctionDetailController implements Observer {
                 vboxBidHistoryContainer.getChildren().add(0, log);
             }
 
-            // 3. Cập nhật điểm dữ liệu mới lên LineChart
             bidCount++;
             priceSeries.getData().add(new XYChart.Data<>(bidCount, newPrice));
 
-            // 🌟 LOGIC AUTO-BID CHUẨN: Nếu người vừa đặt giá KHÔNG PHẢI LÀ MÌNH, kích hoạt trả giá tự động
             if (isAutoBidEnabled && CurrentAccount.getAccount() != null
                     && !username.equals(CurrentAccount.getAccount().getUsername())) {
                 triggerAutoBidSystem(newPrice);
@@ -186,7 +179,6 @@ public class AuctionDetailController implements Observer {
         this.currentAuction = auction;
         this.currentItem = null;
 
-        // Đăng ký phòng Real-time nội bộ nhận tin giống phòng AuctionController
         ClientSocket.getInstance().addAuctionObserver(auction.getId(), this);
 
         detailService.fetchItemByIdAsync(auction.getItemId(), finalItem -> {
@@ -249,13 +241,10 @@ public class AuctionDetailController implements Observer {
 
             int bidderId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-            // Gửi lệnh lên Server kiểm tra tài khoản
             detailService.sendBidRequestAsync(currentAuction.getId(), bidderId, bidAmount, response -> {
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
                         txtBidAmount.clear();
-                        // 🌟 TUYỆT ĐỐI KHÔNG tự gọi hàm vẽ UI ở đây nữa.
-                        // Cứ để yên cho Server phát gói tin Real-time về, hàm update() sẽ lo việc vẽ.
                     } else {
                         String errorMsg = response != null ? response.getMessage() : "Mạng không phản hồi.";
                         showAlert("Đặt giá thất bại", errorMsg);
@@ -290,7 +279,6 @@ public class AuctionDetailController implements Observer {
                     this.isAutoBidEnabled = true;
                     btnAutoBid.setText("Auto-Bid: BẬT");
 
-                    // Nếu mình đang không phải người dẫn đầu, tự động kích hoạt bid phát đầu tiên luôn
                     if (!CurrentAccount.getAccount().getUsername().equals(lblTopBidder.getText())) {
                         triggerAutoBidSystem(getCurrentPriceOnUI());
                     }
@@ -306,20 +294,15 @@ public class AuctionDetailController implements Observer {
         }
     }
 
-    /**
-     * 🚀 HỆ THỐNG AUTO-BID ĐỒNG BỘ: Đẩy lệnh thầu tự động chính thức lên Server đường truyền
-     */
     private void triggerAutoBidSystem(double currentOpponentBid) {
         double myNewPrice = currentOpponentBid + autoBidIncrement;
 
         if (myNewPrice <= maxAutoBidAmount) {
-            // Trì hoãn nhẹ 1.5 giây tạo cảm giác như một người dùng thật đang gõ phím đặt giá
             Timeline autoBidDelay = new Timeline(new KeyFrame(Duration.seconds(1.5), event -> {
                 if (currentAuction == null || CurrentAccount.getAccount() == null) return;
 
                 int bidderId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-                // Gửi lệnh thầu Auto chính thống lên Server để lưu vào Database toàn cục
                 detailService.sendBidRequestAsync(currentAuction.getId(), bidderId, myNewPrice, response -> {
                     if (response != null && !response.isSuccess()) {
                         System.err.println("❌ Auto-Bid bị Server từ chối: " + response.getMessage());
@@ -328,7 +311,6 @@ public class AuctionDetailController implements Observer {
             }));
             autoBidDelay.play();
         } else {
-            // Vượt quá ngân sách thiết lập -> Tự động tắt chế độ
             isAutoBidEnabled = false;
             if (btnAutoBid != null) {
                 btnAutoBid.setSelected(false);
@@ -359,8 +341,44 @@ public class AuctionDetailController implements Observer {
     private void handleBack() {
         if (countdownTimeline != null) countdownTimeline.stop();
         if (currentAuction != null) {
-            // Hủy lắng nghe phòng mạng khi rời trang tránh tràn RAM dữ liệu ma
             ClientSocket.getInstance().removeAuctionObserver(currentAuction.getId(), this);
         }
+
+        Platform.runLater(() -> {
+            try {
+                String homeFxmlPath = "/view/MainView.fxml";
+                java.net.URL fxmlLocation = getClass().getResource(homeFxmlPath);
+                if (fxmlLocation == null) {
+                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
+                    return;
+                }
+
+                FXMLLoader loader = new FXMLLoader(fxmlLocation);
+
+                // 🚀 ĐÃ SỬA: Chuyển kiểu dữ liệu từ Parent thành Node bao quát để khớp signature hàm setContent
+                Node homeView = loader.load();
+
+                if (MainLayoutController.getInstance() != null) {
+                    MainLayoutController.getInstance().setContent(homeView);
+                    System.out.println("🔄 [UI Switch] Đã nạp xong khung giao diện trang chủ.");
+
+                    Timeline lazyLoadTimeline = new Timeline(new KeyFrame(Duration.millis(100), event -> {
+                        if (MainController.getInstance() != null) {
+                            System.out.println("📡 [Async Load] Bắt đầu tải dữ liệu sản phẩm ngầm...");
+                            MainController.getInstance().refreshDashboard();
+                        }
+                    }));
+                    lazyLoadTimeline.setCycleCount(1);
+                    lazyLoadTimeline.play();
+
+                } else {
+                    System.err.println("⚠️ CẢNH BÁO: Không tìm thấy thực thể MainLayoutController toàn cục!");
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi nghiêm trọng khi quay lại trang chủ: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
 }
