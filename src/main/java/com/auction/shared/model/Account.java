@@ -1,9 +1,10 @@
 package com.auction.shared.model;
+import java.io.Serializable;
 
 /**
  * Lớp trừu tượng Account đại diện cho tài khoản người dùng trong hệ thống đấu giá.
  */
-public abstract class Account implements Entity {
+public abstract class Account implements Entity,Serializable {
     protected String id;
     protected String username;
     protected String password;

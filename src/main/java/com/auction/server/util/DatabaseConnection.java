@@ -12,8 +12,8 @@ public class DatabaseConnection {
         HikariConfig config = new HikariConfig();
         // Bắt buộc phải có các tham số tối ưu hóa mạng này ở đuôi URL
         config.setJdbcUrl("jdbc:mysql://bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com:3306/bvfa8t3qtuhyhyzm2cns?autoReconnect=true&tcpKeepAlive=true&useSSL=false&rewriteBatchedStatements=true");
-        config.setUsername("u7xxxxxxxxx"); // Điền user Clever Cloud của ông
-        config.setPassword("pxxxxxxxxx"); // Điền pass Clever Cloud của ông
+        config.setUsername("uvx5jzbzu6h6egtv"); // Điền user Clever Cloud của ông
+        config.setPassword("gxvNiCizwruEPSZnfwud"); // Điền pass Clever Cloud của ông
 
         // ⚡ BỘ THÔNG SỐ SIÊU TỐI ƯU CHO HIKARI:
         config.setMaximumPoolSize(10);        // Dự án BTL chỉ cần tối đa 10 kết nối dùng chung là đủ
