@@ -3,6 +3,7 @@ package com.auction.client.controller;
 import com.auction.client.service.CreateProductService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
+import javafx.application.Platform;
 import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -36,7 +37,6 @@ public class CreateProductController {
 
     private File productImgFile = null;
 
-    // Nạp tầng Service xử lý mạng bất đồng bộ
     private final CreateProductService productService = new CreateProductService();
 
     @FXML
@@ -80,11 +80,16 @@ public class CreateProductController {
 
     @FXML
     private void handleCreateAuction() {
+        // 1. Kiểm tra tài khoản đăng nhập trước tiên để tránh NullPointerException
+        if (CurrentAccount.getAccount() == null) {
+            showAlert(Alert.AlertType.ERROR, "Lỗi phân quyền", "Vui lòng đăng nhập để tạo phiên đấu giá!");
+            return;
+        }
+
         String name = productNameField.getText().trim();
         String description = descriptionArea.getText().trim();
         String priceText = startPriceField.getText().trim();
 
-        // 1. Kiểm tra tính hợp lệ của dữ liệu đầu vào
         if (name.isEmpty() || priceText.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ Tên sản phẩm và Giá khởi điểm!");
             return;
@@ -93,6 +98,10 @@ public class CreateProductController {
         double startPrice;
         try {
             startPrice = Double.parseDouble(priceText);
+            if (startPrice <= 0) {
+                showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Giá khởi điểm phải lớn hơn 0!");
+                return;
+            }
         } catch (NumberFormatException e) {
             showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Giá khởi điểm phải là một số hợp lệ!");
             return;
@@ -103,6 +112,11 @@ public class CreateProductController {
         LocalDateTime endTime = LocalDateTime.of(endDatePicker.getValue(),
                 LocalTime.of(Integer.parseInt(endHourCombo.getValue()), Integer.parseInt(endMinuteCombo.getValue())));
 
+        // 2. Chặn lỗi logic thời gian
+        if (startTime.isBefore(LocalDateTime.now())) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi thời gian", "Thời gian bắt đầu không thể nằm trong quá khứ!");
+            return;
+        }
         if (endTime.isBefore(startTime)) {
             showAlert(Alert.AlertType.WARNING, "Lỗi thời gian", "Thời gian kết thúc phải diễn ra sau thời gian bắt đầu!");
             return;
@@ -115,43 +129,45 @@ public class CreateProductController {
         String itemId = "ITEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        // 2. Ủy quyền tác vụ mạng chạy ngầm thông qua lớp Service trung gian
+        // 3. Gọi Service mạng bất đồng bộ
         productService.createAuctionPipelineAsync(itemId, name, description, startPrice, ownerId,
                 productImgFile, startTimeStr, endTimeStr, response -> {
 
-                    if (response != null && response.isSuccess()) {
-                        // 3. Khởi tạo đối tượng Model để đẩy trực tiếp lên màn hình thời gian thực Client
-                        Auction newAuction = new Auction();
-                        newAuction.setItemId(itemId);
-                        newAuction.setProductName(name);
-                        newAuction.setStartPrice(startPrice);
-                        newAuction.setCurrentPrice(startPrice);
-                        newAuction.setStartTime(startTime);
-                        newAuction.setEndTime(endTime);
-                        newAuction.setSellerId(ownerId);
-                        newAuction.setStatus(Auction.AuctionStatus.OPEN);
-                        newAuction.setAccount(CurrentAccount.getAccount());
+                    // 🌟 CRITICAL FIX: Đưa toàn bộ thao tác cập nhật UI về luồng chính
+                    Platform.runLater(() -> {
+                        if (response != null && response.isSuccess()) {
+                            Auction newAuction = new Auction();
+                            newAuction.setItemId(itemId);
+                            newAuction.setProductName(name);
+                            newAuction.setStartPrice(startPrice);
+                            newAuction.setCurrentPrice(startPrice);
+                            newAuction.setStartTime(startTime);
+                            newAuction.setEndTime(endTime);
+                            newAuction.setSellerId(ownerId);
+                            newAuction.setStatus(Auction.AuctionStatus.OPEN);
+                            newAuction.setAccount(CurrentAccount.getAccount());
 
-                        if (MainController.getInstance() != null) {
-                            MainController.getInstance().addAuctionToRealtimeUI(newAuction);
-                        }
-
-                        showAlert(Alert.AlertType.INFORMATION, "Thông báo", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
-                        handleCancel(); // Reset form sạch sẽ
-
-                        // Trì hoãn 300ms rồi chuyển luồng mượt mà sang màn hình chi tiết sản phẩm vừa tạo
-                        PauseTransition pause = new PauseTransition(Duration.millis(300));
-                        pause.setOnFinished(pEvent -> {
-                            if (MainLayoutController.getInstance() != null) {
-                                MainLayoutController.getInstance().openAuctionDetailWithObject(newAuction);
+                            if (MainController.getInstance() != null) {
+                                MainController.getInstance().addAuctionToRealtimeUI(newAuction);
                             }
-                        });
-                        pause.play();
 
-                    } else {
-                        String errorMsg = (response != null) ? response.getMessage() : "Mạng không phản hồi.";
-                        showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên: " + errorMsg);
-                    }
+                            showAlert(Alert.AlertType.INFORMATION, "Thành công", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
+                            handleCancel();
+
+                            // Hiệu ứng PauseTransition phải được khai báo trên luồng UI
+                            PauseTransition pause = new PauseTransition(Duration.millis(300));
+                            pause.setOnFinished(pEvent -> {
+                                if (MainLayoutController.getInstance() != null) {
+                                    MainLayoutController.getInstance().openAuctionDetailWithObject(newAuction);
+                                }
+                            });
+                            pause.play();
+
+                        } else {
+                            String errorMsg = (response != null) ? response.getMessage() : "Máy chủ không phản hồi.";
+                            showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên: " + errorMsg);
+                        }
+                    });
                 });
     }
 
@@ -171,11 +187,24 @@ public class CreateProductController {
         endMinuteCombo.setValue("00");
     }
 
+    /**
+     * 🌟 HÀM SHOW ALERT ĐA LUỒNG: Đảm bảo popup luôn hiện lên an toàn dù gọi từ đâu
+     */
     private void showAlert(Alert.AlertType type, String title, String content) {
-        Alert alert = new Alert(type);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(content);
-        alert.showAndWait();
+        if (Platform.isFxApplicationThread()) {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(content);
+            alert.showAndWait();
+        } else {
+            Platform.runLater(() -> {
+                Alert alert = new Alert(type);
+                alert.setTitle(title);
+                alert.setHeaderText(null);
+                alert.setContentText(content);
+                alert.showAndWait();
+            });
+        }
     }
 }

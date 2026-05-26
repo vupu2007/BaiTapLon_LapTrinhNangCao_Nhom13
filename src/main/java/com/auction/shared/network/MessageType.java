@@ -11,6 +11,7 @@ public enum MessageType {
     UPDATE_PROFILE,
     CHANGE_PASSWORD,
     GET_USER_BY_ID,
+    UPDATE_USER_STATUS,
 
     // ── Item (Product) ────────────────────────────────
     CREATE_ITEM,
@@ -45,4 +46,6 @@ public enum MessageType {
     // ── Wallet / Transaction ──────────────────────────
     WALLET_TRANSACTION,
     GET_TRANSACTIONS,
+    // 🌟 THÊM DÒNG NÀY VÀO ĐÂY: Dành riêng cho Server push Real-time
+    UPDATE_PRICE
 }

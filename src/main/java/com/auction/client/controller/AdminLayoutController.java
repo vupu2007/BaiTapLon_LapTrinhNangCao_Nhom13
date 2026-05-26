@@ -32,16 +32,29 @@ public class AdminLayoutController {
     }
 
     /**
-     * Nạp động các trang con giao diện vào vùng trung tâm bên phải
+     * 🌟 CẢI TIẾN: Hàm nạp động hỗ trợ cơ chế quét nhiều đường dẫn dự phòng liên tiếp.
+     * Tự động duyệt qua các đường dẫn truyền vào, nạp file đầu tiên tìm thấy.
      */
-    private FXMLLoader loadAdminPage(String fxmlPath) {
-        try {
-            URL fxmlLocation = getClass().getResource(fxmlPath);
-            if (fxmlLocation == null) {
-                System.err.println("❌ Không tìm thấy file tại đường dẫn: " + fxmlPath);
-                return null;
-            }
+    private FXMLLoader loadAdminPage(String... fxmlPaths) {
+        URL fxmlLocation = null;
+        String chosenPath = "";
 
+        // Thử quét tìm file tồn tại trong danh sách đường dẫn truyền vào
+        for (String path : fxmlPaths) {
+            fxmlLocation = getClass().getResource(path);
+            if (fxmlLocation != null) {
+                chosenPath = path;
+                break; // Tìm thấy file rồi thì dừng quét
+            }
+        }
+
+        // Nếu tất cả các đường dẫn đều không tồn tại file FXML
+        if (fxmlLocation == null) {
+            System.err.println("❌ Không tìm thấy file FXML ở bất kỳ đường dẫn nào được cung cấp!");
+            return null;
+        }
+
+        try {
             FXMLLoader loader = new FXMLLoader(fxmlLocation);
             Node page = loader.load();
             adminContentArea.getChildren().clear();
@@ -55,22 +68,20 @@ public class AdminLayoutController {
             adminContentArea.getChildren().add(page);
             return loader;
         } catch (IOException e) {
-            System.err.println("❌ Lỗi nạp cấu trúc FXML của trang con: " + fxmlPath);
+            System.err.println("❌ Lỗi cấu trúc / cú pháp FXML bên trong file: " + chosenPath);
             e.printStackTrace();
             return null;
         }
     }
 
     /**
-     * HOÁN ĐỔI CLASS CSS CHUẨN:
-     * Loại bỏ hoàn toàn inline-style bằng code Java, ép nút chạy chuẩn class css của trang chủ.
+     * HOÁN ĐỔI CLASS CSS CHUẨN
      */
     private void setButtonActive(Button activeButton) {
         Button[] buttons = {btnDashboard, btnUserMgmt};
 
         for (Button btn : buttons) {
             if (btn != null) {
-                // Xóa bỏ trạng thái active cũ, đưa nút về giao diện nền trong suốt chữ xám mặc định
                 btn.getStyleClass().remove("nav-button-active");
                 if (!btn.getStyleClass().contains("nav-button")) {
                     btn.getStyleClass().add("nav-button");
@@ -79,7 +90,6 @@ public class AdminLayoutController {
         }
 
         if (activeButton != null) {
-            // Đổi nút được bấm sang class active (Sáng xanh dương bo góc mượt mà)
             activeButton.getStyleClass().remove("nav-button");
             activeButton.getStyleClass().add("nav-button-active");
         }
@@ -88,24 +98,27 @@ public class AdminLayoutController {
     @FXML
     private void openDashboard() {
         setButtonActive(btnDashboard);
-        // Bổ sung nạp file FXML thống kê tổng quan tại đây nếu có trong tương lai
         System.out.println("-> Mở giao diện Thống kê Tổng quan");
+
+        // 🌟 ĐÃ SỬA: Nạp giao diện Dashboard lên màn hình (kèm đường dẫn dự phòng)
+        loadAdminPage("/view/admin/AdminDashboardView.fxml", "/view/AdminDashboardView.fxml");
     }
 
     @FXML
     private void openUserMgmt() {
         setButtonActive(btnUserMgmt);
+        System.out.println("-> Mở giao diện Quản lý thành viên");
 
-        // Quét tìm file trang quản lý user ở cả 2 đường dẫn dự phòng tránh lỗi biên dịch Maven
-        FXMLLoader res = loadAdminPage("/view/admin/AdminUserMgmtView.fxml");
-        if (res == null) {
-            loadAdminPage("/view/AdminUserMgmtView.fxml");
-        }
+        // 🌟 ĐÃ SỬA: Code siêu ngắn gọn nhờ tận dụng cơ chế quét đa đường dẫn mới
+        loadAdminPage("/view/admin/AdminUserMgmtView.fxml", "/view/AdminUserMgmtView.fxml");
     }
 
     @FXML
     private void handleLogout() {
         try {
+            // Hủy bỏ liên kết Singleton trước khi thoát để giải phóng RAM hoàn toàn
+            instance = null;
+
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
             Stage stage = (Stage) adminContentArea.getScene().getWindow();
             stage.getScene().setRoot(root);

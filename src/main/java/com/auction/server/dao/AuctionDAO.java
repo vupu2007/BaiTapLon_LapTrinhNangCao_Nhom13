@@ -11,10 +11,10 @@ import java.util.List;
 
 public class AuctionDAO {
 
-    // 1. Tạo phiên đấu giá mới
+    // 1. Tạo phiên đấu giá mới (🌟 ĐÃ SỬA: Lưu thêm original_end_time)
     public boolean insertAuction(Auction auction) {
-        String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, min_increment, start_time, end_time, status) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, min_increment, start_time, end_time, original_end_time, status) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
@@ -25,7 +25,8 @@ public class AuctionDAO {
             pstmt.setDouble(5, auction.getMinIncrement());
             pstmt.setObject(6, auction.getStartTime());
             pstmt.setObject(7, auction.getEndTime());
-            pstmt.setString(8, auction.getStatus().name());
+            pstmt.setObject(8, auction.getEndTime()); // Lưu gốc bằng đúng endTime lúc mới tạo
+            pstmt.setString(9, auction.getStatus().name());
 
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -107,7 +108,7 @@ public class AuctionDAO {
         return list;
     }
 
-    // THÊM: insertBid + updateCurrentPrice trong 1 transaction
+    // 6. THÊM: insertBid + updateCurrentPrice trong 1 transaction (Rất tốt, giữ nguyên)
     public boolean placeBidTransaction(BidTransaction bid, double newPrice, int bidderId) {
         String insertBidSql    = "INSERT INTO Bids (auction_id, bidder_id, bid_amount) VALUES (?, ?, ?)";
         String updatePriceSql  = "UPDATE Auctions SET current_price = ?, winner_id = ? " +
@@ -157,7 +158,7 @@ public class AuctionDAO {
         }
     }
 
-    // 6. Cập nhật trạng thái phiên đấu giá
+    // 7. Cập nhật trạng thái phiên đấu giá
     public boolean updateStatus(int auctionId, AuctionStatus newStatus) {
         String sql = "UPDATE Auctions SET status = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -173,7 +174,7 @@ public class AuctionDAO {
         }
     }
 
-    // 7. Cập nhật thời gian kết thúc (Anti-sniping)
+    // 8. Cập nhật thời gian kết thúc (Anti-sniping)
     public boolean updateEndTime(int auctionId, LocalDateTime newEndTime) {
         String sql = "UPDATE Auctions SET end_time = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -189,7 +190,25 @@ public class AuctionDAO {
         }
     }
 
-    // 🌟 8. THÊM MỚI FULL: Hàm lấy các phiên đang diễn ra mà người dùng ĐÃ ĐẶT GIÁ THÀNH CÔNG
+    // 🌟 9. Lấy thời gian kết thúc nguyên bản (Phục vụ AuctionService Anti-Sniping)
+    public LocalDateTime getOriginalEndTime(int auctionId) {
+        String sql = "SELECT original_end_time FROM Auctions WHERE auction_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, auctionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getObject("original_end_time", LocalDateTime.class);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi lấy original_end_time: " + e.getMessage());
+        }
+        return null;
+    }
+
+    // 10. Lấy các phiên đang diễn ra mà người dùng ĐÃ ĐẶT GIÁ THÀNH CÔNG
     public List<Auction> getAuctionsByBidder(int bidderId) {
         List<Auction> list = new ArrayList<>();
         String sql = "SELECT DISTINCT a.* FROM Auctions a " +
@@ -212,25 +231,6 @@ public class AuctionDAO {
         return list;
     }
 
-    // --- Helper: map ResultSet sang Auction object ---
-    private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
-        Auction auction = new Auction();
-        auction.setId(rs.getInt("auction_id"));
-        auction.setItemId(rs.getString("item_id"));
-        auction.setSellerId(rs.getInt("seller_id"));
-        auction.setStartPrice(rs.getDouble("start_price"));
-        auction.setCurrentPrice(rs.getDouble("current_price"));
-        auction.setMinIncrement(rs.getDouble("min_increment"));
-        auction.setStartTime(rs.getObject("start_time", LocalDateTime.class));
-        auction.setEndTime(rs.getObject("end_time", LocalDateTime.class));
-        auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
-
-        int winnerId = rs.getInt("winner_id");
-        if (!rs.wasNull()) auction.setWinnerId(winnerId);
-
-        return auction;
-    }
-
     public boolean updateCurrentPrice(int auctionId, double newPrice, int winnerId) {
         String sql = "UPDATE Auctions SET current_price = ?, winner_id = ? WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -245,7 +245,6 @@ public class AuctionDAO {
         }
     }
 
-    // countWonAuctions: dem so phien bidder thang (dung cho getBidHistoryStats)
     public int countWonAuctions(int bidderId) {
         String sql = "SELECT COUNT(*) FROM Auctions WHERE winner_id = ? AND status = 'FINISHED'";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -256,5 +255,27 @@ public class AuctionDAO {
             }
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
+    }
+
+    // --- Helper: map ResultSet sang Auction object ---
+    private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
+        Auction auction = new Auction();
+        auction.setId(rs.getInt("auction_id"));
+        auction.setItemId(rs.getString("item_id"));
+        auction.setSellerId(rs.getInt("seller_id"));
+        auction.setStartPrice(rs.getDouble("start_price"));
+        auction.setCurrentPrice(rs.getDouble("current_price"));
+        auction.setMinIncrement(rs.getDouble("min_increment"));
+        auction.setStartTime(rs.getObject("start_time", LocalDateTime.class));
+        auction.setEndTime(rs.getObject("end_time", LocalDateTime.class));
+        auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
+
+        // 🌟 ĐÃ SỬA: Parse sang String để đồng bộ với kiểu dữ liệu của lớp Model
+        int winnerId = rs.getInt("winner_id");
+        if (!rs.wasNull()) {
+            auction.setWinnerId(winnerId);
+        }
+
+        return auction;
     }
 }

@@ -7,7 +7,6 @@ import com.auction.shared.model.Seller;
 import com.auction.shared.model.Transaction;
 import com.auction.server.util.DatabaseConnection;
 import java.sql.*;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
@@ -204,7 +203,6 @@ public class AccountDAO {
             return false;
         }
     }
-
     /**
      * Lấy danh sách lịch sử giao dịch từ Database trả về đối tượng Model Transaction nguyên bản
      */
@@ -240,30 +238,30 @@ public class AccountDAO {
     }
 
     // =========================================================================
-    // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÃ CHUẨN HÓA ĐỊNH DẠNG CHUỖI CHO SOCKET CLIENT
+    // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÁP ỨNG MESSAGE_TYPE.GET_TRANSACTIONS CHO CLIENT
     // =========================================================================
+
+    /**
+     * Lấy lịch sử giao dịch và đóng gói thành dạng List<Map> đúng như Client mong đợi,
+     * tận dụng 100% hàm getTransactionHistory có sẵn của nhóm bạn.
+     */
     public List<Map<String, Object>> getTransactions(int accountId) {
         List<Map<String, Object>> resultList = new ArrayList<>();
-        List<Transaction> history = getTransactionHistory(accountId);
 
-        // Sử dụng Formatter để chuyển LocalDateTime sang String tránh lỗi truyền luồng Object mạng
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        // Gọi lại hàm lấy dữ liệu từ bảng Transactions có sẵn của bạn
+        List<Transaction> history = getTransactionHistory(accountId);
 
         if (history != null) {
             for (Transaction t : history) {
                 Map<String, Object> txMap = new HashMap<>();
-                txMap.put("type", t.getType());
+                txMap.put("type", t.getType()); // "DEPOSIT" hoặc "WITHDRAW"
 
+                // Map mô tả thân thiện sang cho Client đọc
                 String desc = "DEPOSIT".equalsIgnoreCase(t.getType()) ? "Chuyển khoản / Nạp tiền" : "Ví điện tử / Rút tiền";
                 txMap.put("description", desc);
-                txMap.put("amount", t.getAmount());
 
-                // Định dạng ngày tháng thành String cực kỳ an toàn cho Socket
-                if (t.getCreatedAt() != null) {
-                    txMap.put("time", t.getCreatedAt().format(formatter));
-                } else {
-                    txMap.put("time", "");
-                }
+                txMap.put("amount", t.getAmount());
+                txMap.put("created_at", t.getCreatedAt()); // LocalDateTime nguyên bản
 
                 resultList.add(txMap);
             }
@@ -274,22 +272,72 @@ public class AccountDAO {
     // =========================================================================
     // 🔀 CÁC HÀM OVERLOAD TƯƠNG THÍCH ĐỂ KHÔNG LÀM LỖI CODE CŨ CỦA DỰ ÁN
     // =========================================================================
+    // Thêm hàm này vào file AccountDAO.java để lấy Username nhanh từ ID
+    public boolean executeAtomicWalletUpdate(int accountId, double amount, String type) {
+        // (!!!) KIỂM TRA 3 ĐIỂM SAU TRONG DATABASE CỦA BẠN:
+        // 1. Tên bảng: 'Accounts' (hay là 'users', 'Account'?)
+        // 2. Tên cột số dư: 'balance' (hay là 'wallet', 'money'?)
+        // 3. Tên cột ID: 'account_id' (hay chỉ là 'id'?)
 
+        String sql = "UPDATE Accounts SET balance = balance " + ("DEPOSIT".equals(type) ? "+" : "-") + " ? WHERE account_id = ?";
+
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDouble(1, amount);
+            pstmt.setInt(2, accountId);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi cập nhật ví nguyên tử: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
     public boolean updateProfile(String userId, String newUsername, String newEmail) {
         return updateProfile(Integer.parseInt(userId), newUsername, newEmail);
     }
+    public String getUsernameById(String id) {
+        String sql = "SELECT username FROM Accounts WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+            pstmt.setInt(1, Integer.parseInt(id));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("username");
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "Bot_" + id; // Trả về tên dự phòng nếu lỗi DB hoặc không tìm thấy
+    }
     public boolean updatePassword(String userId, String newPassword) {
         return updatePassword(Integer.parseInt(userId), newPassword);
     }
 
+    // 2. Ghi nhận lịch sử giao dịch (Để hiển thị lên bảng "Lịch sử giao dịch" ở UI của bạn)
+    // Đã sửa lại tên cột: account_id, type, amount, created_at cho khớp 100% với DB của bạn
     public boolean insertTransaction(int accountId, double amount, String type) {
-        Account acc = getAccountById(accountId);
-        double currentBalance = (acc != null) ? acc.getBalance() : 0.0;
-        double balanceAfter = "DEPOSIT".equalsIgnoreCase(type) ? (currentBalance + amount) : (currentBalance - amount);
-        return insertTransaction(accountId, type, amount, balanceAfter);
+        String sql = "INSERT INTO Transactions (account_id, type, amount, created_at) VALUES (?, ?, ?, ?)";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, accountId);
+            pstmt.setString(2, type);                     // Cột 'type'
+            pstmt.setDouble(3, amount);                   // Cột 'amount'
+            pstmt.setObject(4, java.time.LocalDateTime.now()); // Cột 'created_at'
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi ghi log giao dịch: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
+    // Helper map dữ liệu sạch từ ResultSet MySQL lên Object Java
     private Account mapResultSetToAccount(ResultSet rs) throws SQLException {
         String id       = String.valueOf(rs.getInt("account_id"));
         String username = rs.getString("username");

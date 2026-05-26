@@ -1,16 +1,17 @@
 package com.auction.server.service;
 
+import com.auction.server.dao.AccountDAO;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.AutoBidDAO;
 import com.auction.server.dao.BidDAO;
 import com.auction.server.dao.ItemDAO;
+import com.auction.server.network.ClientHandler;
 import com.auction.shared.model.*;
 import com.auction.shared.network.Response;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.locks.ReentrantLock;
 
 public class AuctionService {
@@ -18,22 +19,21 @@ public class AuctionService {
     private final AuctionDAO auctionDAO = new AuctionDAO();
     private final BidDAO bidDAO = new BidDAO();
     private final ItemDAO itemDAO = new ItemDAO();
-    private final ReentrantLock lock = new ReentrantLock();
     private final AutoBidDAO autoBidDAO = new AutoBidDAO();
+    private final AccountDAO accountDAO = new AccountDAO();
+
+    // 🌟 TỐI ƯU 1: Hệ thống khóa phân mảnh theo từng ID phiên đấu giá
+    // Giúp phiên #1 và phiên #2 đấu giá song song 100% không làm nghẽn luồng của nhau
+    private final ConcurrentHashMap<Integer, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
     private static final int SNIPE_WINDOW_SECONDS     = 30;
     private static final int EXTEND_SECONDS           = 60;
-    private static final int MAX_TOTAL_EXTEND_SECONDS = 300;
+    private static final int MAX_TOTAL_EXTEND_SECONDS = 300; // Giới hạn tổng thời gian gia hạn tối đa 5 phút
 
-    // 1. Seller tạo phiên đấu giá mới
     public boolean createAuction(Auction auction) {
         Item item = itemDAO.getItemById(auction.getItemId());
-        if (item == null) {
-            System.err.println("Sản phẩm không tồn tại!");
-            return false;
-        }
-        if (!"AVAILABLE".equals(item.getStatus())) {
-            System.err.println("Sản phẩm không ở trạng thái AVAILABLE!");
+        if (item == null || !"AVAILABLE".equals(item.getStatus())) {
+            System.err.println("Sản phẩm không hợp lệ hoặc đang nằm trong phiên khác!");
             return false;
         }
         if (auction.getEndTime().isBefore(auction.getStartTime())) {
@@ -56,77 +56,51 @@ public class AuctionService {
             return false;
         }
         if (maxBid <= auction.getCurrentPrice()) {
-            System.err.println("maxBid phải lớn hơn giá hiện tại!");
+            System.err.println("Mức giá tự động tối đa phải lớn hơn giá hiện tại!");
             return false;
         }
         return autoBidDAO.registerAutoBid(auctionId, bidderId, maxBid);
     }
 
-    // Observer
-    private Map<Integer, List<Observer>> auctionObservers = new ConcurrentHashMap<>();
-
-    public void addObserver(int auctionId, Observer observer) {
-        auctionObservers.putIfAbsent(auctionId, new CopyOnWriteArrayList<>());
-        auctionObservers.get(auctionId).add(observer);
-    }
-
-    public void removeObserver(int auctionId, Observer observer) {
-        List<Observer> viewers = auctionObservers.get(auctionId);
-        if (viewers != null) {
-            viewers.remove(observer);
-            if (viewers.isEmpty()) {
-                auctionObservers.remove(auctionId);
-            }
-        }
-    }
-
-    public void notifyObservers(int auctionId, double newPrice, String username) {
-        List<Observer> viewers = auctionObservers.get(auctionId);
-        if (viewers != null) {
-            for (Observer o : viewers) {
-                o.update(newPrice, username);
-            }
-        }
-    }
-
-    // 2. Đặt giá
+    /**
+     * 🚀 ĐẶT GIÁ AN TOÀN ĐA LUỒNG: Sử dụng khóa cục bộ để tối ưu hiệu năng cao độ
+     */
     public boolean placeBid(int auctionId, double amount, Account account) {
-        lock.lock();
+        if (!(account instanceof User)) {
+            System.err.println("Tài khoản quản trị viên không được phép đấu giá!");
+            return false;
+        }
+
+        // Lấy hoặc tạo một ổ khóa riêng biệt duy nhất cho ID phiên này
+        ReentrantLock auctionLock = auctionLocks.computeIfAbsent(auctionId, k -> new ReentrantLock());
+
+        auctionLock.lock();
         try {
-            if (!(account instanceof User)) {
-                System.err.println("Admin không được phép đặt giá!");
-                return false;
-            }
-
             User user = (User) account;
-
             Auction auction = auctionDAO.getAuctionById(auctionId);
-            if (auction == null) {
-                System.err.println("Phiên đấu giá không tồn tại!");
-                return false;
-            }
 
-            if (!auction.isActive()) {
-                System.err.println("Phiên đấu giá đã kết thúc hoặc chưa bắt đầu!");
+            if (auction == null || !auction.isActive()) {
+                System.err.println("Phiên đấu giá không tồn tại hoặc chưa kích hoạt!");
                 return false;
             }
 
             if (auction.getSellerId() == Integer.parseInt(account.getId())) {
-                System.err.println("Không thể đấu giá sản phẩm của chính mình!");
+                System.err.println("Chủ sở hữu sản phẩm không được tự đấu giá!");
                 return false;
             }
 
             double minValidBid = auction.getCurrentPrice() + auction.getMinIncrement();
             if (amount < minValidBid) {
-                System.err.println("Giá đặt phải ít nhất là: " + minValidBid);
+                System.err.println("Giá đặt tối thiểu phải là: " + minValidBid);
                 return false;
             }
 
             if (user.getBalance() < amount) {
-                System.err.println("Số dư không đủ!");
+                System.err.println("Tài khoản không đủ số dư khả dụng!");
                 return false;
             }
 
+            // Ghi nhận giao dịch đặt giá vào DB
             BidTransaction bid = new BidTransaction();
             bid.setAuctionId(auctionId);
             bid.setBidderId(Integer.parseInt(account.getId()));
@@ -135,117 +109,131 @@ public class AuctionService {
             boolean transactionSuccess = auctionDAO.placeBidTransaction(bid, amount, Integer.parseInt(account.getId()));
             if (!transactionSuccess) return false;
 
-            System.out.println("Đặt giá thành công: " + amount);
+            System.out.println("🔥 Người dùng " + account.getUsername() + " đặt giá thành công: " + amount + " đ");
 
-            // Anti-sniping: bid trong 30 giây cuối → gia hạn thêm 60 giây
+            // Kiểm tra áp dụng luật bảo vệ chống Sniping phút chót
             applyAntiSniping(auction);
 
-            notifyObservers(auctionId, amount, account.getUsername());
+            // Bắn tín hiệu Real-time báo số tiền mới ngay lập tức cho toàn trạm mạng
+            ClientHandler.pushBidUpdate(auctionId, amount, account.getUsername());
 
-            processAutoBids(auctionId, Integer.parseInt(account.getId()));
+            // 🚀 BƯỚC NGOẶT: Kích hoạt chuỗi xử lý Auto-bid liên hoàn mà không bị ngắt quãng
+            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
 
             return true;
 
         } finally {
-            lock.unlock();
+            auctionLock.unlock();
         }
     }
 
+    /**
+     * 🌟 SỬA LỖI ANTI-SNIPING: Tính toán dựa trên độ lệch gốc ban đầu của phiên đấu giá
+     */
     private void applyAntiSniping(Auction auction) {
-        LocalDateTime now     = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
 
-        // Nếu endTime còn hơn 5 phút so với now → đã gia hạn đủ rồi
-        if (endTime.isAfter(now.plusSeconds(MAX_TOTAL_EXTEND_SECONDS))) {
-            System.out.println("Phiên " + auction.getId() + " đã đạt giới hạn gia hạn 5 phút!");
-            return;
-        }
+        // Kiểm tra xem thời gian hiện tại có đang nằm trong khung 30 giây cuối cùng hay không
+        if (now.isAfter(endTime.minusSeconds(SNIPE_WINDOW_SECONDS)) && now.isBefore(endTime)) {
 
-        // Bid trong 30 giây cuối → gia hạn thêm 60 giây
-        if (now.isAfter(endTime.minusSeconds(SNIPE_WINDOW_SECONDS))) {
-            LocalDateTime newEndTime = endTime.plusSeconds(EXTEND_SECONDS);
-            auctionDAO.updateEndTime(auction.getId(), newEndTime);
-            System.out.println("Anti-sniping: gia hạn phiên " + auction.getId()
-                    + " đến " + newEndTime);
+            // Lấy thông tin thời gian kết thúc gốc lúc tạo phiên từ DB để tính giới hạn kéo dài tối đa
+            LocalDateTime originalEndTime = auctionDAO.getOriginalEndTime(auction.getId());
+            if (originalEndTime == null) originalEndTime = endTime;
+
+            if (endTime.isBefore(originalEndTime.plusSeconds(MAX_TOTAL_EXTEND_SECONDS))) {
+                LocalDateTime newEndTime = endTime.plusSeconds(EXTEND_SECONDS);
+                auctionDAO.updateEndTime(auction.getId(), newEndTime);
+                System.out.println("🛡️ [Anti-Sniping] Gia hạn phiên #" + auction.getId() + " thêm 60s -> " + newEndTime);
+            } else {
+                System.out.println("⚠️ [Anti-Sniping] Đã chạm mốc gia hạn kịch trần 5 phút của phiên này.");
+            }
         }
     }
 
-    private void processAutoBids(int auctionId, int lastBidderId) {
+    /**
+     * 🌟 SỬA LỖI AUTO-BID LOOP: Kích hoạt chuỗi phản ứng liên hoàn (Chain Reaction)
+     * Cho phép các bot Auto-bid tự động nâng giá đấu đá nhau cho tới khi chạm đỉnh trần
+     */
+    private void processAutoBidsChain(int auctionId, int lastBidderId) {
+        // Đọc lại trạng thái phiên mới nhất sau mỗi lượt tăng giá
         Auction auction = auctionDAO.getAuctionById(auctionId);
         if (auction == null || !auction.isActive()) return;
 
         List<int[]> autoBids = autoBidDAO.getAutoBidsByAuction(auctionId);
+        int[] highestEligibleAutoBid = null;
+        double targetBidAmount = 0;
+
+        double nextRequiredBid = auction.getCurrentPrice() + auction.getMinIncrement();
+
+        // Tìm kiếm xem trong danh sách ai có cấu hình MaxBid hợp lệ và cao nhất lúc này
         for (int[] autoBid : autoBids) {
-            int bidderId  = autoBid[0];
-            double maxBid = autoBid[1] / 100.0;
+            int bidderId = autoBid[0];
+            double maxBid = autoBid[1] / 100.0; // Giả định DB của bạn lưu dạng cents/nhân 100
 
             if (bidderId == lastBidderId) continue;
 
-            double nextBid = auction.getCurrentPrice() + auction.getMinIncrement();
-            if (maxBid >= nextBid) {
-                BidTransaction bid = new BidTransaction();
-                bid.setAuctionId(auctionId);
-                bid.setBidderId(bidderId);
-                bid.setBidAmount(nextBid);
-
-                boolean success = auctionDAO.placeBidTransaction(bid, nextBid, bidderId);
-                if (success) {
-                    System.out.println("Auto-bid: bidder " + bidderId + " tự động đặt " + nextBid);
-                    notifyObservers(auctionId, nextBid, "Auto-bid");
+            if (maxBid >= nextRequiredBid) {
+                if (highestEligibleAutoBid == null || maxBid > (highestEligibleAutoBid[1] / 100.0)) {
+                    highestEligibleAutoBid = autoBid;
+                    targetBidAmount = nextRequiredBid;
                 }
-                break;
+            }
+        }
+
+        // Nếu tìm thấy Bot Auto-bid đủ điều kiện, tiến hành đặt giá tự động
+        if (highestEligibleAutoBid != null) {
+            int botBidderId = highestEligibleAutoBid[0];
+
+            BidTransaction bid = new BidTransaction();
+            bid.setAuctionId(auctionId);
+            bid.setBidderId(botBidderId);
+            bid.setBidAmount(targetBidAmount);
+
+            boolean success = auctionDAO.placeBidTransaction(bid, targetBidAmount, botBidderId);
+            if (success) {
+                String botUsername = accountDAO.getUsernameById(String.valueOf(botBidderId));
+                System.out.println("🤖 [Auto-Bid] Hệ thống tự đặt giá hộ User #" + botUsername + ": " + targetBidAmount + " đ");
+
+                ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
+
+                // 🔄 ĐỆ QUY ĐUỔI VÒNG: Gọi lại chính nó để các cấu hình Auto-bid khác có cơ hội phản đòn
+                processAutoBidsChain(auctionId, botBidderId);
             }
         }
     }
 
-    // 3. Đóng phiên
     public boolean closeAuction(int auctionId) {
         Auction auction = auctionDAO.getAuctionById(auctionId);
-        if (auction == null) {
-            System.err.println("Phiên đấu giá không tồn tại!");
-            return false;
-        }
+        if (auction == null) return false;
 
         boolean closed = auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
         if (closed) {
-            if (auction.getWinnerId() != null) {
-                itemDAO.updateStatus(auction.getItemId(), "SOLD");
-            } else {
-                itemDAO.updateStatus(auction.getItemId(), "AVAILABLE");
-            }
-            System.out.println("Phiên đấu giá đã kết thúc!");
+            itemDAO.updateStatus(auction.getItemId(), auction.getWinnerId() != null ? "SOLD" : "AVAILABLE");
+            // Giải phóng bộ nhớ map khóa khi phiên đóng
+            auctionLocks.remove(auctionId);
         }
         return closed;
     }
 
-    // 4. Lấy danh sách phiên đang chạy
     public List<Auction> getActiveAuctions() {
         return auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
     }
 
-    // 5. Lấy danh sách phiên của một Seller
     public List<Auction> getAuctionsBySeller(int sellerId) {
         return auctionDAO.getAuctionsBySeller(sellerId);
     }
 
-    // 6. Lấy chi tiết một phiên
     public Auction getAuctionById(int auctionId) {
         return auctionDAO.getAuctionById(auctionId);
     }
 
-    // 7. Lấy lịch sử bid của một phiên
     public List<BidTransaction> getBidHistory(int auctionId) {
         return bidDAO.getBidsByAuction(auctionId);
     }
 
-    // ── Alias/wrapper methods cho ClientHandler ───────────────────────────────
-
-    // createAuction(String itemId, int sellerId, double startPrice, String startTimeStr, String endTimeStr)
-    // ClientHandler truyen tham so roi, khong truyen Auction object
-    public boolean createAuction(String itemId, int sellerId, double startPrice,
-                                 String startTimeStr, String endTimeStr) {
-        java.time.format.DateTimeFormatter fmt =
-                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    public boolean createAuction(String itemId, int sellerId, double startPrice, String startTimeStr, String endTimeStr) {
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         Auction auction = new Auction();
         auction.setItemId(itemId);
         auction.setSellerId(sellerId);
@@ -257,37 +245,31 @@ public class AuctionService {
         return createAuction(auction);
     }
 
-    // getAllAuctions: lay tat ca phien (OPEN + RUNNING + FINISHED)
     public List<Auction> getAllAuctions() {
         return auctionDAO.getAllAuctions();
     }
 
-    // getAuctionsByBidder: lay danh sach phien bidder da tham gia
     public List<Auction> getAuctionsByBidder(int bidderId) {
         return auctionDAO.getAuctionsByBidder(bidderId);
     }
 
-    // placeBid(int, double, String userId) — ClientHandler truyen userId la String
-    // Wrapper lay Account tu DB roi goi placeBid goc
     public Response placeBid(int auctionId, double amount, String userId) {
         try {
-            com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
             Account account = accountDAO.getAccountById(Integer.parseInt(userId));
-            if (account == null)
-                return new com.auction.shared.network.Response(false, "Tai khoan khong ton tai!", null);
-
+            if (account == null) {
+                return new Response(false, "Tài khoản không tồn tại trên hệ thống!", null);
+            }
             boolean ok = placeBid(auctionId, amount, account);
             return ok
-                    ? new com.auction.shared.network.Response(true,  "Dat gia thanh cong!", null)
-                    : new com.auction.shared.network.Response(false, "Dat gia that bai!", null);
+                    ? new Response(true, "Đặt giá thành công!", null)
+                    : new Response(false, "Đặt giá thất bại! Kiểm tra lại điều kiện đặt hoặc số dư.", null);
         } catch (Exception e) {
-            return new com.auction.shared.network.Response(false, "Loi server: " + e.getMessage(), null);
+            return new Response(false, "Lỗi xử lý hệ thống: " + e.getMessage(), null);
         }
     }
 
-    // getBidHistoryStats: tra ve Map {total, won, lost} cho HistoryController
-    public java.util.Map<String, Integer> getBidHistoryStats(int userId) {
-        java.util.Map<String, Integer> stats = new java.util.HashMap<>();
+    public Map<String, Integer> getBidHistoryStats(int userId) {
+        Map<String, Integer> stats = new java.util.HashMap<>();
         try {
             int total = bidDAO.countBidsByUser(userId);
             int won   = auctionDAO.countWonAuctions(userId);
@@ -295,14 +277,11 @@ public class AuctionService {
             stats.put("won",   won);
             stats.put("lost",  Math.max(0, total - won));
         } catch (Exception e) {
-            stats.put("total", 0);
-            stats.put("won",   0);
-            stats.put("lost",  0);
+            stats.put("total", 0); stats.put("won", 0); stats.put("lost", 0);
         }
         return stats;
     }
 
-    // setAutoBid: wrapper cho registerAutoBid, ClientHandler truyen String userId
     public boolean setAutoBid(int auctionId, String userId, double maxBid, double increment) {
         try {
             return registerAutoBid(auctionId, Integer.parseInt(userId), maxBid);
@@ -311,43 +290,20 @@ public class AuctionService {
         }
     }
 
-    // getDashboardStats: khong can userId, tra tong quan he thong
-    public java.util.Map<String, Object> getDashboardStats() {
-        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+    public Map<String, Integer> getDashboardStats(int userId) {
+        Map<String, Integer> stats = new java.util.HashMap<>();
         try {
-            List<Auction> all = auctionDAO.getAllAuctions();
-            long running = all.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.RUNNING).count();
-            long open    = all.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.OPEN).count();
-            stats.put("totalAuctions", all.size());
-            stats.put("ongoing", (int) running); // thêm dòng này
-            stats.put("running", (int) running);
-            stats.put("open",    (int) open);
-            stats.put("won",     0); // thêm dòng này
+            int ongoing = getAuctionsByBidder(userId).size();
+            int won     = auctionDAO.countWonAuctions(userId);
+            stats.put("ongoing", ongoing);
+            stats.put("won",     won);
         } catch (Exception e) {
-            System.err.println("getDashboardStats loi: " + e.getMessage());
-            stats.put("totalAuctions", 0);
-            stats.put("running", 0);
-            stats.put("open",    0);
+            stats.put("ongoing", 0); stats.put("won", 0);
         }
         return stats;
     }
 
-    // getAuctionsByStatus_wrapper: expose getAuctionsByStatus cho ClientHandler
     public List<Auction> getAuctionsByStatus_wrapper(Auction.AuctionStatus status) {
         return auctionDAO.getAuctionsByStatus(status);
-    }
-    // getHotAuctions: lay cac phien OPEN + RUNNING
-    public List<Auction> getHotAuctions() {
-        try {
-            List<Auction> open    = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.OPEN);
-            List<Auction> running = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
-            List<Auction> all = new java.util.ArrayList<>();
-            all.addAll(running); // running len truoc
-            all.addAll(open);
-            return all;
-        } catch (Exception e) {
-            System.err.println("getHotAuctions loi: " + e.getMessage());
-            return new java.util.ArrayList<>();
-        }
     }
 }

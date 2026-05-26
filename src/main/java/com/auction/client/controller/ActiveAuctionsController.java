@@ -1,23 +1,25 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
 import com.auction.client.util.CurrentAccount;
+import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
+import javafx.application.Platform;
+import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
-import javafx.scene.Node;
-import javafx.application.Platform;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 public class ActiveAuctionsController {
@@ -25,8 +27,19 @@ public class ActiveAuctionsController {
     @FXML private VBox emptyStateBox;
     @FXML private FlowPane cardsContainer;
 
-    // Bộ định dạng ngày giờ của bạn - Giữ nguyên
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+    // 🌟 LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
+    private static class AuctionCardDto {
+        String name;
+        String price;
+        String time;
+        String image;
+        String description;
+        String sellerName;
+        String startTimeStr;
+        String endTimeStr;
+    }
 
     @FXML
     public void initialize() {
@@ -44,82 +57,93 @@ public class ActiveAuctionsController {
             return;
         }
 
-        // 🚀 Tách một Thread chạy ngầm để kéo dữ liệu mạng, không làm đơ giao diện UI
-        Thread networkWorker = new Thread(() -> {
-            try {
+        // 🌟 KHỞI TẠO TASK: Luồng này chỉ lấy dữ liệu mạng thuần túy, tuyệt đối không tạo Node UI ở đây
+        Task<List<AuctionCardDto>> loadTask = new Task<>() {
+            @Override
+            protected List<AuctionCardDto> call() throws Exception {
+                List<AuctionCardDto> dataList = new ArrayList<>();
                 int bidderIdInt = Integer.parseInt(currentAcc.getId());
 
-                // Gửi request lấy danh sách phiên đấu giá
+                // 1. Lấy danh sách các phiên đấu giá từ Server
                 Request request = new Request(MessageType.GET_AUCTIONS_BY_BIDDER, bidderIdInt);
                 Response response = ClientSocket.getInstance().sendRequest(request);
 
-                if (response == null || !response.isSuccess()) {
-                    Platform.runLater(() -> showEmptyState(true));
-                    return;
-                }
+                if (response == null || !response.isSuccess()) return dataList;
 
                 List<Auction> auctions = (List<Auction>) response.getData();
+                if (auctions == null || auctions.isEmpty()) return dataList;
 
-                if (auctions == null || auctions.isEmpty()) {
-                    Platform.runLater(() -> showEmptyState(true));
-                    return;
-                }
-
-                // Cập nhật trạng thái ẩn trạng thái trống trên luồng UI
-                Platform.runLater(() -> showEmptyState(false));
-
-                // Duyệt danh sách phiên đấu giá ngầm dưới RAM
+                // 2. Vòng lặp lấy thông tin Item tương ứng (Chạy ngầm tuần tự)
                 for (Auction auction : auctions) {
                     try {
-                        // Lấy thông tin Item qua Socket ngầm
                         Request itemRequest = new Request(MessageType.GET_ITEM_BY_ID, auction.getItemId());
                         Response itemResponse = ClientSocket.getInstance().sendRequest(itemRequest);
                         Item item = (itemResponse != null && itemResponse.isSuccess())
                                 ? (Item) itemResponse.getData() : null;
 
-                        // Xử lý chuỗi và tính toán thời gian của bạn - Giữ nguyên logic gốc
-                        String name        = (item != null) ? item.getName()        : "Sản phẩm #" + auction.getItemId();
-                        String image       = (item != null) ? item.getImagePath()   : null;
-                        String description = (item != null) ? item.getDescription() : "Không có mô tả.";
-                        String sellerName  = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
+                        // Gom tất cả thông tin dạng String/Dữ liệu thô vào đối tượng DTO
+                        AuctionCardDto dto = new AuctionCardDto();
+                        dto.name = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
+                        dto.image = (item != null) ? item.getImagePath() : null;
+                        dto.description = (item != null) ? item.getDescription() : "Không có mô tả.";
+                        dto.sellerName = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
 
-                        String startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                        String endTimeStr   = (auction.getEndTime()   != null) ? auction.getEndTime().format(dateTimeFormatter)   : "--/--/---- --:--";
+                        dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                        dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
 
                         long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
-                        String time  = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
-                        String price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
+                        dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
+                        dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
 
-                        // 🚀 Đẩy việc nạp giao diện và hiển thị Card quay lại luồng JavaFX an toàn
-                        Platform.runLater(() -> {
-                            try {
-                                FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
-                                Node card = loader.load();
-                                ProductCardController controller = loader.getController();
-
-                                // Nạp đủ 8 tham số chuẩn của bạn
-                                controller.setData(name, price, time, image, description, sellerName, startTimeStr, endTimeStr);
-                                cardsContainer.getChildren().add(card);
-                            } catch (Exception e) {
-                                System.err.println("❌ Lỗi dựng UI hiển thị Card: " + e.getMessage());
-                            }
-                        });
-
+                        dataList.add(dto);
                     } catch (Exception e) {
-                        System.err.println("❌ Lỗi load dữ liệu mạng auction_id=" + auction.getId() + ": " + e.getMessage());
+                        System.err.println("❌ Lỗi lấy dữ liệu mạng của auction_id=" + auction.getId() + ": " + e.getMessage());
                     }
                 }
-            } catch (NumberFormatException e) {
-                System.err.println("❌ ID Tài khoản không hợp lệ: " + currentAcc.getId());
-                Platform.runLater(() -> showEmptyState(true));
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi kết nối mạng: " + e.getMessage());
-                Platform.runLater(() -> showEmptyState(true));
+                return dataList;
             }
-        }, "ActiveAuctionsLoaderThread");
+        };
 
-        networkWorker.setDaemon(true);
-        networkWorker.start();
+        // 🌟 XỬ LÝ KHI LUỒNG NGẦM CHẠY XONG THÀNH CÔNG (Đã về luồng chính JavaFX Application Thread)
+        loadTask.setOnSucceeded(event -> {
+            List<AuctionCardDto> results = loadTask.getValue();
+            if (results == null || results.isEmpty()) {
+                showEmptyState(true);
+                return;
+            }
+
+            showEmptyState(false);
+
+            // Duyệt danh sách data sạch, nạp file FXML dựng giao diện cực kỳ an toàn
+            for (AuctionCardDto dto : results) {
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
+                    Node card = loader.load();
+                    ProductCardController controller = loader.getController();
+
+                    // Đổ dữ liệu thô lên Controller của Card
+                    controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
+                            dto.sellerName, dto.startTimeStr, dto.endTimeStr);
+
+                    // Thêm card thẳng vào container hiển thị
+                    cardsContainer.getChildren().add(card);
+                } catch (Exception e) {
+                    System.err.println("❌ Lỗi dựng giao diện Card từ FXML: " + e.getMessage());
+                }
+            }
+        });
+
+        // Xử lý khi luồng ngầm bị lỗi (Mất mạng, nghẽn đường truyền...)
+        loadTask.setOnFailed(event -> {
+            Throwable e = loadTask.getException();
+            System.err.println("❌ Lỗi luồng ngầm ActiveAuctions: " + e.getMessage());
+            showEmptyState(true);
+        });
+
+        // Kích hoạt chạy luồng ngầm độc lập
+        Thread thread = new Thread(loadTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 
     private void showEmptyState(boolean isEmpty) {
@@ -136,7 +160,7 @@ public class ActiveAuctionsController {
     @FXML
     private void openHome() {
         if (MainLayoutController.getInstance() != null) {
-            javafx.application.Platform.runLater(() -> {
+            Platform.runLater(() -> {
                 MainLayoutController.getInstance().openHome();
             });
         }
