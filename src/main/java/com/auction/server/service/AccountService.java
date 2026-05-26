@@ -164,25 +164,29 @@ public class AccountService {
             currentBalance = ((com.auction.shared.model.Seller) acc).getBalance();
 
         double newBalance;
-        double totalDeposit = 0.0, totalWithdraw = 0.0;
+        // 🚀 ĐÃ FIX: Biến này bây giờ chỉ mang ý nghĩa là "Số tiền cần cộng thêm", không phải là Tổng
+        double amountToDeposit = 0.0, amountToWithdraw = 0.0;
 
         if ("DEPOSIT".equals(type)) {
             newBalance = currentBalance + amount;
-            totalDeposit = amount;
+            amountToDeposit = amount;
         } else if ("WITHDRAW".equals(type)) {
             if (currentBalance < amount) return false;
             newBalance = currentBalance - amount;
-            totalWithdraw = amount;
+            amountToWithdraw = amount;
         } else {
             return false;
         }
 
-        // 🌟 FIX LỖI: Gọi hàm với đầy đủ 4 tham số như AccountDAO yêu cầu
-        boolean ok = accountDAO.updateBalance(accountId, newBalance, totalDeposit, totalWithdraw);
+        // Gửi xuống DAO để DAO tự động lấy số cũ cộng với số mới này
+        boolean ok = accountDAO.updateBalance(accountId, newBalance, amountToDeposit, amountToWithdraw);
 
-        // 🌟 FIX LỖI: Thêm các tham số log cho hàm insertTransaction chạy chuẩn
+        // 🚀 ĐÃ FIX: Không được làm ngơ lỗi của hàm insertTransaction nữa!
         if (ok) {
-            accountDAO.insertTransaction(accountId, type, amount, newBalance);
+            boolean insertOk = accountDAO.insertTransaction(accountId, type, amount, newBalance);
+            if (!insertOk) {
+                System.err.println("CẢNH BÁO MỨC ĐỘ CAO: Đã cập nhật tiền nhưng không thể ghi vào bảng transactions!");
+            }
         }
         return ok;
     }

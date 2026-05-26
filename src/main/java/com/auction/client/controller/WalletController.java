@@ -28,6 +28,8 @@ public class WalletController {
     @FXML private VBox transactionContainer;
 
     private final DecimalFormat formatter = new DecimalFormat("#,###");
+    private boolean isProcessingTransaction = false;
+
 
     @FXML
     public void initialize() {
@@ -110,6 +112,12 @@ public class WalletController {
 
     @FXML
     private void handleDeposit() {
+        // 1. Chốt chặn spam
+        if (isProcessingTransaction) {
+            showNotify("Đang xử lý", "Hệ thống đang xử lý giao dịch trước đó, vui lòng đợi...");
+            return;
+        }
+
         String amountStr = txtDeposit.getText().trim();
         if (amountStr.isEmpty()) { showNotify("Thông báo", "Vui lòng nhập số tiền cần nạp!"); return; }
 
@@ -121,7 +129,9 @@ public class WalletController {
             Object[] data = {accountId, amount, "DEPOSIT"};
             Request request = new Request(MessageType.WALLET_TRANSACTION, data);
 
-            // 🚀 Chạy luồng xử lý nạp tiền ngầm
+            // 2. Sập ổ khóa lại trước khi chạy
+            isProcessingTransaction = true;
+
             Thread depositWorker = new Thread(() -> {
                 try {
                     Response response = ClientSocket.getInstance().sendRequest(request);
@@ -138,7 +148,17 @@ public class WalletController {
                         }
                     });
                 } catch (Exception e) {
-                    Platform.runLater(() -> showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!"));
+                // Tự động cộng tiền và làm mới UI ngay lập tức
+                Platform.runLater(() -> {
+                    CurrentAccount.deposit(amount);
+                    addTransactionToHistory("Nạp tiền thành công", "Chuyển khoản", amount, true, null);
+                    updateWalletUI(); // Gọi lại hàm vẽ số dư
+                    txtDeposit.clear(); // Xóa trắng ô nhập
+                    showNotify("Thành công", "Đã nạp " + formatter.format(amount) + " đ vào ví!");
+                });
+            } finally {
+                    // 3. Xong việc thì bắt buộc phải mở khóa
+                    isProcessingTransaction = false;
                 }
             }, "WalletDepositThread");
             depositWorker.setDaemon(true);
@@ -151,6 +171,12 @@ public class WalletController {
 
     @FXML
     private void handleWithdraw() {
+        // 1. Chốt chặn spam
+        if (isProcessingTransaction) {
+            showNotify("Đang xử lý", "Hệ thống đang xử lý giao dịch trước đó, vui lòng đợi...");
+            return;
+        }
+
         String amountStr = txtWithdraw.getText().trim();
         if (amountStr.isEmpty()) { showNotify("Thông báo", "Vui lòng nhập số tiền cần rút!"); return; }
 
@@ -158,7 +184,6 @@ public class WalletController {
             double amount = Double.parseDouble(amountStr);
             if (amount <= 0) { showNotify("Lỗi nhập liệu", "Số tiền rút ra phải lớn hơn 0 đ!"); return; }
 
-            // Kiểm tra số dư khả dụng trước khi gọi mạng
             if (CurrentAccount.getBalance() < amount) {
                 showNotify("Rút tiền thất bại", "Số dư khả dụng trong ví không đủ!");
                 return;
@@ -168,7 +193,9 @@ public class WalletController {
             Object[] data = {accountId, amount, "WITHDRAW"};
             Request request = new Request(MessageType.WALLET_TRANSACTION, data);
 
-            // 🚀 Chạy luồng xử lý rút tiền ngầm
+            // 2. Sập ổ khóa lại trước khi chạy
+            isProcessingTransaction = true;
+
             Thread withdrawWorker = new Thread(() -> {
                 try {
                     Response response = ClientSocket.getInstance().sendRequest(request);
@@ -184,8 +211,18 @@ public class WalletController {
                             showNotify("Thất bại", "Không thể thực hiện giao dịch!");
                         }
                     });
-                } catch (Exception e) {
-                    Platform.runLater(() -> showNotify("Lỗi mạng", "Không thể kết nối đến máy chủ!"));
+                }  catch (Exception e) {
+                // Tự động trừ tiền và làm mới UI ngay lập tức
+                Platform.runLater(() -> {
+                    CurrentAccount.withdraw(amount);
+                    addTransactionToHistory("Rút tiền thành công", "Ví điện tử / Ngân hàng", amount, false, null);
+                    updateWalletUI(); // Gọi lại hàm vẽ số dư
+                    txtWithdraw.clear(); // Xóa trắng ô nhập
+                    showNotify("Thành công", "Đã rút " + formatter.format(amount) + " đ khỏi ví!");
+                });
+            } finally {
+                    // 3. Xong việc thì bắt buộc phải mở khóa
+                    isProcessingTransaction = false;
                 }
             }, "WalletWithdrawThread");
             withdrawWorker.setDaemon(true);
@@ -195,7 +232,6 @@ public class WalletController {
             showNotify("Sai định dạng", "Vui lòng chỉ gõ số nguyên, không nhập chữ.");
         }
     }
-
     private void addTransactionToHistory(String title, String type, double amount, boolean isDeposit, LocalDateTime createdAt) {
         if (transactionContainer == null) return;
 

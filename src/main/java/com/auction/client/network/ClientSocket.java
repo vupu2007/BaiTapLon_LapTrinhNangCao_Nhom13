@@ -78,7 +78,7 @@ public class ClientSocket {
         sendInternal(request);
 
         // Thằng nào gửi thì tự vào hàng đợi của mình mà móng tin, tối đa 4 giây không có thì bỏ qua
-        Response res = queue.poll(4, TimeUnit.SECONDS);
+        Response res = queue.poll(15, TimeUnit.SECONDS);
         if (res == null) {
             throw new IOException("Server phản hồi quá lâu (Timeout 4s) hoặc mất kết nối tại luồng: " + routeKey);
         }
