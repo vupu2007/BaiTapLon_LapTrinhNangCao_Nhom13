@@ -26,6 +26,7 @@ public class Auction implements Serializable {
     private Integer winnerId;           // ID người thắng cuộc
     private LocalDateTime startTime;    // Thời gian bắt đầu
     private LocalDateTime endTime;      // Thời gian kết thúc
+    private LocalDateTime originalEndTime; // 🌟 THÊM: Lưu thời gian kết thúc gốc phục vụ Anti-sniping
     private AuctionStatus status;       // Trạng thái phiên đấu giá
 
     // Thông tin bổ trợ phục vụ hiển thị trực tiếp trên giao diện Client Card
@@ -44,9 +45,10 @@ public class Auction implements Serializable {
 
     public Auction() {}
 
+    // Constructor đầy đủ tham số (Đã cập nhật originalEndTime)
     public Auction(int id, String itemId, int sellerId, double startPrice, double currentPrice,
-                   double minIncrement, Integer winnerId,
-                   LocalDateTime startTime, LocalDateTime endTime, AuctionStatus status, Account account) {
+                   double minIncrement, Integer winnerId, LocalDateTime startTime, LocalDateTime endTime,
+                   LocalDateTime originalEndTime, AuctionStatus status, Account account) {
         this.id = id;
         this.itemId = itemId;
         this.sellerId = sellerId;
@@ -56,6 +58,7 @@ public class Auction implements Serializable {
         this.winnerId = winnerId;
         this.startTime = startTime;
         this.endTime = endTime;
+        this.originalEndTime = originalEndTime;
         this.status = status;
         this.account = account;
     }
@@ -88,6 +91,12 @@ public class Auction implements Serializable {
 
     public LocalDateTime getEndTime() { return endTime; }
     public void setEndTime(LocalDateTime endTime) { this.endTime = endTime; }
+
+    // 🌟 THÊM: Getter cho originalEndTime
+    public LocalDateTime getOriginalEndTime() { return originalEndTime; }
+
+    // 🌟 THÊM: Setter cho originalEndTime
+    public void setOriginalEndTime(LocalDateTime originalEndTime) { this.originalEndTime = originalEndTime; }
 
     public AuctionStatus getStatus() { return status; }
     public void setStatus(AuctionStatus status) { this.status = status; }

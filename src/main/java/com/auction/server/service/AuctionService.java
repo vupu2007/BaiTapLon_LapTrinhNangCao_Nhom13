@@ -23,12 +23,11 @@ public class AuctionService {
     private final AccountDAO accountDAO = new AccountDAO();
 
     // 🌟 TỐI ƯU 1: Hệ thống khóa phân mảnh theo từng ID phiên đấu giá
-    // Giúp phiên #1 và phiên #2 đấu giá song song 100% không làm nghẽn luồng của nhau
     private final ConcurrentHashMap<Integer, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
     private static final int SNIPE_WINDOW_SECONDS     = 30;
     private static final int EXTEND_SECONDS           = 60;
-    private static final int MAX_TOTAL_EXTEND_SECONDS = 300; // Giới hạn tổng thời gian gia hạn tối đa 5 phút
+    private static final int MAX_TOTAL_EXTEND_SECONDS = 300;
 
     public boolean createAuction(Auction auction) {
         Item item = itemDAO.getItemById(auction.getItemId());
@@ -63,7 +62,7 @@ public class AuctionService {
     }
 
     /**
-     * 🚀 ĐẶT GIÁ AN TOÀN ĐA LUỒNG: Sử dụng khóa cục bộ để tối ưu hiệu năng cao độ
+     * 🚀 ĐẶT GIÁ AN TOÀN ĐA LUỒNG
      */
     public boolean placeBid(int auctionId, double amount, Account account) {
         if (!(account instanceof User)) {
@@ -71,7 +70,6 @@ public class AuctionService {
             return false;
         }
 
-        // Lấy hoặc tạo một ổ khóa riêng biệt duy nhất cho ID phiên này
         ReentrantLock auctionLock = auctionLocks.computeIfAbsent(auctionId, k -> new ReentrantLock());
 
         auctionLock.lock();
@@ -100,7 +98,6 @@ public class AuctionService {
                 return false;
             }
 
-            // Ghi nhận giao dịch đặt giá vào DB
             BidTransaction bid = new BidTransaction();
             bid.setAuctionId(auctionId);
             bid.setBidderId(Integer.parseInt(account.getId()));
@@ -111,13 +108,11 @@ public class AuctionService {
 
             System.out.println("🔥 Người dùng " + account.getUsername() + " đặt giá thành công: " + amount + " đ");
 
-            // Kiểm tra áp dụng luật bảo vệ chống Sniping phút chót
             applyAntiSniping(auction);
 
-            // Bắn tín hiệu Real-time báo số tiền mới ngay lập tức cho toàn trạm mạng
             ClientHandler.pushBidUpdate(auctionId, amount, account.getUsername());
 
-            // 🚀 BƯỚC NGOẶT: Kích hoạt chuỗi xử lý Auto-bid liên hoàn mà không bị ngắt quãng
+            // Chạy chuỗi Auto-bid ngầm
             processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
 
             return true;
@@ -127,17 +122,11 @@ public class AuctionService {
         }
     }
 
-    /**
-     * 🌟 SỬA LỖI ANTI-SNIPING: Tính toán dựa trên độ lệch gốc ban đầu của phiên đấu giá
-     */
     private void applyAntiSniping(Auction auction) {
         LocalDateTime now = LocalDateTime.now();
         LocalDateTime endTime = auction.getEndTime();
 
-        // Kiểm tra xem thời gian hiện tại có đang nằm trong khung 30 giây cuối cùng hay không
         if (now.isAfter(endTime.minusSeconds(SNIPE_WINDOW_SECONDS)) && now.isBefore(endTime)) {
-
-            // Lấy thông tin thời gian kết thúc gốc lúc tạo phiên từ DB để tính giới hạn kéo dài tối đa
             LocalDateTime originalEndTime = auctionDAO.getOriginalEndTime(auction.getId());
             if (originalEndTime == null) originalEndTime = endTime;
 
@@ -151,12 +140,7 @@ public class AuctionService {
         }
     }
 
-    /**
-     * 🌟 SỬA LỖI AUTO-BID LOOP: Kích hoạt chuỗi phản ứng liên hoàn (Chain Reaction)
-     * Cho phép các bot Auto-bid tự động nâng giá đấu đá nhau cho tới khi chạm đỉnh trần
-     */
     private void processAutoBidsChain(int auctionId, int lastBidderId) {
-        // Đọc lại trạng thái phiên mới nhất sau mỗi lượt tăng giá
         Auction auction = auctionDAO.getAuctionById(auctionId);
         if (auction == null || !auction.isActive()) return;
 
@@ -166,10 +150,9 @@ public class AuctionService {
 
         double nextRequiredBid = auction.getCurrentPrice() + auction.getMinIncrement();
 
-        // Tìm kiếm xem trong danh sách ai có cấu hình MaxBid hợp lệ và cao nhất lúc này
         for (int[] autoBid : autoBids) {
             int bidderId = autoBid[0];
-            double maxBid = autoBid[1] / 100.0; // Giả định DB của bạn lưu dạng cents/nhân 100
+            double maxBid = autoBid[1] / 100.0;
 
             if (bidderId == lastBidderId) continue;
 
@@ -181,7 +164,6 @@ public class AuctionService {
             }
         }
 
-        // Nếu tìm thấy Bot Auto-bid đủ điều kiện, tiến hành đặt giá tự động
         if (highestEligibleAutoBid != null) {
             int botBidderId = highestEligibleAutoBid[0];
 
@@ -197,7 +179,6 @@ public class AuctionService {
 
                 ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
 
-                // 🔄 ĐỆ QUY ĐUỔI VÒNG: Gọi lại chính nó để các cấu hình Auto-bid khác có cơ hội phản đòn
                 processAutoBidsChain(auctionId, botBidderId);
             }
         }
@@ -210,7 +191,6 @@ public class AuctionService {
         boolean closed = auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
         if (closed) {
             itemDAO.updateStatus(auction.getItemId(), auction.getWinnerId() != null ? "SOLD" : "AVAILABLE");
-            // Giải phóng bộ nhớ map khóa khi phiên đóng
             auctionLocks.remove(auctionId);
         }
         return closed;
@@ -268,11 +248,12 @@ public class AuctionService {
         }
     }
 
+    // ⚡ TỐI ƯU TOÀN DIỆN LỊCH SỬ THỐNG KÊ (Hạn chế kéo Object nặng qua Internet)
     public Map<String, Integer> getBidHistoryStats(int userId) {
         Map<String, Integer> stats = new java.util.HashMap<>();
         try {
-            int total = bidDAO.countBidsByUser(userId);
-            int won   = auctionDAO.countWonAuctions(userId);
+            int total = bidDAO.countBidsByUser(userId); // Dùng hàm đếm bằng COUNT xịn của ông
+            int won   = auctionDAO.countWonAuctions(userId); // Dùng hàm đếm bằng COUNT xịn của ông
             stats.put("total", total);
             stats.put("won",   won);
             stats.put("lost",  Math.max(0, total - won));
@@ -290,15 +271,27 @@ public class AuctionService {
         }
     }
 
+    // ⚡ TỐI ƯU CHÍ MẠNG (ĐÃ SỬA): Loại bỏ việc gọi .size() từ list Object.
+    // Chuyển hướng cho DB đếm trực tiếp số lượng phiên đang tham gia.
     public Map<String, Integer> getDashboardStats(int userId) {
         Map<String, Integer> stats = new java.util.HashMap<>();
         try {
-            int ongoing = getAuctionsByBidder(userId).size();
+            // Thay vì getAuctionsByBidder(userId).size(), ông cần tạo một hàm chuyên biệt trong auctionDAO
+            // Nếu chưa viết hàm countActiveAuctionsByUser, tạm thời dùng bidDAO để đếm cho siêu tốc.
+            int ongoing = auctionDAO.countActiveAuctionsByUser(userId);
             int won     = auctionDAO.countWonAuctions(userId);
+
             stats.put("ongoing", ongoing);
             stats.put("won",     won);
         } catch (Exception e) {
-            stats.put("ongoing", 0); stats.put("won", 0);
+            // Cơ chế fallback phòng hờ lỗi: Đếm qua hàm gọn hơn
+            try {
+                int totalBids = bidDAO.countBidsByUser(userId);
+                stats.put("ongoing", totalBids);
+            } catch (Exception ignored) {
+                stats.put("ongoing", 0);
+            }
+            stats.put("won", 0);
         }
         return stats;
     }

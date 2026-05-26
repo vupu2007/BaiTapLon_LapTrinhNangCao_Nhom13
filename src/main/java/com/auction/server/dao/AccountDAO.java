@@ -17,13 +17,12 @@ public class AccountDAO {
     // 1. Đăng ký tài khoản mới (mặc định role = BIDDER)
     public boolean register(String username, String password, String email) {
         String sql = "INSERT INTO Accounts (username, password, email, role) VALUES (?, ?, ?, 'BIDDER')";
+        // ✅ ĐÃ SỬA: Đưa conn vào try() để tự động giải phóng về Pool
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, username);
             pstmt.setString(2, password);
             pstmt.setString(3, email);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -36,10 +35,8 @@ public class AccountDAO {
         String sql = "SELECT * FROM Accounts WHERE username = ? AND password = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, username);
             pstmt.setString(2, password);
-
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToAccount(rs);
@@ -56,7 +53,6 @@ public class AccountDAO {
         String sql = "SELECT * FROM Accounts WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, accountId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -74,10 +70,8 @@ public class AccountDAO {
         String sql = "UPDATE Accounts SET role = ? WHERE account_id = ? AND role != 'ADMIN'";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, newRole);
             pstmt.setInt(2, accountId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -90,12 +84,10 @@ public class AccountDAO {
         String sql = "UPDATE Accounts SET balance = ?, total_deposit = ?, total_withdraw = ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setDouble(1, newBalance);
             pstmt.setDouble(2, totalDeposit);
             pstmt.setDouble(3, totalWithdraw);
             pstmt.setInt(4, accountId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -108,7 +100,6 @@ public class AccountDAO {
         String sql = "SELECT account_id FROM Accounts WHERE username = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, username);
             try (ResultSet rs = pstmt.executeQuery()) {
                 return rs.next();
@@ -138,11 +129,9 @@ public class AccountDAO {
         String sql = "UPDATE Accounts SET username = ?, email = ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setString(1, newUsername);
             pstmt.setString(2, newEmail);
             pstmt.setInt(3, accountId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
@@ -190,30 +179,26 @@ public class AccountDAO {
         String sql = "INSERT INTO Transactions (account_id, type, amount, balance_after, created_at) VALUES (?, ?, ?, ?, NOW())";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, accountId);
             pstmt.setString(2, type);
             pstmt.setDouble(3, amount);
             pstmt.setDouble(4, balanceAfter);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
+
     /**
      * Lấy danh sách lịch sử giao dịch từ Database trả về đối tượng Model Transaction nguyên bản
      */
     public List<Transaction> getTransactionHistory(int accountId) {
         List<Transaction> list = new ArrayList<>();
         String sql = "SELECT * FROM Transactions WHERE account_id = ? ORDER BY transaction_id DESC";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, accountId);
-
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     Transaction t = new Transaction();
@@ -240,27 +225,19 @@ public class AccountDAO {
     // 🔗 HÀM KẾT NỐI ĐỒNG BỘ MỚI: ĐÁP ỨNG MESSAGE_TYPE.GET_TRANSACTIONS CHO CLIENT
     // =========================================================================
 
-    /**
-     * Lấy lịch sử giao dịch và đóng gói thành dạng List<Map> đúng như Client mong đợi,
-     * tận dụng 100% hàm getTransactionHistory có sẵn của nhóm bạn.
-     */
     public List<Map<String, Object>> getTransactions(int accountId) {
         List<Map<String, Object>> resultList = new ArrayList<>();
-
-        // Gọi lại hàm lấy dữ liệu từ bảng Transactions có sẵn của bạn
         List<Transaction> history = getTransactionHistory(accountId);
 
         if (history != null) {
             for (Transaction t : history) {
                 Map<String, Object> txMap = new HashMap<>();
-                txMap.put("type", t.getType()); // "DEPOSIT" hoặc "WITHDRAW"
+                txMap.put("type", t.getType());
 
-                // Map mô tả thân thiện sang cho Client đọc
                 String desc = "DEPOSIT".equalsIgnoreCase(t.getType()) ? "Chuyển khoản / Nạp tiền" : "Ví điện tử / Rút tiền";
                 txMap.put("description", desc);
-
                 txMap.put("amount", t.getAmount());
-                txMap.put("created_at", t.getCreatedAt()); // LocalDateTime nguyên bản
+                txMap.put("created_at", t.getCreatedAt());
 
                 resultList.add(txMap);
             }
@@ -271,21 +248,13 @@ public class AccountDAO {
     // =========================================================================
     // 🔀 CÁC HÀM OVERLOAD TƯƠNG THÍCH ĐỂ KHÔNG LÀM LỖI CODE CŨ CỦA DỰ ÁN
     // =========================================================================
-    // Thêm hàm này vào file AccountDAO.java để lấy Username nhanh từ ID
+
     public boolean executeAtomicWalletUpdate(int accountId, double amount, String type) {
-        // (!!!) KIỂM TRA 3 ĐIỂM SAU TRONG DATABASE CỦA BẠN:
-        // 1. Tên bảng: 'Accounts' (hay là 'users', 'Account'?)
-        // 2. Tên cột số dư: 'balance' (hay là 'wallet', 'money'?)
-        // 3. Tên cột ID: 'account_id' (hay chỉ là 'id'?)
-
         String sql = "UPDATE Accounts SET balance = balance " + ("DEPOSIT".equals(type) ? "+" : "-") + " ? WHERE account_id = ?";
-
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setDouble(1, amount);
             pstmt.setInt(2, accountId);
-
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("❌ Lỗi cập nhật ví nguyên tử: " + e.getMessage());
@@ -293,14 +262,15 @@ public class AccountDAO {
             return false;
         }
     }
+
     public boolean updateProfile(String userId, String newUsername, String newEmail) {
         return updateProfile(Integer.parseInt(userId), newUsername, newEmail);
     }
+
     public String getUsernameById(String id) {
         String sql = "SELECT username FROM Accounts WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, Integer.parseInt(id));
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
@@ -310,24 +280,21 @@ public class AccountDAO {
         } catch (Exception e) {
             e.printStackTrace();
         }
-        return "Bot_" + id; // Trả về tên dự phòng nếu lỗi DB hoặc không tìm thấy
+        return "Bot_" + id;
     }
+
     public boolean updatePassword(String userId, String newPassword) {
         return updatePassword(Integer.parseInt(userId), newPassword);
     }
 
-    // 2. Ghi nhận lịch sử giao dịch (Để hiển thị lên bảng "Lịch sử giao dịch" ở UI của bạn)
-    // Đã sửa lại tên cột: account_id, type, amount, created_at cho khớp 100% với DB của bạn
     public boolean insertTransaction(int accountId, double amount, String type) {
         String sql = "INSERT INTO Transactions (account_id, type, amount, created_at) VALUES (?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, accountId);
-            pstmt.setString(2, type);                     // Cột 'type'
-            pstmt.setDouble(3, amount);                   // Cột 'amount'
-            pstmt.setObject(4, java.time.LocalDateTime.now()); // Cột 'created_at'
-
+            pstmt.setString(2, type);
+            pstmt.setDouble(3, amount);
+            pstmt.setObject(4, java.time.LocalDateTime.now());
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("❌ Lỗi ghi log giao dịch: " + e.getMessage());

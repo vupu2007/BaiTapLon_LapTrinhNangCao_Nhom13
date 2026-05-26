@@ -2,31 +2,25 @@ package com.auction.client.controller;
 
 import com.auction.client.service.MainDashboardService;
 import com.auction.client.util.CurrentAccount;
-import com.auction.client.util.ImageLoader;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.User;
 import com.auction.shared.model.Item;
-import com.auction.shared.model.Electronics;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
-import javafx.geometry.Insets;
-import javafx.geometry.Pos;
 import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
-import javafx.scene.image.ImageView;
-import javafx.scene.layout.*;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
+import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class MainController {
 
@@ -38,17 +32,29 @@ public class MainController {
     private String currentFilter = "ALL";
 
     private final MainDashboardService dashboardService = new MainDashboardService();
+    private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
+
+    // 🚀 TỐI ƯU DỰ ÁN LỚN: Định vị sẵn FXML mẫu ngay khi khởi chạy class, tránh quét bộ nhớ nhiều lần
+    private static java.net.URL cachedFxmlLocation;
 
     public MainController() {}
 
     @FXML
     public void initialize() {
         instance = this;
+
+        // Khởi tạo cache đường dẫn FXML một lần duy nhất
+        if (cachedFxmlLocation == null) {
+            cachedFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
+            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
+            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("ProductCard.fxml");
+            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/ProductCard.fxml");
+        }
+
         Account current = CurrentAccount.getAccount();
         if (current != null) {
             if (welcomeLabel != null) welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
-            // Đảm bảo lệnh làm tươi màn hình luôn được khởi động an toàn
-            Platform.runLater(this::refreshDashboard);
+            refreshDashboard(); // Gọi trực tiếp, việc chia luồng đã có dashboardService lo
         }
     }
 
@@ -56,48 +62,140 @@ public class MainController {
         return instance;
     }
 
+    /**
+     * Tải lại toàn bộ dữ liệu thống kê và danh sách sản phẩm từ cơ sở dữ liệu (Đã tối ưu hóa luồng ngầm hoàn toàn)
+     */
     public void refreshDashboard() {
         Account current = CurrentAccount.getAccount();
         if (current == null) return;
 
-        // Hiển thị số dư tiền mặt tài khoản
         if (balanceLabel != null) {
             balanceLabel.setText(current instanceof User
                     ? String.format("%,.0f VND", ((User) current).getBalance()) : "N/A");
         }
 
-        // Gọi dịch vụ mạng chạy ngầm xử lý bất đồng bộ
+        // Tải dữ liệu bất đồng bộ (Chạy trên luồng nền của Service)
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
 
-            // 🌟 CRITICAL FIX: Đẩy toàn bộ luồng dựng Card đồ họa về JavaFX Thread để chống sập ứng dụng
+            // 🧠 CHIẾN LƯỢC DỰ ÁN LỚN: Nạp FXML ngay trên LUỒNG NGẦM này trước khi đẩy về UI Thread
+            List<VBox> renderedCards = new ArrayList<>();
+            if (items != null && cachedFxmlLocation != null) {
+                for (Item item : items) {
+                    if (item == null) continue;
+                    try {
+                        // Đọc file FXML thô từ ổ cứng/bộ nhớ tại đây (Không gây block UI)
+                        FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
+                        VBox cardLayout = loader.load();
+
+                        // Đổ dữ liệu vào Controller của Card
+                        ProductCardController cardController = loader.getController();
+                        String finalImageUrl = getFinalImageUrl(item.getImagePath());
+
+                        String statusText = "UPCOMING".equals(currentFilter) || (item.getDescription() != null && item.getDescription().toLowerCase().contains("sắp diễn ra"))
+                                ? "Sắp diễn ra" : "Đang diễn ra";
+
+                        cardController.setData(item.getName(), String.format("%,.0f đ", item.getStartingPrice()), statusText, finalImageUrl, item.getDescription(), "Người bán ẩn", "", "");
+
+                        // Cài đặt sự kiện click
+                        cardLayout.setOnMouseClicked(e -> showAuctionDetail(item));
+                        cardLayout.setStyle(cardLayout.getStyle() + "; -fx-cursor: hand;");
+                        bindCardButtons(cardLayout, item);
+
+                        renderedCards.add(cardLayout);
+                    } catch (IOException e) {
+                        System.err.println("❌ Lỗi nạp FXML ngầm cho item: " + item.getName());
+                    }
+                }
+            }
+
+            // Sau khi đã chuẩn bị xong xuôi toàn bộ mớ giao diện thô ở luồng ngầm, ta mới đẩy về UI Thread để hiển thị
             Platform.runLater(() -> {
                 if (flowPane == null) return;
 
-                // 1. Cập nhật các con số thống kê lên màn hình
                 if (stats != null) {
                     if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
                     if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
                 }
 
-                // 2. Kích hoạt hiệu ứng sáng tối cho các nút bộ lọc phân loại
                 switch (currentFilter) {
                     case "ALL" -> setButtonActive(btnFilterAll);
                     case "ACTIVE" -> setButtonActive(btnFilterActive);
                     case "UPCOMING" -> setButtonActive(btnFilterUpcoming);
                 }
 
-                // 3. Xóa giao diện cũ và vẽ loạt card sản phẩm mới tinh an toàn
+                // Xóa sạch các Node cũ và đẩy toàn bộ danh sách card mới lên (Chỉ mất vài mili-giây)
                 flowPane.getChildren().clear();
-                String statusLabelText = currentFilter.equals("UPCOMING") ? "Sắp diễn ra" : "Đang diễn ra";
+                flowPane.getChildren().addAll(renderedCards);
 
-                for (Item item : items) {
-                    if (item != null) {
-                        flowPane.getChildren().add(createItemCardWithStatus(item, statusLabelText));
-                    }
-                }
-                System.out.println("=== [UI] Đã hiển thị mượt mà " + flowPane.getChildren().size() + " thẻ đấu giá.");
+                System.out.println("=== [UI] Đã hiển thị mượt mà " + flowPane.getChildren().size() + " thẻ đấu giá từ FXML mẫu.");
             });
         });
+    }
+
+    /**
+     * 🌟 REAL-TIME MECHANISM: Tự động render bất đồng bộ và bắn card mới lên đầu
+     */
+    public void addAuctionToRealtimeUI(Auction newAuction) {
+        if (newAuction == null || cachedFxmlLocation == null) return;
+
+        // Tách việc load FXML của card real-time ra một luồng background riêng biệt
+        Thread realtimeRenderWorker = new Thread(() -> {
+            try {
+                FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
+                VBox cardLayout = loader.load();
+
+                ProductCardController cardController = loader.getController();
+                String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
+
+                cardController.setData(newAuction.getProductName(), String.format("%,.0f đ", newAuction.getStartPrice()), "Đang diễn ra", finalImageUrl, "Sản phẩm mới lên sàn đấu giá thời gian thực.", "Hệ thống", "", "");
+
+                cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
+                cardLayout.setStyle(cardLayout.getStyle() + "; -fx-cursor: hand;");
+                bindCardButtons(cardLayout, newAuction);
+
+                // Sau khi dựng xong card, đẩy lệnh chèn vào đầu FlowPane lên UI Thread
+                Platform.runLater(() -> {
+                    if (flowPane != null && (currentFilter.equals("ALL") || currentFilter.equals("ACTIVE"))) {
+                        flowPane.getChildren().add(0, cardLayout);
+                    }
+                });
+            } catch (IOException e) {
+                System.err.println("❌ Lỗi nạp FXML real-time: " + e.getMessage());
+            }
+        });
+        realtimeRenderWorker.setDaemon(true);
+        realtimeRenderWorker.start();
+    }
+
+    /**
+     * Hàm tiện ích giúp xử lý logic chuỗi URL ảnh
+     */
+    private String getFinalImageUrl(String rawImagePath) {
+        if (rawImagePath == null || rawImagePath.trim().isEmpty()) {
+            return "default.png";
+        } else if (rawImagePath.startsWith("http://") || rawImagePath.startsWith("https://") || rawImagePath.startsWith("base64:")) {
+            return rawImagePath;
+        } else {
+            return SERVER_IMAGE_BASE_URL + rawImagePath;
+        }
+    }
+
+    /**
+     * Hàm tiện ích liên kết các nút bấm bên trong thẻ card
+     */
+    private void bindCardButtons(VBox cardLayout, Object originData) {
+        try {
+            Node actionBtn = cardLayout.lookup("#actionButton");
+            if (actionBtn == null) actionBtn = cardLayout.lookup("#btnBid");
+            if (actionBtn == null) actionBtn = cardLayout.lookup("#actionBtn");
+
+            if (actionBtn instanceof Button button) {
+                button.setOnAction(e -> {
+                    e.consume();
+                    showAuctionDetail(originData);
+                });
+            }
+        } catch (Exception ignored) {}
     }
 
     private void setButtonActive(Button activeButton) {
@@ -114,170 +212,17 @@ public class MainController {
     @FXML private void handleFilterActive() { currentFilter = "ACTIVE"; refreshDashboard(); }
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
 
-    private VBox createItemCardWithStatus(Item item, String statusText) {
-        VBox card = new VBox();
-        card.setPrefWidth(300);
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;");
-
-        StackPane imageHolder = new StackPane();
-        imageHolder.setPrefHeight(180);
-        Region bgRegion = new Region();
-        bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
-        imageHolder.getChildren().add(bgRegion);
-
-        ImageView imgView = new ImageView();
-        imgView.setFitWidth(300);
-        imgView.setFitHeight(180);
-        imgView.setPreserveRatio(false);
-
-        String preferredName = item.getImagePath();
-        if (preferredName == null || preferredName.trim().isEmpty()) {
-            preferredName = "default.png";
-            if (item instanceof Electronics) {
-                String brand = ((Electronics) item).getBrand();
-                if (brand != null && !brand.trim().isEmpty()) preferredName = brand.trim();
-            }
-        }
-
-        ImageLoader.tryLoadImageToView(imgView, preferredName);
-
-        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
-        clip.setArcWidth(15);
-        clip.setArcHeight(15);
-        imgView.setClip(clip);
-        imageHolder.getChildren().add(imgView);
-
-        Label statusLabel = new Label(statusText);
-        // 🌟 FIX CÚ PHÁP CSS: Xóa bỏ chữ "格式" thừa thãi lỗi font ở cuối chuỗi
-        statusLabel.setStyle(statusText.equals("Sắp diễn ra") ?
-                "-fx-background-color: #dbeafe; -fx-text-fill: #2563eb; -fx-background-radius: 20; -fx-font-weight: bold;" :
-                "-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
-        statusLabel.setPadding(new Insets(5, 12, 5, 12));
-        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
-        StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
-        imageHolder.getChildren().add(statusLabel);
-
-        VBox infoBox = new VBox(8);
-        infoBox.setPadding(new Insets(15));
-        Label nameLabel = new Label(item.getName());
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
-        nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
-        Label descLabel = new Label(item.getDescription() != null && !item.getDescription().isEmpty() ? item.getDescription() : "Sản phẩm chất lượng cao đang trong phiên đấu giá công khai.");
-        descLabel.setPrefHeight(40);
-        descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        descLabel.setWrapText(true);
-
-        Region spacer = new Region();
-        spacer.setPrefHeight(10);
-        HBox priceBox = new HBox();
-        priceBox.setAlignment(Pos.CENTER_LEFT);
-        Label priceTitle = new Label("Giá hiện tại:");
-        priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        Region priceSpacer = new Region();
-        HBox.setHgrow(priceSpacer, Priority.ALWAYS);
-        Label priceValue = new Label(String.format("%,.0f đ", item.getStartingPrice()));
-        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
-        priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
-        priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
-
-        Button bidButton = new Button(statusText.equals("Sắp diễn ra") ? "Xem chi tiết" : "Đấu giá ngay");
-        bidButton.setMaxWidth(Double.MAX_VALUE);
-        bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
-        bidButton.setPadding(new Insets(8, 0, 8, 0));
-        bidButton.setOnAction(e -> showAuctionDetail(item));
-
-        infoBox.getChildren().addAll(nameLabel, descLabel, spacer, priceBox, bidButton);
-        card.getChildren().addAll(imageHolder, infoBox);
-        return card;
-    }
-
-    public void addAuctionToRealtimeUI(Auction newAuction) {
-        Platform.runLater(() -> {
-            if (flowPane != null && (currentFilter.equals("ALL") || currentFilter.equals("UPCOMING"))) {
-                VBox card = createCardFromAuction(newAuction);
-                flowPane.getChildren().add(0, card);
-            }
-        });
-    }
-
-    private VBox createCardFromAuction(Auction auction) {
-        VBox card = new VBox();
-        card.setPrefWidth(300);
-        card.setStyle("-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-border-width: 1;");
-
-        StackPane imageHolder = new StackPane();
-        imageHolder.setPrefHeight(180);
-        Region bgRegion = new Region();
-        bgRegion.setStyle("-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;");
-        imageHolder.getChildren().add(bgRegion);
-
-        ImageView imgView = new ImageView();
-        imgView.setFitWidth(300);
-        imgView.setFitHeight(180);
-        imgView.setPreserveRatio(false);
-
-        String preferredName = auction.getImagePath();
-        if (preferredName == null || preferredName.trim().isEmpty()) {
-            preferredName = "default.png";
-        }
-
-        ImageLoader.tryLoadImageToView(imgView, preferredName);
-
-        javafx.scene.shape.Rectangle clip = new javafx.scene.shape.Rectangle(300, 180);
-        clip.setArcWidth(15);
-        clip.setArcHeight(15);
-        imgView.setClip(clip);
-        imageHolder.getChildren().add(imgView);
-
-        Label statusLabel = new Label("Đang diễn ra");
-        statusLabel.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-background-radius: 20; -fx-font-weight: bold;");
-        statusLabel.setPadding(new Insets(5, 12, 5, 12));
-        StackPane.setAlignment(statusLabel, Pos.TOP_RIGHT);
-        StackPane.setMargin(statusLabel, new Insets(10, 10, 0, 0));
-        imageHolder.getChildren().add(statusLabel);
-
-        VBox infoBox = new VBox(8);
-        infoBox.setPadding(new Insets(15));
-        Label nameLabel = new Label(auction.getProductName() != null ? auction.getProductName() : "Sản phẩm mới lên sàn");
-        nameLabel.setFont(Font.font("System", FontWeight.BOLD, 16));
-        nameLabel.setTextFill(javafx.scene.paint.Color.valueOf("#1e293b"));
-        Label descLabel = new Label("Sản phẩm chất lượng cao đang trong phiên đấu giá công khai.");
-        descLabel.setPrefHeight(40);
-        descLabel.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        descLabel.setWrapText(true);
-
-        Region spacer = new Region();
-        spacer.setPrefHeight(10);
-        HBox priceBox = new HBox();
-        priceBox.setAlignment(Pos.CENTER_LEFT);
-        Label priceTitle = new Label("Giá hiện tại:");
-        priceTitle.setTextFill(javafx.scene.paint.Color.valueOf("#64748b"));
-        Region priceSpacer = new Region();
-        HBox.setHgrow(priceSpacer, Priority.ALWAYS);
-        Label priceValue = new Label(String.format("%,.0f đ", auction.getStartPrice()));
-        priceValue.setFont(Font.font("System", FontWeight.BOLD, 16));
-        priceValue.setTextFill(javafx.scene.paint.Color.valueOf("#0284c7"));
-        priceBox.getChildren().addAll(priceTitle, priceSpacer, priceValue);
-
-        Button bidButton = new Button("Đấu giá ngay");
-        bidButton.setMaxWidth(Double.MAX_VALUE);
-        bidButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 6; -fx-font-weight: bold; -fx-cursor: hand;");
-        bidButton.setPadding(new Insets(8, 0, 8, 0));
-        bidButton.setOnAction(e -> showAuctionDetail(auction));
-
-        infoBox.getChildren().addAll(nameLabel, descLabel, spacer, priceBox, bidButton);
-        card.getChildren().addAll(imageHolder, infoBox);
-        return card;
-    }
-
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentAccount.logOut();
 
-        // 🚀 TỐI ƯU LUỒNG: Đẩy việc đọc file FXML đăng xuất sang một luồng Worker ngầm để không bị đơ UI
         Thread logoutWorker = new Thread(() -> {
             try {
-                Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
+                java.net.URL loginLocation = getClass().getResource("/view/LoginView.fxml");
+                if (loginLocation == null) loginLocation = getClass().getResource("/com/auction/client/view/LoginView.fxml");
+                if (loginLocation == null) loginLocation = getClass().getResource("LoginView.fxml");
+
+                Parent root = FXMLLoader.load(loginLocation);
                 Platform.runLater(() -> {
                     Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
                     stage.getScene().setRoot(root);
@@ -291,23 +236,17 @@ public class MainController {
     }
 
     public void showAuctionDetail(Object productData) {
-        Platform.runLater(() -> {
+        // Tách việc load màn hình chi tiết FXML nặng nề ra luồng ngầm
+        Thread detailLoaderWorker = new Thread(() -> {
             try {
-                java.net.URL fxmlLocation = getClass().getResource("/view/AuctionDetailView.fxml");
-                if (fxmlLocation == null) fxmlLocation = getClass().getResource("/view/AuctionDetail.fxml");
-                if (fxmlLocation == null) fxmlLocation = getClass().getResource("/com/auction/client/view/AuctionDetailView.fxml");
-                if (fxmlLocation == null) fxmlLocation = getClass().getResource("/com/auction/client/view/AuctionDetail.fxml");
-                if (fxmlLocation == null) fxmlLocation = getClass().getResource("AuctionDetailView.fxml");
-
-                if (fxmlLocation == null) {
-                    System.err.println("❌ KHÔNG TÌM THẤY FILE FXML TRANG CHI TIẾT!");
-                    return;
-                }
+                String fxmlPath = "/view/AuctionDetail.fxml";
+                java.net.URL fxmlLocation = getClass().getResource(fxmlPath);
+                if (fxmlLocation == null) return;
 
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
-                Parent detailView = loader.load();
-                AuctionDetailController detailController = loader.getController();
+                Parent detailView = loader.load(); // Load ngầm cấu trúc giao diện chi tiết
 
+                AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
                     if (productData instanceof Item) {
                         detailController.loadProductDetail((Item) productData);
@@ -316,13 +255,18 @@ public class MainController {
                     }
                 }
 
-                if (MainLayoutController.getInstance() != null) {
-                    MainLayoutController.getInstance().setContent(detailView);
-                }
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi nghiêm trọng khi tải trang chi tiết: " + e.getMessage());
-                e.printStackTrace();
+                // Chuyển view thô về luồng UI để hiển thị lên màn hình chính
+                Platform.runLater(() -> {
+                    if (MainLayoutController.getInstance() != null) {
+                        MainLayoutController.getInstance().setContent(detailView);
+                        System.out.println("🎯 [UI Switch] Đã nạp thành công trang chi tiết sản phẩm.");
+                    }
+                });
+            } catch (IOException e) {
+                System.err.println("❌ Lỗi nghiêm trọng khi biên dịch cấu trúc FXML chi tiết: " + e.getMessage());
             }
         });
+        detailLoaderWorker.setDaemon(true);
+        detailLoaderWorker.start();
     }
 }

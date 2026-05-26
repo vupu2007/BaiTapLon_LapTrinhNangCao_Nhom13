@@ -14,9 +14,9 @@ public class AutoBidDAO {
         }
 
         String sql = "INSERT INTO AutoBids (auction_id, bidder_id, max_bid) VALUES (?, ?, ?)";
+        // ✅ ĐÃ SỬA: Đọc kết nối ngay trong try() để tự động đóng/nhả về Pool
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             pstmt.setInt(2, bidderId);
             pstmt.setDouble(3, maxBid);
@@ -34,7 +34,6 @@ public class AutoBidDAO {
         String sql = "SELECT bidder_id, max_bid FROM AutoBids WHERE auction_id = ? ORDER BY max_bid DESC, created_at ASC";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
@@ -55,7 +54,6 @@ public class AutoBidDAO {
         String sql = "SELECT auto_bid_id FROM AutoBids WHERE auction_id = ? AND bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             pstmt.setInt(2, bidderId);
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -72,7 +70,6 @@ public class AutoBidDAO {
         String sql = "UPDATE AutoBids SET max_bid = ? WHERE auction_id = ? AND bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setDouble(1, newMaxBid);
             pstmt.setInt(2, auctionId);
             pstmt.setInt(3, bidderId);
@@ -89,7 +86,6 @@ public class AutoBidDAO {
         String sql = "DELETE FROM AutoBids WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
@@ -97,12 +93,12 @@ public class AutoBidDAO {
             return false;
         }
     }
-    // Lất bid lơsn nhất
+
+    // 6. Lấy bid lớn nhất
     public double getMaxBid(int auctionId, int bidderId) {
         String sql = "SELECT max_bid FROM AutoBids WHERE auction_id = ? AND bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
             pstmt.setInt(1, auctionId);
             pstmt.setInt(2, bidderId);
             try (ResultSet rs = pstmt.executeQuery()) {
