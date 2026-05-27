@@ -210,8 +210,13 @@ public class AuctionDetailController implements Observer {
                 priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
             });
         });
-    }
 
+        ClientSocket.getInstance().setBidUpdateListener((auctionId, newPrice, username) -> {
+            if (auctionId == currentAuction.getId()) {
+                Platform.runLater(() -> update(newPrice, username));
+            }
+        });
+    }
     private void fillTextFields(String title, String price, String desc, String seller, String start, String end) {
         if (lblProductTitle != null) lblProductTitle.setText(title);
         if (lblInfoName != null) lblInfoName.setText(title);

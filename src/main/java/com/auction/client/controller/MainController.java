@@ -35,6 +35,7 @@ public class MainController {
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
 
+
     // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
     private final ExecutorService executorService = Executors.newFixedThreadPool(
             Runtime.getRuntime().availableProcessors(),

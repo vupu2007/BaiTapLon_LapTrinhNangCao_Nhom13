@@ -22,6 +22,14 @@ public class ClientSocket {
     private final ConcurrentHashMap<String, CompletableFuture<Response>> pendingRequests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Object> auctionObservers = new ConcurrentHashMap<>();
 
+    public interface BidUpdateListener {
+        void onBidUpdate(int auctionId, double newPrice, String username);
+    }
+    private BidUpdateListener bidUpdateListener;
+    public void setBidUpdateListener(BidUpdateListener listener) {
+        this.bidUpdateListener = listener;
+    }
+
     private ClientSocket() {
         connectToServer();
     }
@@ -165,8 +173,11 @@ public class ClientSocket {
     }
 
     private void handleRealtimeNotification(Response response) {
-        if (response != null && "AUCTION_UPDATE".equalsIgnoreCase(response.getType())) {
-            System.out.println("📢 [Realtime-Broadcast] Nhận được gói tin cập nhật tự động từ Server!");
+        if ("BID_UPDATE".equalsIgnoreCase(response.getType())) {
+            Object[] data = (Object[]) response.getData();
+            if (bidUpdateListener != null && data != null) {
+                bidUpdateListener.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
+            }
         }
     }
 

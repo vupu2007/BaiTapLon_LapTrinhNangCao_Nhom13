@@ -8,11 +8,15 @@ import com.auction.shared.model.Account;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Bidder;
 import com.auction.shared.model.Seller;
+
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.sql.Connection;
+import com.auction.server.util.DatabaseConnection;
 
 public class AuctionScheduler {
 
@@ -27,7 +31,8 @@ public class AuctionScheduler {
 
     private static AuctionScheduler instance;
 
-    private AuctionScheduler() {}
+    private AuctionScheduler() {
+    }
 
     public static synchronized AuctionScheduler getInstance() {
         if (instance == null) {
@@ -37,7 +42,7 @@ public class AuctionScheduler {
     }
 
     public void start() {
-        scheduler.scheduleAtFixedRate(this::tick, 0, 10, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(this::tick, 10, 60, TimeUnit.SECONDS);
         System.out.println("✅ AuctionScheduler da khoi dong thanh cong tren Server!");
     }
 
@@ -52,68 +57,51 @@ public class AuctionScheduler {
             scheduler.shutdownNow();
         }
     }
-
     private void tick() {
-        openPendingAuctions();
-        closeExpiredAuctions();
-    }
+        try (Connection conn = DatabaseConnection.getConnection()) {
+            List<Auction> allAuctions = auctionDAO.getAllAuctionsWithConnection(conn);
+            if (allAuctions == null) return;
 
-    private void openPendingAuctions() {
-        try {
-            List<Auction> openAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.OPEN);
-            if (openAuctions == null) return;
-
-            for (Auction auction : openAuctions) {
-                if (auction.getStartTime() != null && LocalDateTime.now().isAfter(auction.getStartTime())) {
-                    auctionDAO.updateStatus(auction.getId(), Auction.AuctionStatus.RUNNING);
+            for (Auction auction : allAuctions) {
+                if (auction.getStatus() == Auction.AuctionStatus.OPEN
+                        && auction.getStartTime() != null
+                        && LocalDateTime.now().isAfter(auction.getStartTime())) {
+                    auctionDAO.updateStatusWithConnection(conn, auction.getId(), Auction.AuctionStatus.RUNNING);
                     System.out.println("Phiên " + auction.getId() + " bắt đầu!");
+                } else if (auction.getStatus() == Auction.AuctionStatus.RUNNING
+                        && auction.getEndTime() != null
+                        && LocalDateTime.now().isAfter(auction.getEndTime())) {
+                    closeAuction(auction, conn);
                 }
             }
         } catch (Exception e) {
-            System.err.println("Lỗi Scheduler khi mở phiên: " + e.getMessage());
+            System.err.println("Lỗi Scheduler: " + e.getMessage());
         }
     }
 
-    private void closeExpiredAuctions() {
-        try {
-            List<Auction> runningAuctions = auctionDAO.getAuctionsByStatus(Auction.AuctionStatus.RUNNING);
-            if (runningAuctions == null) return;
-
-            for (Auction auction : runningAuctions) {
-                if (auction.getEndTime() != null && LocalDateTime.now().isAfter(auction.getEndTime())) {
-                    // Fresh Select: Lay lai phien truc tiep tu DB de giam thieu sai sot so lieu giay cuoi
-                    Auction freshAuction = auctionDAO.getAuctionById(auction.getId());
-                    if (freshAuction != null && freshAuction.getStatus() == Auction.AuctionStatus.RUNNING) {
-                        closeAuction(freshAuction);
-                    }
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Lỗi Scheduler khi đóng phiên hết hạn: " + e.getMessage());
-        }
-    }
-
-    private void closeAuction(Auction auction) {
+    private void closeAuction(Auction auction, Connection conn) {
         int auctionId = auction.getId();
 
-        // Chốt kiểm tra sự tồn tại của Winner thực tế
-        if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
-            boolean paymentSuccess = settlePayment(auction);
+        try {
+            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                boolean paymentSuccess = settlePayment(auction);
 
-            if (paymentSuccess) {
-                auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
-                itemDAO.updateStatus(auction.getItemId(), "SOLD");
-                System.out.println("Phiên " + auctionId + " kết thúc — Winner ID: " + auction.getWinnerId());
+                if (paymentSuccess) {
+                    auctionDAO.updateStatusWithConnection(conn, auctionId, Auction.AuctionStatus.FINISHED);
+                    itemDAO.updateStatus(auction.getItemId(), "SOLD");
+                    System.out.println("Phiên " + auctionId + " kết thúc — Winner ID: " + auction.getWinnerId());
+                } else {
+                    auctionDAO.updateStatusWithConnection(conn, auctionId, Auction.AuctionStatus.FINISHED);
+                    itemDAO.updateStatus(auction.getItemId(), "AVAILABLE");
+                    System.err.println("Phiên #" + auctionId + " đóng thất bại — Trả lại AVAILABLE!");
+                }
             } else {
-                // Xu ly bien co winner ao, winner quyt nguon tien: Tra hang kho de dau gia lai
-                auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
+                auctionDAO.updateStatusWithConnection(conn, auctionId, Auction.AuctionStatus.FINISHED);
                 itemDAO.updateStatus(auction.getItemId(), "AVAILABLE");
-                System.err.println("💥 Phiên #" + auctionId + " đóng thất bại do Winner không đủ số dư. Trả lại trạng thái AVAILABLE!");
+                System.out.println("Phiên " + auctionId + " kết thúc — Không có người thắng");
             }
-        } else {
-            auctionDAO.updateStatus(auctionId, Auction.AuctionStatus.FINISHED);
-            itemDAO.updateStatus(auction.getItemId(), "AVAILABLE");
-            System.out.println("Phiên " + auctionId + " kết thúc — Không có người thắng");
+        } catch (SQLException e) {
+            System.err.println("Lỗi đóng phiên #" + auctionId + ": " + e.getMessage());
         }
 
         try {
@@ -122,7 +110,6 @@ public class AuctionScheduler {
             System.err.println("Không thể notify client: " + e.getMessage());
         }
     }
-
     private boolean settlePayment(Auction auction) {
         Integer winnerId = auction.getWinnerId();
         int sellerId = auction.getSellerId();

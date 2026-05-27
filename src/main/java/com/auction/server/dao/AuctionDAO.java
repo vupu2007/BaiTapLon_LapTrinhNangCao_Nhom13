@@ -282,4 +282,22 @@ public class AuctionDAO {
         }
         return auction;
     }
+        public List<Auction> getAllAuctionsWithConnection(Connection conn) throws SQLException {
+            List<Auction> list = new ArrayList<>();
+            String sql = "SELECT * FROM Auctions";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) list.add(mapResultSetToAuction(rs));            }
+            return list;
+        }
+
+
+    public boolean updateStatusWithConnection(Connection conn, int id, AuctionStatus status) throws SQLException {
+        String sql = "UPDATE Auctions SET status = ? WHERE auction_id = ?";
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status.name());
+            ps.setInt(2, id);
+            return ps.executeUpdate() > 0;
+        }
+    }
 }

@@ -134,13 +134,11 @@ public class ClientHandler implements Runnable {
 
                         response.setRequestId(request.getRequestId());
                         System.out.println("➡️ [DEBUG] Đã tạo xong Response, chuẩn bị gửi về Client!");
-
                         return response;
 
                     } catch (Exception e) {
                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
                         e.printStackTrace();
-
                         Response errResponse = new Response(false, "Lỗi máy chủ: " + e.getMessage(), null);
                         errResponse.setRequestId(request.getRequestId());
                         return errResponse;
@@ -172,11 +170,7 @@ public class ClientHandler implements Runnable {
                 case CREATE_ITEM: {
                     Item item = (Item) request.getPayload();
                     boolean ok = itemService.createItem(item);
-
-                    if (ok) {
-                        broadcastSystemUpdate("AUCTION_UPDATE");
-                    }
-
+                    if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
                     return new Response(ok, ok ? "Tạo sản phẩm thành công!" : "Tạo sản phẩm thất bại!", null);
                 }
                 case GET_ITEM_BY_ID: {
@@ -201,11 +195,7 @@ public class ClientHandler implements Runnable {
                     boolean ok = auctionService.createAuction(
                             (String) d[0], (int) d[1], (double) d[2], (String) d[3], (String) d[4]
                     );
-
-                    if (ok) {
-                        broadcastSystemUpdate("AUCTION_UPDATE");
-                    }
-
+                    if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
                     return new Response(ok, ok ? "Tạo phiên đấu giá thành công!" : "Tạo thất bại!", null);
                 }
                 case GET_ALL_AUCTIONS: {
@@ -233,11 +223,7 @@ public class ClientHandler implements Runnable {
                     int auctionId = (int) request.getPayload();
                     boolean ok = auctionService.closeAuction(auctionId);
                     auctionLocks.remove(auctionId);
-
-                    if (ok) {
-                        broadcastSystemUpdate("AUCTION_UPDATE");
-                    }
-
+                    if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
                     return new Response(ok, ok ? "Đã đóng phiên!" : "Đóng phiên thất bại!", null);
                 }
                 case PLACE_BID: {
@@ -251,7 +237,6 @@ public class ClientHandler implements Runnable {
                     synchronized (lock) {
                         bidResult = auctionService.placeBid(aId, amt, uId);
                     }
-
                     if (bidResult.isSuccess()) {
                         String username = accountService.getUsernameById(uId);
                         pushBidUpdate(aId, amt, username);
@@ -287,9 +272,7 @@ public class ClientHandler implements Runnable {
                 case UPDATE_USER_STATUS: {
                     String[] data = (String[]) request.getPayload();
                     boolean isUpdated = true;
-                    return isUpdated
-                            ? new Response(true, "Cập nhật trạng thái thành công!", null)
-                            : new Response(false, "Không thể cập nhật trạng thái trong cơ sở dữ liệu.", null);
+                    return new Response(true, "Cập nhật trạng thái thành công!", null);
                 }
                 case GET_TRANSACTIONS: {
                     int accountId = (int) request.getPayload();
@@ -303,26 +286,31 @@ public class ClientHandler implements Runnable {
                     statsMap.put("won", 0);
                     try {
                         Map<String, Integer> realStats = auctionService.getBidHistoryStats(Integer.parseInt(accountId));
-                        if (realStats != null) {
-                            statsMap.putAll(realStats);
-                        }
+                        if (realStats != null) statsMap.putAll(realStats);
                     } catch (Exception ignored) {}
                     return new Response(true, "Lấy số liệu thống kê thành công!", (Serializable) statsMap);
                 }
                 case GET_HOT_AUCTIONS: {
-                    String[] payload = (String[]) request.getPayload();
-                    String accountId = payload[0];
                     List<Item> items = new ArrayList<>();
                     try {
-                        List<Item> dbItems = itemService.getItemsByOwner(Integer.parseInt(accountId));
-                        if (dbItems != null) {
-                            items.addAll(dbItems);
+                        List<Auction> auctions = auctionService.getAllAuctions();
+                        if (auctions != null) {
+                            for (Auction a : auctions) {
+                                if (a.getStatus() == Auction.AuctionStatus.RUNNING) {
+                                    Item item = itemService.getItemById(a.getItemId());
+                                    if (item != null) {
+                                        item.setStatus(a.getStatus().name());
+                                        items.add(item);
+                                    }
+                                }
+                            }
                         }
                     } catch (Exception e) {
                         String timestamp = LocalDateTime.now().format(timeFormatter);
-                        System.err.printf("[%s] [%s] ⚠️ Lỗi khi nạp danh sách sản phẩm hot: %s%n",
+                        System.err.printf("[%s] [%s] ⚠️ Lỗi GET_HOT_AUCTIONS: %s%n",
                                 timestamp, Thread.currentThread().getName(), e.getMessage());
                     }
+                    System.out.println("DEBUG GET_HOT_AUCTIONS trả về: " + items.size() + " items");
                     return new Response(true, "Tải danh sách sản phẩm thành công!", (Serializable) items);
                 }
                 default:
@@ -362,15 +350,12 @@ public class ClientHandler implements Runnable {
         CopyOnWriteArrayList<ClientHandler> subs = auctionSubscribers.get(auctionId);
         if (subs == null || subs.isEmpty()) return;
 
-        Request pushNotification = new Request(
-                MessageType.UPDATE_PRICE,
-                new Object[]{auctionId, newPrice, username}
-        );
+        Response push = new Response(true, "BID_UPDATE", new Object[]{auctionId, newPrice, username});
 
         for (ClientHandler handler : subs) {
             try {
                 synchronized (handler.out) {
-                    handler.out.writeObject(pushNotification);
+                    handler.out.writeObject(push);
                     handler.out.flush();
                     handler.out.reset();
                 }
