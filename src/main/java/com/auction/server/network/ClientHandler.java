@@ -79,6 +79,8 @@ public class ClientHandler implements Runnable {
                     try {
                         Response response = handleRequest(request);
 
+                        response.setRequestId(request.getRequestId());
+
                         if (response != null) {
                             // Sao chép nguyên vẹn ID gói tin từ Request sang Response để Client khớp mạch hòm thư
                             response.setRequestId(request.getRequestId());
@@ -118,11 +120,33 @@ public class ClientHandler implements Runnable {
         try {
             switch (request.getType()) {
                 case LOGIN: {
-                    String[] creds = (String[]) request.getPayload();
-                    Account acc = accountService.login(creds[0], creds[1]);
-                    return acc != null
-                            ? new Response(true, "Đăng nhập thành công!", acc)
-                            : new Response(false, "Sai tài khoản hoặc mật khẩu!", null);
+                    try {
+                        System.out.println("➡️ [DEBUG] Bắt đầu xử lý LOGIN...");
+                        String[] creds = (String[]) request.getPayload();
+                        System.out.println("➡️ [DEBUG] Đã nhận payload, Username: " + creds[0]);
+
+                        // Đoạn này rất dễ nổ Exception nếu chưa bật XAMPP hoặc sai SQL
+                        Account acc = accountService.login(creds[0], creds[1]);
+                        System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
+
+                        Response response = acc != null
+                                ? new Response(true, "Đăng nhập thành công!", acc)
+                                : new Response(false, "Sai tài khoản hoặc mật khẩu!", null);
+
+                        response.setRequestId(request.getRequestId());
+                        System.out.println("➡️ [DEBUG] Đã tạo xong Response, chuẩn bị gửi về Client!");
+
+                        return response;
+
+                    } catch (Exception e) {
+                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
+                        e.printStackTrace();
+
+                        // Trả về thông báo lỗi cho Client để Client KHÔNG BỊ TIMEOUT
+                        Response errResponse = new Response(false, "Lỗi máy chủ: " + e.getMessage(), null);
+                        errResponse.setRequestId(request.getRequestId());
+                        return errResponse;
+                    }
                 }
                 case REGISTER: {
                     String[] d = (String[]) request.getPayload();

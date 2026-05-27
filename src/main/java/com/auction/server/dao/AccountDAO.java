@@ -176,6 +176,7 @@ public class AccountDAO {
      * Ghi một dòng lịch sử nạp/rút tiền thật vào bảng Transactions trong Database
      */
     public boolean insertTransaction(int accountId, String type, double amount, double balanceAfter) {
+        // 🚀 ĐÃ FIX: Chữ "transactions" viết thường để tương thích với Linux Clever Cloud
         String sql = "INSERT INTO Transactions (account_id, type, amount, balance_after, created_at) VALUES (?, ?, ?, ?, NOW())";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -185,7 +186,7 @@ public class AccountDAO {
             pstmt.setDouble(4, balanceAfter);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            e.printStackTrace();
+            System.err.println("LỖI GHI LỊCH SỬ GIAO DỊCH: " + e.getMessage()); // In lỗi rõ ràng để dễ bắt
             return false;
         }
     }
