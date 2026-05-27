@@ -21,7 +21,6 @@ public class ServerMain {
 
     private static ServerSocket serverSocket;
     private static volatile boolean isRunning = true;
-
     public static void main(String[] args) {
         // 🌟 TỐI ƯU 2: Đăng ký cơ chế Tắt nguồn mềm (Graceful Shutdown Hook)
         // Hệ thống sẽ tự động bắt được lệnh tắt nguồn (Ctrl+C, tắt Terminal, Kill Process) để dọn dẹp hạ tầng
