@@ -15,9 +15,9 @@ public class DatabaseConnection {
         config.setPassword("gxvNiCizwruEPSZnfwud"); // Điền pass Clever Cloud của ông
 
         // ⚡ BỘ THÔNG SỐ SIÊU TỐI ƯU CHO HIKARI:
-        config.setMaximumPoolSize(3);
+        config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);
-        config.setConnectionTimeout(15000);  // tăng lên 8s
+        config.setConnectionTimeout(10000);  // tăng lên 8s
         config.setIdleTimeout(30000);
         config.setMaxLifetime(1800000);
 
