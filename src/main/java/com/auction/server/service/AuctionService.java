@@ -51,6 +51,7 @@ public class AuctionService {
 
     public boolean registerAutoBid(int auctionId, int bidderId, double maxBid) {
         Auction auction = auctionDAO.getAuctionById(auctionId);
+
         if (auction == null || !auction.isActive()) {
             System.err.println("Phiên không tồn tại hoặc đã kết thúc!");
             return false;
@@ -66,6 +67,7 @@ public class AuctionService {
      * 🚀 ĐẶT GIÁ AN TOÀN ĐA LUỒNG
      */
     public boolean placeBid(int auctionId, double amount, Account account) {
+
         if (!(account instanceof User)) {
             System.err.println("Tài khoản quản trị viên không được phép đấu giá!");
             return false;
@@ -77,6 +79,9 @@ public class AuctionService {
         try {
             User user = (User) account;
             Auction auction = auctionDAO.getAuctionById(auctionId);
+            System.out.println("Check isActive: " + auction.isActive());
+            System.out.println("Check minBid: " + (auction.getCurrentPrice() + auction.getMinIncrement()));
+            System.out.println("Check balance: " + ((User)account).getBalance());
 
             if (auction == null || !auction.isActive()) {
                 System.err.println("Phiên đấu giá không tồn tại hoặc chưa kích hoạt!");
@@ -142,6 +147,8 @@ public class AuctionService {
     }
 
     private void processAutoBidsChain(int auctionId, int lastBidderId) {
+        System.out.println("processAutoBidsChain called for auction: " + auctionId);
+
         Auction auction = auctionDAO.getAuctionById(auctionId);
         if (auction == null || !auction.isActive()) return;
 
@@ -177,6 +184,9 @@ public class AuctionService {
             if (success) {
                 String botUsername = accountDAO.getUsernameById(String.valueOf(botBidderId));
                 System.out.println("🤖 [Auto-Bid] Hệ thống tự đặt giá hộ User #" + botUsername + ": " + targetBidAmount + " đ");
+
+                System.out.println("pushBidUpdate từ placeBid");
+                new Exception().printStackTrace();
 
                 ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
 
@@ -236,7 +246,9 @@ public class AuctionService {
 
     public Response placeBid(int auctionId, double amount, String userId) {
         try {
-            Account account = accountDAO.getAccountById(Integer.parseInt(userId));
+            System.out.println("PLACE_BID userId nhận được: " + userId);
+            Account account = accountDAO.getAccountById((int) Double.parseDouble(userId));
+            System.out.println("Account tìm được: " + account);
             if (account == null) {
                 return new Response(false, "Tài khoản không tồn tại trên hệ thống!", null);
             }

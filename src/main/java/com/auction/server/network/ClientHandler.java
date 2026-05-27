@@ -1,5 +1,6 @@
 package com.auction.server.network;
 
+import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.ItemDAO;
 import com.auction.server.service.*;
 import com.auction.server.util.DatabaseConnection;
@@ -13,6 +14,7 @@ import java.net.Socket;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -20,6 +22,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+
+import static com.auction.shared.network.MessageType.GET_AUCTION_BY_ITEM_ID;
 
 public class ClientHandler implements Runnable {
 
@@ -47,6 +51,7 @@ public class ClientHandler implements Runnable {
     private static final AuctionService auctionService = new AuctionService();
     private static final ItemService    itemService    = new ItemService();
     private final ItemDAO itemDAO = new ItemDAO();
+    private final AuctionDAO auctionDAO = new AuctionDAO();
 
     private final Socket socket;
     private ObjectInputStream in;
@@ -233,11 +238,9 @@ public class ClientHandler implements Runnable {
                     return new Response(ok, ok ? "Đã đóng phiên!" : "Đóng phiên thất bại!", null);
                 }
                 case PLACE_BID: {
-                    Object[] d = (Object[]) request.getPayload();
-                    int aId = (int) d[0];
-                    double amt = (double) d[1];
-                    String uId = (String) d[2];
-
+                    Object[] d = (Object[]) request.getPayload();int aId = ((Number) d[0]).intValue();
+                    String uId = String.valueOf(((Number) d[1]).intValue());
+                    double amt = ((Number) d[2]).doubleValue();
                     Object lock = auctionLocks.computeIfAbsent(aId, k -> new Object());
                     Response bidResult;
                     synchronized (lock) {
@@ -245,8 +248,7 @@ public class ClientHandler implements Runnable {
                     }
                     if (bidResult.isSuccess()) {
                         String username = accountService.getUsernameById(uId);
-                        pushBidUpdate(aId, amt, username);
-                    }
+                     }
                     return bidResult;
                 }
                 case GET_BID_HISTORY_STATS: {
@@ -314,12 +316,26 @@ public class ClientHandler implements Runnable {
                     }
                     return new Response(true, "Tải danh sách sản phẩm thành công!", (Serializable) items);
                 }
+
+                case GET_AUCTION_BY_ITEM_ID: {
+                    String itemId = (String) request.getPayload();
+                    try {
+                        Auction auction = auctionDAO.getAuctionByItemId(itemId);
+                        return auction != null
+                                ? new Response(true, "OK", auction)
+                                : new Response(false, "Không tìm thấy phiên!", null);
+                    } catch (SQLException e) {
+                        return new Response(false, "Lỗi DB: " + e.getMessage(), null);
+                    }
+                }
                 default:
                     return new Response(false, "Lệnh không được hỗ trợ!", null);
             }
         } catch (Exception e) {
             return new Response(false, "Lỗi hệ thống: " + e.getMessage(), null);
         }
+
+
 
     }
     // 📢 PHÁT SÓNG SỰ KIỆN TOÀN HỆ THỐNG
@@ -343,10 +359,16 @@ public class ClientHandler implements Runnable {
     }
 
     public static void pushBidUpdate(int auctionId, double newPrice, String username) {
+        System.out.println("pushBidUpdate called: " + auctionId + " " + newPrice);
+        new Exception("Stack trace").printStackTrace();
         CopyOnWriteArrayList<ClientHandler> subs = auctionSubscribers.get(auctionId);
+        System.out.println("Subscribers: " + (subs == null ? 0 : subs.size()));
+
         if (subs == null || subs.isEmpty()) return;
 
         Response push = new Response(true, "BID_UPDATE", new Object[]{auctionId, newPrice, username});
+
+        push.setType("BID_UPDATE");
 
         for (ClientHandler handler : subs) {
             try {

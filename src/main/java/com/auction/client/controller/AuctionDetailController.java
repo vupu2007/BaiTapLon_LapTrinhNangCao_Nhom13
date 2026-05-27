@@ -157,6 +157,7 @@ public class AuctionDetailController implements Observer {
     }
 
     public void loadProductDetail(Item item) {
+
         if (item == null) return;
         this.currentItem = item;
         this.currentAuction = null;
@@ -173,8 +174,27 @@ public class AuctionDetailController implements Observer {
             bidCount = 0;
             priceSeries.getData().add(new XYChart.Data<>(bidCount, item.getStartingPrice()));
         });
-    }
 
+
+        // Fetch auction từ server
+        detailService.fetchAuctionByItemIdAsync(item.getId(), a -> {
+            System.out.println("Auction nhận được: " + a);
+            if (a != null) {
+                this.currentAuction = a;
+                ClientSocket.getInstance().addAuctionObserver(a.getId(), this);
+                ClientSocket.getInstance().setBidUpdateListener((auctionId, newPrice, username) -> {
+                    if (auctionId == currentAuction.getId()) {
+                        Platform.runLater(() -> update(newPrice, username));
+                    }
+                });
+                Platform.runLater(() -> {
+                    startCountdownClock(a.getEndTime());
+                    if (lblCurrentPrice != null)
+                        lblCurrentPrice.setText(String.format("%,.0f đ", a.getCurrentPrice()));
+                });
+            }
+        });
+    }
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
         this.currentAuction = auction;
@@ -253,6 +273,7 @@ public class AuctionDetailController implements Observer {
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
                         txtBidAmount.clear();
+                        showAlert("Thành công", "Đặt giá thành công!");
                     } else {
                         String errorMsg = response != null ? response.getMessage() : "Mạng không phản hồi.";
                         showAlert("Đặt giá thất bại", errorMsg);

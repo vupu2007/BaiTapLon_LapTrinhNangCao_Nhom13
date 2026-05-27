@@ -1,11 +1,14 @@
 package com.auction.client.service;
 
 import com.auction.client.network.ClientSocket;
+import com.auction.shared.model.Auction;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 import com.auction.shared.model.Item;
 import javafx.application.Platform;
+
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
 public class AuctionDetailService {
@@ -38,24 +41,29 @@ public class AuctionDetailService {
      * 💰 CHUẨN ENTERPRISE: Gửi lệnh trả giá thực tế lên Server để lưu vào DB công khai
      */
     public void sendBidRequestAsync(int auctionId, int bidderId, double bidAmount, Consumer<Response> callback) {
-        Thread worker = new Thread(() -> {
-            Response resp = null;
+        CompletableFuture.runAsync(() -> {
             try {
-                // Đóng gói mảng dữ liệu hoặc object tùy thuộc vào kiến trúc Server của bạn nhận gì
-                // Ở đây giả định gửi một mảng chứa thông tin phiên, người đặt, và số tiền nâng giá
                 Object[] bidData = new Object[]{auctionId, bidderId, bidAmount};
-                Request bidReq = new Request(MessageType.PLACE_BID, bidData);
-
-                resp = ClientSocket.getInstance().sendRequest(bidReq);
+                Response resp = ClientSocket.getInstance().sendRequest(new Request(MessageType.PLACE_BID, bidData));
+                Platform.runLater(() -> callback.accept(resp));
             } catch (Exception ex) {
-                System.err.println("❌ [Service] Lỗi gửi request đặt giá: " + ex.getMessage());
+                Platform.runLater(() -> callback.accept(null));
             }
-
-            final Response finalResp = resp;
-            Platform.runLater(() -> callback.accept(finalResp));
-        }, "BidPlacementWorker");
-
-        worker.setDaemon(true);
-        worker.start();
+        });
+    }
+    public void fetchAuctionByItemIdAsync(String itemId, Consumer<Auction> callback) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                Response response = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_AUCTION_BY_ITEM_ID, itemId));
+                if (response != null && response.isSuccess()) {
+                    callback.accept((Auction) response.getData());
+                } else {
+                    callback.accept(null);
+                }
+            } catch (Exception e) {
+                callback.accept(null);
+            }
+        });
     }
 }

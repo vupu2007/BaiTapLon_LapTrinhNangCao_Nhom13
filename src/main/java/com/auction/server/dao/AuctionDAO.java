@@ -322,5 +322,15 @@ public class AuctionDAO {
         }
         return stats;
     }
+    public Auction getAuctionByItemId(String itemId) throws SQLException {
+        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status = 'RUNNING' LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, itemId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return mapResultSetToAuction(rs);
+        }
+        return null;
+    }
 
 }

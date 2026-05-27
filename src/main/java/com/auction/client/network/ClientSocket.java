@@ -1,5 +1,6 @@
 package com.auction.client.network;
 
+import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 import java.io.*;
@@ -159,10 +160,20 @@ public class ClientSocket {
     public void addAuctionObserver(int auctionId, Object observer) {
         if (observer != null) {
             auctionObservers.put(auctionId, observer);
+            try {
+                Request req = new Request(MessageType.SUBSCRIBE_AUCTION, auctionId);
+                req.setRequestId(java.util.UUID.randomUUID().toString());
+                synchronized (out) {
+                    out.writeObject(req);
+                    out.flush();
+                    out.reset();
+                }
+            } catch (Exception e) {
+                System.err.println("Lỗi subscribe: " + e.getMessage());
+            }
             System.out.println("🎯 [Realtime-Observer] Đã đăng ký lắng nghe phiên ID: " + auctionId);
         }
     }
-
     public void removeAuctionObserver(int auctionId) {
         auctionObservers.remove(auctionId);
         System.out.println("🔌 [Realtime-Observer] Đã hủy lắng nghe phiên ID: " + auctionId);
@@ -173,7 +184,8 @@ public class ClientSocket {
     }
 
     private void handleRealtimeNotification(Response response) {
-        if ("BID_UPDATE".equalsIgnoreCase(response.getType())) {
+        String typeOrMessage = response.getType() != null ? response.getType() : response.getMessage();
+        if ("BID_UPDATE".equalsIgnoreCase(typeOrMessage)) {
             Object[] data = (Object[]) response.getData();
             if (bidUpdateListener != null && data != null) {
                 bidUpdateListener.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
