@@ -18,20 +18,21 @@ import java.util.concurrent.Executors;
 
 public class ClientHandler implements Runnable {
 
+    // 🚀 QUẢN LÝ CLIENT ONLINE TOÀN CỤC
+    public static final CopyOnWriteArrayList<ClientHandler> onlineClients = new CopyOnWriteArrayList<>();
+
     private static final ConcurrentHashMap<Integer, CopyOnWriteArrayList<ClientHandler>>
             auctionSubscribers = new ConcurrentHashMap<>();
 
     private static final ConcurrentHashMap<Integer, Object> auctionLocks = new ConcurrentHashMap<>();
 
-    // Định dạng thời gian cho log hệ thống
     private static final DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
 
-    // 🚀 TỐI ƯU HỆ THỐNG LỚN: Thread Pool quản lý tập trung toàn bộ các tác vụ xử lý Logic + SQL ngầm ở Server.
     private static final ExecutorService serverWorkerPool = Executors.newFixedThreadPool(
             Math.max(4, Runtime.getRuntime().availableProcessors() * 2),
             r -> {
                 Thread t = new Thread(r);
-                t.setName("Server-Worker-Pool"); // Đặt tên để nhận diện luồng xử lý
+                t.setName("Server-Worker-Pool");
                 t.setDaemon(true);
                 return t;
             }
@@ -49,7 +50,6 @@ public class ClientHandler implements Runnable {
         this.socket = socket;
     }
 
-    // ⚙️ HÀM BỔ TRỢ: Xuất log tự động đính kèm Tên Luồng hiện hành
     private void printLog(String icon, String status, String message) {
         String timestamp = LocalDateTime.now().format(timeFormatter);
         String threadName = Thread.currentThread().getName();
@@ -59,30 +59,27 @@ public class ClientHandler implements Runnable {
     @Override
     public void run() {
         try {
-            // 🚀 ĐÃ SỬA: Khởi tạo ObjectOutputStream trước và FLUSH NGAY LẬP TỨC để gửi stream header sang Client
             out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
 
             in  = new ObjectInputStream(socket.getInputStream());
             printLog("✅", "I/O_CONNECTED", "Đã kết nối thông suốt luồng I/O với Client: " + socket.getRemoteSocketAddress());
 
+            // Đăng ký client vào danh sách online
+            onlineClients.add(this);
+
             while (!Thread.currentThread().isInterrupted()) {
                 Request request = (Request) in.readObject();
                 if (request == null) break;
 
-                // ⏱️ Ghi nhận mốc thời gian nhận gói tin
                 long startTime = System.currentTimeMillis();
                 printLog("📥", "REQ_RECEIVED", "Nhận request: " + request.getType());
 
-                // 🧠 Ủỷ thác Request cho Thread Pool ngầm xử lý bất đồng bộ
                 serverWorkerPool.submit(() -> {
                     try {
                         Response response = handleRequest(request);
 
-                        response.setRequestId(request.getRequestId());
-
                         if (response != null) {
-                            // Sao chép nguyên vẹn ID gói tin từ Request sang Response để Client khớp mạch hòm thư
                             response.setRequestId(request.getRequestId());
 
                             synchronized (out) {
@@ -91,7 +88,6 @@ public class ClientHandler implements Runnable {
                                 out.reset();
                             }
 
-                            // ⏱️ TÍNH TOÁN VÀ IN ĐỘ TRỄ CHI TIẾT THEO LUỒNG
                             long endTime = System.currentTimeMillis();
                             long duration = endTime - startTime;
                             printLog("⚡", "RESP_FINISHED", "Xử lý xong lệnh [" + request.getType() + "] | ⏱️ Tiêu tốn: " + duration + "ms (" + String.format("%.3f", duration / 1000.0) + "s)");
@@ -111,6 +107,7 @@ public class ClientHandler implements Runnable {
             System.err.printf("[%s] [%s] ❌ [ERR_RUNTIME] Lỗi tại ClientHandler: %s%n",
                     timestamp, Thread.currentThread().getName(), e.getMessage());
         } finally {
+            onlineClients.remove(this);
             unsubscribeAll();
             closeQuietly();
         }
@@ -125,7 +122,6 @@ public class ClientHandler implements Runnable {
                         String[] creds = (String[]) request.getPayload();
                         System.out.println("➡️ [DEBUG] Đã nhận payload, Username: " + creds[0]);
 
-                        // Đoạn này rất dễ nổ Exception nếu chưa bật XAMPP hoặc sai SQL
                         Account acc = accountService.login(creds[0], creds[1]);
                         System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
 
@@ -139,10 +135,9 @@ public class ClientHandler implements Runnable {
                         return response;
 
                     } catch (Exception e) {
-                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
+                        System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
                         e.printStackTrace();
 
-                        // Trả về thông báo lỗi cho Client để Client KHÔNG BỊ TIMEOUT
                         Response errResponse = new Response(false, "Lỗi máy chủ: " + e.getMessage(), null);
                         errResponse.setRequestId(request.getRequestId());
                         return errResponse;
@@ -174,6 +169,11 @@ public class ClientHandler implements Runnable {
                 case CREATE_ITEM: {
                     Item item = (Item) request.getPayload();
                     boolean ok = itemService.createItem(item);
+
+                    if (ok) {
+                        broadcastSystemUpdate("AUCTION_UPDATE");
+                    }
+
                     return new Response(ok, ok ? "Tạo sản phẩm thành công!" : "Tạo sản phẩm thất bại!", null);
                 }
                 case GET_ITEM_BY_ID: {
@@ -198,6 +198,11 @@ public class ClientHandler implements Runnable {
                     boolean ok = auctionService.createAuction(
                             (String) d[0], (int) d[1], (double) d[2], (String) d[3], (String) d[4]
                     );
+
+                    if (ok) {
+                        broadcastSystemUpdate("AUCTION_UPDATE");
+                    }
+
                     return new Response(ok, ok ? "Tạo phiên đấu giá thành công!" : "Tạo thất bại!", null);
                 }
                 case GET_ALL_AUCTIONS: {
@@ -225,6 +230,11 @@ public class ClientHandler implements Runnable {
                     int auctionId = (int) request.getPayload();
                     boolean ok = auctionService.closeAuction(auctionId);
                     auctionLocks.remove(auctionId);
+
+                    if (ok) {
+                        broadcastSystemUpdate("AUCTION_UPDATE");
+                    }
+
                     return new Response(ok, ok ? "Đã đóng phiên!" : "Đóng phiên thất bại!", null);
                 }
                 case PLACE_BID: {
@@ -322,6 +332,26 @@ public class ClientHandler implements Runnable {
             System.err.printf("[%s] [%s] ❌ Lỗi xử lý lệnh %s: %s%n",
                     timestamp, Thread.currentThread().getName(), request.getType(), e.getMessage());
             return new Response(false, "Lỗi hệ thống Server nội bộ!", null);
+        }
+    }
+
+    // 📢 PHÁT SÓNG SỰ KIỆN TOÀN HỆ THỐNG
+    public static void broadcastSystemUpdate(String updateType) {
+        Response broadcastNotification = new Response(true, "Dữ liệu hệ thống có thay đổi mới!");
+        broadcastNotification.setType(updateType);
+
+        System.out.println("📢 [Broadcast-System] Đang gửi tín hiệu real-time [" + updateType + "] tới " + onlineClients.size() + " máy trạm...");
+
+        for (ClientHandler handler : onlineClients) {
+            try {
+                synchronized (handler.out) {
+                    handler.out.writeObject(broadcastNotification);
+                    handler.out.flush();
+                    handler.out.reset();
+                }
+            } catch (Exception e) {
+                onlineClients.remove(handler);
+            }
         }
     }
 
