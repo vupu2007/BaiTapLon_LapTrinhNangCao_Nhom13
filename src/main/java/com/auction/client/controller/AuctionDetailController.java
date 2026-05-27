@@ -8,7 +8,6 @@ import com.auction.shared.model.Observer;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
 
-// 🌟 ĐÃ THÊM ĐỦ IMPORT KHẮC PHỤC LỖI ĐỎ BIÊN DỊCH
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.application.Platform;
@@ -16,9 +15,11 @@ import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.scene.Parent;
 import javafx.scene.chart.LineChart;
 import javafx.scene.chart.XYChart;
 import javafx.scene.control.*;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import javafx.scene.image.ImageView;
 import javafx.util.Duration;
@@ -194,18 +195,20 @@ public class AuctionDetailController implements Observer {
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0) ? "Thành viên #" + auction.getWinnerId() : "Chưa có";
 
-            fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
+            Platform.runLater(() -> {
+                fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
 
-            if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
-            if (lblTopBidder != null) lblTopBidder.setText(winnerText);
+                if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
+                if (lblTopBidder != null) lblTopBidder.setText(winnerText);
 
-            ImageLoader.tryLoadImageToView(imgProduct, imagePath);
-            startCountdownClock(auction.getEndTime());
-            checkBiddingPermissions(auction.getSellerId());
+                ImageLoader.tryLoadImageToView(imgProduct, imagePath);
+                startCountdownClock(auction.getEndTime());
+                checkBiddingPermissions(auction.getSellerId());
 
-            priceSeries.getData().clear();
-            bidCount = 0;
-            priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
+                priceSeries.getData().clear();
+                bidCount = 0;
+                priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
+            });
         });
     }
 
@@ -337,12 +340,18 @@ public class AuctionDetailController implements Observer {
         alert.showAndWait();
     }
 
+    /**
+     * 🚀 SỬA LỖI ĐỎ BIÊN DỊCH: Sử dụng kỹ thuật định vị cây giao diện động (Scene Graph Lookup)
+     * Thay thế hoàn toàn cơ chế gọi qua Singleton lỗi thời.
+     */
     @FXML
     private void handleBack() {
         if (countdownTimeline != null) countdownTimeline.stop();
         if (currentAuction != null) {
             ClientSocket.getInstance().removeAuctionObserver(currentAuction.getId(), this);
         }
+
+        if (txtBidAmount.getScene() == null) return;
 
         Platform.runLater(() -> {
             try {
@@ -354,25 +363,21 @@ public class AuctionDetailController implements Observer {
                 }
 
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
-
-                // 🚀 ĐÃ SỬA: Chuyển kiểu dữ liệu từ Parent thành Node bao quát để khớp signature hàm setContent
                 Node homeView = loader.load();
 
-                if (MainLayoutController.getInstance() != null) {
-                    MainLayoutController.getInstance().setContent(homeView);
-                    System.out.println("🔄 [UI Switch] Đã nạp xong khung giao diện trang chủ.");
+                // Định vị gián tiếp vùng contentArea tổng thể từ Node hiện tại
+                Parent root = txtBidAmount.getScene().getRoot();
+                Node layoutCenter = root.lookup("#contentArea");
 
-                    Timeline lazyLoadTimeline = new Timeline(new KeyFrame(Duration.millis(100), event -> {
-                        if (MainController.getInstance() != null) {
-                            System.out.println("📡 [Async Load] Bắt đầu tải dữ liệu sản phẩm ngầm...");
-                            MainController.getInstance().refreshDashboard();
-                        }
-                    }));
-                    lazyLoadTimeline.setCycleCount(1);
-                    lazyLoadTimeline.play();
+                if (layoutCenter instanceof StackPane contentArea) {
+                    // Chèn màn hình MainView quay lại trung tâm màn hình chính
+                    contentArea.getChildren().setAll(homeView);
+                    System.out.println("🎯 [Navigation] Quay lại trang chủ thành công qua cơ chế Scene Graph Lookup.");
 
+                    // Lưu ý: Hàm initialize() trong MainController mới của màn hình Home
+                    // sẽ tự động gọi refreshDashboard() để cập nhật dữ liệu nên không cần gọi thủ công nữa.
                 } else {
-                    System.err.println("⚠️ CẢNH BÁO: Không tìm thấy thực thể MainLayoutController toàn cục!");
+                    System.err.println("❌ Không tìm thấy vùng chứa #contentArea trên giao diện hiện hành.");
                 }
 
             } catch (Exception e) {

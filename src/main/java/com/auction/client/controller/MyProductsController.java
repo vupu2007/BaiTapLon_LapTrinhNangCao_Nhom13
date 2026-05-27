@@ -7,18 +7,18 @@ import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 public class MyProductsController {
-
-    private static MyProductsController instance;
 
     @FXML private Label lblTotalAuctions;
     @FXML private Label lblActiveAuctions;
@@ -31,14 +31,8 @@ public class MyProductsController {
     // 🚀 TỐI ƯU DỰ ÁN LỚN: Định vị sẵn FXML mẫu ngay khi khởi chạy để tối ưu hóa I/O tốc độ đọc file
     private static java.net.URL productCardFxmlLocation;
 
-    public static MyProductsController getInstance() {
-        return instance;
-    }
-
     @FXML
     public void initialize() {
-        instance = this;
-
         if (productCardFxmlLocation == null) {
             productCardFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
             if (productCardFxmlLocation == null) productCardFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
@@ -147,18 +141,20 @@ public class MyProductsController {
                 if (fxmlLoc == null) fxmlLoc = getClass().getResource("/com/auction/client/view/CreateProduct.fxml");
 
                 FXMLLoader loader = new FXMLLoader(fxmlLoc);
-                javafx.scene.Parent root = loader.load();
+                Parent root = loader.load();
 
                 Platform.runLater(() -> {
                     try {
-                        javafx.stage.Stage popupStage = new javafx.stage.Stage();
-                        popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
-                        popupStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
-                        popupStage.initOwner(productsGrid.getScene().getWindow());
-                        popupStage.setScene(new javafx.scene.Scene(root));
+                        if (productsGrid.getScene() != null) {
+                            javafx.stage.Stage popupStage = new javafx.stage.Stage();
+                            popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
+                            popupStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+                            popupStage.initOwner(productsGrid.getScene().getWindow());
+                            popupStage.setScene(new javafx.scene.Scene(root));
 
-                        popupStage.showAndWait();
-                        loadMyProductsData(); // Refresh lại dữ liệu sau khi tắt popup công việc
+                            popupStage.showAndWait();
+                            loadMyProductsData(); // Refresh lại dữ liệu sau khi tắt popup công việc
+                        }
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
@@ -199,10 +195,39 @@ public class MyProductsController {
         }
     }
 
+    /**
+     * 🚀 ĐÃ SỬA LỖI BIÊN DỊCH: Sử dụng Kỹ thuật Scene Graph Lookup
+     * Tìm kiếm và chèn trang "Tạo sản phẩm" động lên vùng chứa tổng của Layout cha
+     */
     @FXML
     private void handleGoToCreateProduct() {
-        if (MainLayoutController.getInstance() != null) {
-            MainLayoutController.getInstance().showCreateProductView();
-        }
+        if (productsGrid.getScene() == null) return;
+
+        // Bắn luồng ngầm biên dịch FXML tạo sản phẩm mới, không block nút bấm
+        Thread navigationWorker = new Thread(() -> {
+            try {
+                java.net.URL createFxmlLoc = getClass().getResource("/view/CreateAuction.fxml");
+                if (createFxmlLoc == null) createFxmlLoc = getClass().getResource("/view/CreateProduct.fxml");
+
+                FXMLLoader loader = new FXMLLoader(createFxmlLoc);
+                Parent createView = loader.load();
+
+                Platform.runLater(() -> {
+                    Parent root = productsGrid.getScene().getRoot();
+                    Node layoutCenter = root.lookup("#contentArea");
+
+                    if (layoutCenter instanceof StackPane contentArea) {
+                        contentArea.getChildren().setAll(createView);
+                        System.out.println("🎯 [Navigation] Đã chuyển đổi màn hình sang form Tạo sản phẩm an toàn.");
+                    } else {
+                        System.err.println("❌ Không tìm thấy vùng chứa trung tâm #contentArea.");
+                    }
+                });
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi load trang tạo sản phẩm ở luồng nền: " + e.getMessage());
+            }
+        });
+        navigationWorker.setDaemon(true);
+        navigationWorker.start();
     }
 }

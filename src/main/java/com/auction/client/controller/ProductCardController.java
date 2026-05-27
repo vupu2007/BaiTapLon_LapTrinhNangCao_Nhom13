@@ -1,11 +1,16 @@
 package com.auction.client.controller;
 
 import com.auction.client.util.ImageLoader; // 🚀 Gọi class tiện ích tập trung của hệ thống
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.Item;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
-import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.scene.shape.Rectangle;
 
 public class ProductCardController {
@@ -15,6 +20,9 @@ public class ProductCardController {
 
     @FXML private Button btnEdit;
     @FXML private Button btnDelete;
+
+    // Giữ lại Object gốc của thẻ sản phẩm phục vụ cho việc truyền nhận trang chi tiết động
+    private Object originProductData;
 
     @FXML
     public void initialize() {
@@ -46,9 +54,25 @@ public class ProductCardController {
         }
     }
 
+    /**
+     * Hàm nạp dữ liệu cũ: Hỗ trợ tương thích ngược với các hàm gọi cũ chỉ truyền Text chuỗi thô
+     */
     public void setData(String name, String price, String statusText, String imageFileName,
                         String description, String sellerName, String startTime, String endTime) {
 
+        setDataInternal(name, price, statusText, imageFileName, description);
+    }
+
+    /**
+     * 🌟 HÀM NÂNG CAO: Nạp dữ liệu đồng thời gán dữ liệu Model Object gốc (Item hoặc Auction)
+     * Giúp hệ thống không bao giờ phải chạy vào khối logic dự phòng (Fallback) khi đổi trang
+     */
+    public void setProductModelData(Object originModel, String name, String price, String statusText, String imageFileName, String description) {
+        this.originProductData = originModel;
+        setDataInternal(name, price, statusText, imageFileName, description);
+    }
+
+    private void setDataInternal(String name, String price, String statusText, String imageFileName, String description) {
         // 🌟 ĐỒNG BỘ DỮ LIỆU CHỮ VỚI FXML
         if (productName != null) productName.setText(name);
         if (currentPrice != null) currentPrice.setText(price);
@@ -69,28 +93,74 @@ public class ProductCardController {
         }
 
         // 🚀 CHUẨN KIẾN TRÚC LỚN: ỦY THÁC TOÀN BỘ VIỆC LOAD ẢNH + CACHE CHO IMAGELOADER
-        // Hàm này tự chạy ngầm, tự check Cache Caffeine trong RAM, tự đổi ảnh default nếu lỗi
         ImageLoader.tryLoadImageToView(productImage, imageFileName);
 
         // Xử lý sự kiện click vào nút Đấu giá ngay / Xem chi tiết
         if (actionButton != null) {
             actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
-            actionButton.setOnAction(e -> {
-                if (MainLayoutController.getInstance() != null) {
-                    Image currentImg = (productImage != null) ? productImage.getImage() : null;
-
-                    MainLayoutController.getInstance().openAuctionDetail(
-                            name,
-                            price,
-                            currentImg,
-                            imageFileName,
-                            description,
-                            sellerName,
-                            startTime,
-                            endTime
-                    );
-                }
-            });
+            actionButton.setOnAction(e -> handleNavigateToDetail());
         }
+    }
+
+    /**
+     * 🚀 SỬA LỖI BIÊN DỊCH TRIỆT ĐỂ: Tự điều hướng sang trang chi tiết bằng kỹ thuật Scene Graph Lookup
+     * Loại bỏ hoàn toàn cơ chế gọi qua Singleton static cũ và sửa lỗi khởi tạo lớp abstract Item.
+     */
+    private void handleNavigateToDetail() {
+        if (actionButton.getScene() == null) return;
+
+        // 🎯 FIX: Sử dụng Auction (Concrete Class) làm phương án dự phòng thay vì khởi tạo lớp trừu tượng Item
+        if (originProductData == null) {
+            Auction fallbackAuction = new Auction();
+            fallbackAuction.setProductName(productName != null ? productName.getText() : "Sản phẩm");
+            try {
+                String rawPrice = currentPrice != null ? currentPrice.getText().replaceAll("[^0-9]", "") : "0";
+                fallbackAuction.setStartPrice(Double.parseDouble(rawPrice));
+                fallbackAuction.setCurrentPrice(Double.parseDouble(rawPrice));
+            } catch (Exception ex) {
+                fallbackAuction.setStartPrice(0.0);
+                fallbackAuction.setCurrentPrice(0.0);
+            }
+            if (productDesc != null) {
+                fallbackAuction.setItemId("FALLBACK-" + productName.getText().hashCode());
+            }
+            this.originProductData = fallbackAuction;
+        }
+
+        // Tạo tiến trình chạy nền nạp FXML trang chi tiết, giữ nút click phản hồi tức thì
+        Thread navigationWorker = new Thread(() -> {
+            try {
+                String path = getClass().getResource("/view/AuctionDetailView.fxml") != null
+                        ? "/view/AuctionDetailView.fxml" : "/view/AuctionDetail.fxml";
+
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
+                Parent detailView = loader.load();
+
+                // Đổ Object dữ liệu nguyên bản trực tiếp vào Controller trang chi tiết mới
+                AuctionDetailController detailController = loader.getController();
+                if (detailController != null) {
+                    if (originProductData instanceof Item item) detailController.loadProductDetail(item);
+                    else if (originProductData instanceof Auction auction) detailController.loadProductDetail(auction);
+                }
+
+                // Cập nhật giao diện đè lên khung contentArea của Layout cha chính thức
+                Platform.runLater(() -> {
+                    Parent root = actionButton.getScene().getRoot();
+                    Node layoutCenter = root.lookup("#contentArea");
+
+                    if (layoutCenter instanceof StackPane contentArea) {
+                        contentArea.getChildren().setAll(detailView);
+                        System.out.println("🎯 [Navigation] Card sản phẩm chuyển tiếp sang trang chi tiết thành công.");
+                    } else {
+                        System.err.println("❌ Không thể định vị được vùng hiển thị #contentArea của bố cục cha.");
+                    }
+                });
+
+            } catch (Exception ex) {
+                System.err.println("❌ Lỗi chuyển hướng trang chi tiết từ ProductCard: " + ex.getMessage());
+            }
+        });
+        navigationWorker.setDaemon(true);
+        navigationWorker.start();
     }
 }

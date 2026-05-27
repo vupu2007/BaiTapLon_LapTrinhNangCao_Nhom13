@@ -8,12 +8,18 @@ import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
+import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.File;
+import java.io.IOException;
+import java.net.URL;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
@@ -36,7 +42,6 @@ public class CreateProductController {
     @FXML private ComboBox<String> endMinuteCombo;
 
     private File productImgFile = null;
-
     private final CreateProductService productService = new CreateProductService();
 
     @FXML
@@ -69,18 +74,19 @@ public class CreateProductController {
                 new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg", "*.gif")
         );
 
-        Stage stage = (Stage) lblImagePath.getScene().getWindow();
-        File selectedFile = fileChooser.showOpenDialog(stage);
+        if (lblImagePath.getScene() != null) {
+            Stage stage = (Stage) lblImagePath.getScene().getWindow();
+            File selectedFile = fileChooser.showOpenDialog(stage);
 
-        if (selectedFile != null) {
-            this.productImgFile = selectedFile;
-            lblImagePath.setText(selectedFile.getName());
+            if (selectedFile != null) {
+                this.productImgFile = selectedFile;
+                lblImagePath.setText(selectedFile.getName());
+            }
         }
     }
 
     @FXML
     private void handleCreateAuction() {
-        // 1. Kiểm tra tài khoản đăng nhập trước tiên để tránh NullPointerException
         if (CurrentAccount.getAccount() == null) {
             showAlert(Alert.AlertType.ERROR, "Lỗi phân quyền", "Vui lòng đăng nhập để tạo phiên đấu giá!");
             return;
@@ -112,7 +118,6 @@ public class CreateProductController {
         LocalDateTime endTime = LocalDateTime.of(endDatePicker.getValue(),
                 LocalTime.of(Integer.parseInt(endHourCombo.getValue()), Integer.parseInt(endMinuteCombo.getValue())));
 
-        // 2. Chặn lỗi logic thời gian
         if (startTime.isBefore(LocalDateTime.now())) {
             showAlert(Alert.AlertType.WARNING, "Lỗi thời gian", "Thời gian bắt đầu không thể nằm trong quá khứ!");
             return;
@@ -129,11 +134,10 @@ public class CreateProductController {
         String itemId = "ITEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        // 3. Gọi Service mạng bất đồng bộ
+        // Gọi Service gửi gói tin lên mạng bất đồng bộ
         productService.createAuctionPipelineAsync(itemId, name, description, startPrice, ownerId,
                 productImgFile, startTimeStr, endTimeStr, response -> {
 
-                    // 🌟 CRITICAL FIX: Đưa toàn bộ thao tác cập nhật UI về luồng chính
                     Platform.runLater(() -> {
                         if (response != null && response.isSuccess()) {
                             Auction newAuction = new Auction();
@@ -147,20 +151,12 @@ public class CreateProductController {
                             newAuction.setStatus(Auction.AuctionStatus.OPEN);
                             newAuction.setAccount(CurrentAccount.getAccount());
 
-                            if (MainController.getInstance() != null) {
-                                MainController.getInstance().addAuctionToRealtimeUI(newAuction);
-                            }
-
                             showAlert(Alert.AlertType.INFORMATION, "Thành công", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
                             handleCancel();
 
-                            // Hiệu ứng PauseTransition phải được khai báo trên luồng UI
+                            // 🚀 SỬA LỖI GIẢI PHÓNG SINGLETON: Tự động chuyển hướng trang dựa vào việc quét cây Scene Graph
                             PauseTransition pause = new PauseTransition(Duration.millis(300));
-                            pause.setOnFinished(pEvent -> {
-                                if (MainLayoutController.getInstance() != null) {
-                                    MainLayoutController.getInstance().openAuctionDetailWithObject(newAuction);
-                                }
-                            });
+                            pause.setOnFinished(pEvent -> navigateToDetailView(newAuction));
                             pause.play();
 
                         } else {
@@ -169,6 +165,41 @@ public class CreateProductController {
                         }
                     });
                 });
+    }
+
+    /**
+     * 🧠 KỸ THUẬT SCENE LOOKUP: Tự định vị vùng hiển thị của Layout cha để đổi trang mà không cần gọi Singleton
+     */
+    private void navigateToDetailView(Auction newAuction) {
+        if (productNameField.getScene() == null) return;
+
+        Parent root = productNameField.getScene().getRoot();
+        Node layoutCenter = root.lookup("#contentArea");
+
+        if (layoutCenter instanceof StackPane contentArea) {
+            try {
+                // Xác định đường dẫn file chi tiết thích hợp
+                String path = getClass().getResource("/view/AuctionDetailView.fxml") != null
+                        ? "/view/AuctionDetailView.fxml" : "/view/AuctionDetail.fxml";
+
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
+                Parent detailView = loader.load();
+
+                // Truyền Model dữ liệu trực tiếp vào Controller mới vừa nạp
+                AuctionDetailController detailController = loader.getController();
+                if (detailController != null) {
+                    detailController.loadProductDetail(newAuction);
+                }
+
+                // Chèn đè giao diện chi tiết vào trung tâm màn hình chính
+                contentArea.getChildren().setAll(detailView);
+                System.out.println("🎯 [Navigation] Đã chuyển tiếp sang trang chi tiết sản phẩm mới tạo.");
+            } catch (IOException e) {
+                System.err.println("❌ Không thể nạp trang chi tiết sản phẩm: " + e.getMessage());
+            }
+        } else {
+            System.err.println("❌ Không thể định vị được vùng chứa trung tâm #contentArea.");
+        }
     }
 
     @FXML
@@ -187,9 +218,6 @@ public class CreateProductController {
         endMinuteCombo.setValue("00");
     }
 
-    /**
-     * 🌟 HÀM SHOW ALERT ĐA LUỒNG: Đảm bảo popup luôn hiện lên an toàn dù gọi từ đâu
-     */
     private void showAlert(Alert.AlertType type, String title, String content) {
         if (Platform.isFxApplicationThread()) {
             Alert alert = new Alert(type);

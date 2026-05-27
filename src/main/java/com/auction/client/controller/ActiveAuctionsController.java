@@ -13,7 +13,9 @@ import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.layout.FlowPane;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 
 import java.time.Duration;
@@ -70,8 +72,15 @@ public class ActiveAuctionsController {
 
                 if (response == null || !response.isSuccess()) return dataList;
 
-                List<Auction> auctions = (List<Auction>) response.getData();
-                if (auctions == null || auctions.isEmpty()) return dataList;
+                // Kiểm tra kiểu dữ liệu an toàn trước khi ép kiểu danh sách phiên đấu giá
+                if (!(response.getData() instanceof List<?> rawList)) return dataList;
+
+                List<Auction> auctions = new ArrayList<>();
+                for (Object obj : rawList) {
+                    if (obj instanceof Auction a) auctions.add(a);
+                }
+
+                if (auctions.isEmpty()) return dataList;
 
                 // 2. Vòng lặp lấy thông tin Item tương ứng (Chạy ngầm tuần tự)
                 for (Auction auction : auctions) {
@@ -122,8 +131,10 @@ public class ActiveAuctionsController {
                     ProductCardController controller = loader.getController();
 
                     // Đổ dữ liệu thô lên Controller của Card
-                    controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
-                            dto.sellerName, dto.startTimeStr, dto.endTimeStr);
+                    if (controller != null) {
+                        controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
+                                dto.sellerName, dto.startTimeStr, dto.endTimeStr);
+                    }
 
                     // Thêm card thẳng vào container hiển thị
                     cardsContainer.getChildren().add(card);
@@ -157,12 +168,42 @@ public class ActiveAuctionsController {
         }
     }
 
+    /**
+     * 🚀 SỬA LỖI BIÊN DỊCH TRIỆT ĐỂ: Điều hướng quay lại trang chủ bằng kỹ thuật Scene Graph Lookup
+     * Loại bỏ hoàn toàn sự phụ thuộc vào Singleton static cũ để tránh lỗi compile và rò rỉ RAM.
+     */
     @FXML
     private void openHome() {
-        if (MainLayoutController.getInstance() != null) {
-            Platform.runLater(() -> {
-                MainLayoutController.getInstance().openHome();
-            });
-        }
+        if (cardsContainer == null || cardsContainer.getScene() == null) return;
+
+        Platform.runLater(() -> {
+            try {
+                String homeFxmlPath = "/view/MainView.fxml";
+                java.net.URL fxmlLocation = getClass().getResource(homeFxmlPath);
+                if (fxmlLocation == null) {
+                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
+                    return;
+                }
+
+                FXMLLoader loader = new FXMLLoader(fxmlLocation);
+                Node homeView = loader.load();
+
+                // Dò tìm động phân vùng chứa trung tâm #contentArea từ cây phân cấp giao diện hiện tại
+                Parent root = cardsContainer.getScene().getRoot();
+                Node layoutCenter = root.lookup("#contentArea");
+
+                if (layoutCenter instanceof StackPane contentArea) {
+                    // Chèn màn hình tổng quan trang chủ quay lại trung tâm màn hình Layout chính
+                    contentArea.getChildren().setAll(homeView);
+                    System.out.println("🎯 [Navigation] Đã chuyển đổi màn hình sang Trang chủ từ ActiveAuctions thông qua Scene Graph Lookup.");
+                } else {
+                    System.err.println("❌ Không định vị được vùng hiển thị #contentArea trên giao diện.");
+                }
+
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi nghiêm trọng khi quay lại giao diện trang chủ: " + e.getMessage());
+                e.printStackTrace();
+            }
+        });
     }
 }

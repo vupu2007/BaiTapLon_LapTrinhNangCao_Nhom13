@@ -19,8 +19,11 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class MainController {
 
@@ -28,43 +31,43 @@ public class MainController {
     @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming;
     @FXML private FlowPane flowPane;
 
-    private static MainController instance;
     private String currentFilter = "ALL";
-
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
 
-    // 🚀 TỐI ƯU DỰ ÁN LỚN: Định vị sẵn FXML mẫu ngay khi khởi chạy class, tránh quét bộ nhớ nhiều lần
+    // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
+    private final ExecutorService executorService = Executors.newFixedThreadPool(
+            Runtime.getRuntime().availableProcessors(),
+            r -> {
+                Thread t = new Thread(r);
+                t.setDaemon(true); // Tự động tắt luồng khi đóng ứng dụng
+                return t;
+            }
+    );
+
+    // Cache vị trí FXML mẫu để tránh quét bộ nhớ nhiều lần
     private static java.net.URL cachedFxmlLocation;
 
     public MainController() {}
 
     @FXML
     public void initialize() {
-        instance = this;
-
-        // Khởi tạo cache đường dẫn FXML một lần duy nhất
-        if (cachedFxmlLocation == null) {
-            cachedFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
-            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
-            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("ProductCard.fxml");
-            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/ProductCard.fxml");
-        }
+        initFxmlCache();
 
         Account current = CurrentAccount.getAccount();
         if (current != null) {
             if (welcomeLabel != null) welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
-            refreshDashboard(); // Gọi trực tiếp, việc chia luồng đã có dashboardService lo
+            refreshDashboard();
         }
     }
 
-    public static MainController getInstance() {
-        return instance;
+    private void initFxmlCache() {
+        if (cachedFxmlLocation == null) {
+            cachedFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
+            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
+        }
     }
 
-    /**
-     * Tải lại toàn bộ dữ liệu thống kê và danh sách sản phẩm từ cơ sở dữ liệu (Đã tối ưu hóa luồng ngầm hoàn toàn)
-     */
     public void refreshDashboard() {
         Account current = CurrentAccount.getAccount();
         if (current == null) return;
@@ -74,72 +77,58 @@ public class MainController {
                     ? String.format("%,.0f VND", ((User) current).getBalance()) : "N/A");
         }
 
-        // Tải dữ liệu bất đồng bộ (Chạy trên luồng nền của Service)
+        // Gọi Service lấy dữ liệu bất đồng bộ
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
 
-            // 🧠 CHIẾN LƯỢC DỰ ÁN LỚN: Nạp FXML ngay trên LUỒNG NGẦM này trước khi đẩy về UI Thread
-            List<VBox> renderedCards = new ArrayList<>();
-            if (items != null && cachedFxmlLocation != null) {
-                for (Item item : items) {
-                    if (item == null) continue;
-                    try {
-                        // Đọc file FXML thô từ ổ cứng/bộ nhớ tại đây (Không gây block UI)
-                        FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
-                        VBox cardLayout = loader.load();
+            // Đẩy việc xử lý FXML đồ sộ vào Thread Pool tập trung
+            executorService.submit(() -> {
+                List<VBox> renderedCards = new ArrayList<>();
+                if (items != null && cachedFxmlLocation != null) {
+                    for (Item item : items) {
+                        if (item == null) continue;
+                        try {
+                            FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
+                            VBox cardLayout = loader.load();
 
-                        // Đổ dữ liệu vào Controller của Card
-                        ProductCardController cardController = loader.getController();
-                        String finalImageUrl = getFinalImageUrl(item.getImagePath());
+                            ProductCardController cardController = loader.getController();
+                            String finalImageUrl = getFinalImageUrl(item.getImagePath());
+                            String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
 
-                        String statusText = "UPCOMING".equals(currentFilter) || (item.getDescription() != null && item.getDescription().toLowerCase().contains("sắp diễn ra"))
-                                ? "Sắp diễn ra" : "Đang diễn ra";
+                            cardController.setData(item.getName(), String.format("%,.0f đ", item.getStartingPrice()), statusText, finalImageUrl, item.getDescription(), "Người bán ẩn", "", "");
 
-                        cardController.setData(item.getName(), String.format("%,.0f đ", item.getStartingPrice()), statusText, finalImageUrl, item.getDescription(), "Người bán ẩn", "", "");
+                            cardLayout.setOnMouseClicked(e -> showAuctionDetail(item));
+                            bindCardButtons(cardLayout, item);
 
-                        // Cài đặt sự kiện click
-                        cardLayout.setOnMouseClicked(e -> showAuctionDetail(item));
-                        cardLayout.setStyle(cardLayout.getStyle() + "; -fx-cursor: hand;");
-                        bindCardButtons(cardLayout, item);
-
-                        renderedCards.add(cardLayout);
-                    } catch (IOException e) {
-                        System.err.println("❌ Lỗi nạp FXML ngầm cho item: " + item.getName());
+                            renderedCards.add(cardLayout);
+                        } catch (IOException e) {
+                            System.err.println("❌ Lỗi nạp FXML ngầm cho item: " + item.getName());
+                        }
                     }
                 }
-            }
 
-            // Sau khi đã chuẩn bị xong xuôi toàn bộ mớ giao diện thô ở luồng ngầm, ta mới đẩy về UI Thread để hiển thị
-            Platform.runLater(() -> {
-                if (flowPane == null) return;
+                // Cập nhật lên UI Thread sau khi chuẩn bị xong danh sách card
+                Platform.runLater(() -> {
+                    if (flowPane == null) return;
 
-                if (stats != null) {
-                    if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
-                    if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
-                }
+                    if (stats != null) {
+                        if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
+                        if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
+                    }
 
-                switch (currentFilter) {
-                    case "ALL" -> setButtonActive(btnFilterAll);
-                    case "ACTIVE" -> setButtonActive(btnFilterActive);
-                    case "UPCOMING" -> setButtonActive(btnFilterUpcoming);
-                }
+                    updateFilterButtonStyles();
 
-                // Xóa sạch các Node cũ và đẩy toàn bộ danh sách card mới lên (Chỉ mất vài mili-giây)
-                flowPane.getChildren().clear();
-                flowPane.getChildren().addAll(renderedCards);
-
-                System.out.println("=== [UI] Đã hiển thị mượt mà " + flowPane.getChildren().size() + " thẻ đấu giá từ FXML mẫu.");
+                    flowPane.getChildren().clear();
+                    flowPane.getChildren().addAll(renderedCards);
+                });
             });
         });
     }
 
-    /**
-     * 🌟 REAL-TIME MECHANISM: Tự động render bất đồng bộ và bắn card mới lên đầu
-     */
     public void addAuctionToRealtimeUI(Auction newAuction) {
         if (newAuction == null || cachedFxmlLocation == null) return;
 
-        // Tách việc load FXML của card real-time ra một luồng background riêng biệt
-        Thread realtimeRenderWorker = new Thread(() -> {
+        // Tận dụng Thread Pool thay vì tạo "new Thread()" bừa bãi
+        executorService.submit(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
                 VBox cardLayout = loader.load();
@@ -147,15 +136,12 @@ public class MainController {
                 ProductCardController cardController = loader.getController();
                 String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
 
-                cardController.setData(newAuction.getProductName(), String.format("%,.0f đ", newAuction.getStartPrice()), "Đang diễn ra", finalImageUrl, "Sản phẩm mới lên sàn đấu giá thời gian thực.", "Hệ thống", "", "");
-
+                cardController.setData(newAuction.getProductName(), String.format("%,.0f đ", newAuction.getStartPrice()), "Đang diễn ra", finalImageUrl, "Sản phẩm mới.", "Hệ thống", "", "");
                 cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
-                cardLayout.setStyle(cardLayout.getStyle() + "; -fx-cursor: hand;");
                 bindCardButtons(cardLayout, newAuction);
 
-                // Sau khi dựng xong card, đẩy lệnh chèn vào đầu FlowPane lên UI Thread
                 Platform.runLater(() -> {
-                    if (flowPane != null && (currentFilter.equals("ALL") || currentFilter.equals("ACTIVE"))) {
+                    if (flowPane != null && ("ALL".equals(currentFilter) || "ACTIVE".equals(currentFilter))) {
                         flowPane.getChildren().add(0, cardLayout);
                     }
                 });
@@ -163,32 +149,17 @@ public class MainController {
                 System.err.println("❌ Lỗi nạp FXML real-time: " + e.getMessage());
             }
         });
-        realtimeRenderWorker.setDaemon(true);
-        realtimeRenderWorker.start();
     }
 
-    /**
-     * Hàm tiện ích giúp xử lý logic chuỗi URL ảnh
-     */
     private String getFinalImageUrl(String rawImagePath) {
-        if (rawImagePath == null || rawImagePath.trim().isEmpty()) {
-            return "default.png";
-        } else if (rawImagePath.startsWith("http://") || rawImagePath.startsWith("https://") || rawImagePath.startsWith("base64:")) {
-            return rawImagePath;
-        } else {
-            return SERVER_IMAGE_BASE_URL + rawImagePath;
-        }
+        if (rawImagePath == null || rawImagePath.trim().isEmpty()) return "default.png";
+        if (rawImagePath.startsWith("http://") || rawImagePath.startsWith("https://") || rawImagePath.startsWith("base64:")) return rawImagePath;
+        return SERVER_IMAGE_BASE_URL + rawImagePath;
     }
 
-    /**
-     * Hàm tiện ích liên kết các nút bấm bên trong thẻ card
-     */
     private void bindCardButtons(VBox cardLayout, Object originData) {
         try {
             Node actionBtn = cardLayout.lookup("#actionButton");
-            if (actionBtn == null) actionBtn = cardLayout.lookup("#btnBid");
-            if (actionBtn == null) actionBtn = cardLayout.lookup("#actionBtn");
-
             if (actionBtn instanceof Button button) {
                 button.setOnAction(e -> {
                     e.consume();
@@ -198,14 +169,23 @@ public class MainController {
         } catch (Exception ignored) {}
     }
 
-    private void setButtonActive(Button activeButton) {
+    private void updateFilterButtonStyles() {
         Button[] filterButtons = {btnFilterAll, btnFilterActive, btnFilterUpcoming};
         for (Button btn : filterButtons) {
-            if (btn != null)
-                btn.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;");
+            if (btn != null) {
+                btn.getStyleClass().remove("filter-button-active");
+                if (!btn.getStyleClass().contains("filter-button")) {
+                    btn.getStyleClass().add("filter-button");
+                }
+            }
         }
-        if (activeButton != null)
-            activeButton.setStyle("-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;");
+        Button activeBtn = switch (currentFilter) {
+            case "ALL" -> btnFilterAll;
+            case "ACTIVE" -> btnFilterActive;
+            case "UPCOMING" -> btnFilterUpcoming;
+            default -> null;
+        };
+        if (activeBtn != null) activeBtn.getStyleClass().add("filter-button-active");
     }
 
     @FXML private void handleFilterAll() { currentFilter = "ALL"; refreshDashboard(); }
@@ -215,12 +195,12 @@ public class MainController {
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentAccount.logOut();
+        shutdownExecutor(); // Dọn dẹp luồng khi thoát màn hình chính
 
-        Thread logoutWorker = new Thread(() -> {
+        executorService.submit(() -> {
             try {
-                java.net.URL loginLocation = getClass().getResource("/view/LoginView.fxml");
-                if (loginLocation == null) loginLocation = getClass().getResource("/com/auction/client/view/LoginView.fxml");
-                if (loginLocation == null) loginLocation = getClass().getResource("LoginView.fxml");
+                URL loginLocation = getClass().getResource("/view/LoginView.fxml");
+                if (loginLocation == null) return;
 
                 Parent root = FXMLLoader.load(loginLocation);
                 Platform.runLater(() -> {
@@ -228,45 +208,56 @@ public class MainController {
                     stage.getScene().setRoot(root);
                 });
             } catch (IOException e) {
-                System.err.println("❌ Không thể chuyển cảnh đăng xuất: " + e.getMessage());
+                System.err.println("❌ Lỗi chuyển cảnh đăng xuất: " + e.getMessage());
             }
         });
-        logoutWorker.setDaemon(true);
-        logoutWorker.start();
     }
 
+    /**
+     * 🌟 ĐÃ SỬA LỖI: Tìm kiếm tầng cha (MainLayoutController) một cách linh hoạt qua Scene Graph
+     * Giải quyết triệt để lỗi biên dịch mà không cần gọi Singleton.
+     */
     public void showAuctionDetail(Object productData) {
-        // Tách việc load màn hình chi tiết FXML nặng nề ra luồng ngầm
-        Thread detailLoaderWorker = new Thread(() -> {
+        executorService.submit(() -> {
             try {
-                String fxmlPath = "/view/AuctionDetail.fxml";
-                java.net.URL fxmlLocation = getClass().getResource(fxmlPath);
+                URL fxmlLocation = getClass().getResource("/view/AuctionDetail.fxml");
                 if (fxmlLocation == null) return;
 
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
-                Parent detailView = loader.load(); // Load ngầm cấu trúc giao diện chi tiết
+                Parent detailView = loader.load();
 
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
-                    if (productData instanceof Item) {
-                        detailController.loadProductDetail((Item) productData);
-                    } else if (productData instanceof Auction) {
-                        detailController.loadProductDetail((Auction) productData);
-                    }
+                    if (productData instanceof Item) detailController.loadProductDetail((Item) productData);
+                    else if (productData instanceof Auction) detailController.loadProductDetail((Auction) productData);
                 }
 
-                // Chuyển view thô về luồng UI để hiển thị lên màn hình chính
                 Platform.runLater(() -> {
-                    if (MainLayoutController.getInstance() != null) {
-                        MainLayoutController.getInstance().setContent(detailView);
-                        System.out.println("🎯 [UI Switch] Đã nạp thành công trang chi tiết sản phẩm.");
+                    if (flowPane != null && flowPane.getScene() != null) {
+                        // Tìm Root Node của cả cửa sổ chính (nơi chứa MainLayout)
+                        Parent root = flowPane.getScene().getRoot();
+
+                        // Nếu root chính là thực thể được load từ MainLayoutView, ta lấy Controller của nó thông qua thuộc tính UserData
+                        // Cách chính thống: Ép trực tiếp thông qua việc thay đổi vùng hiển thị ContentArea của Scene chính
+                        Node layoutCenter = root.lookup("#contentArea");
+                        if (layoutCenter instanceof javafx.scene.layout.StackPane contentArea) {
+                            contentArea.getChildren().setAll(detailView);
+                            System.out.println("🎯 [UI Switch] Đã nạp thành công trang chi tiết sản phẩm qua cấu trúc Scene Graph.");
+                        } else {
+                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để chèn trang chi tiết.");
+                        }
                     }
                 });
             } catch (IOException e) {
-                System.err.println("❌ Lỗi nghiêm trọng khi biên dịch cấu trúc FXML chi tiết: " + e.getMessage());
+                System.err.println("❌ Lỗi load trang chi tiết: " + e.getMessage());
             }
         });
-        detailLoaderWorker.setDaemon(true);
-        detailLoaderWorker.start();
+    }
+
+    // Đóng dọn dẹp Executor Service để tránh thất thoát tài nguyên hệ thống
+    public void shutdownExecutor() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
     }
 }

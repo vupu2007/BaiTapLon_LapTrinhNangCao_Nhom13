@@ -6,6 +6,8 @@ import com.auction.shared.model.Account;
 import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
+import javafx.scene.Parent;
 import javafx.scene.control.*;
 
 public class SettingController {
@@ -63,7 +65,7 @@ public class SettingController {
                 // 🌟 CRITICAL FIX: Đẩy toàn bộ tác vụ cập nhật UI và thông báo về luồng chính JavaFX
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
-                        // 1. Cập nhật dữ liệu Session Client
+                        // 1. Cập nhật dữ liệu Session Client toàn cục
                         current.setUsername(name);
                         current.setEmail(email);
 
@@ -71,10 +73,21 @@ public class SettingController {
                         if (lblDisplayUsername != null) lblDisplayUsername.setText(name);
                         if (lblDisplayEmail != null) lblDisplayEmail.setText(email);
 
-                        // 3. 🚀 ĐỒNG BỘ TOÀN CỤC: Gọi cập nhật trực tiếp lên thanh tiêu đề Main Layout
-                        if (MainLayoutController.getInstance() != null) {
-                            // Ép MainLayout cập nhật lại chữ hiển thị "👤 Tên người dùng" ngay lập tức
-                            MainLayoutController.getInstance().initialize();
+                        // 3. 🚀 ĐỒNG BỘ TOÀN CỤC KHÔNG DÙNG SINGLETON (Scene Graph Lookup)
+                        // Định vị trực tiếp Label hiển thị thông tin tài khoản trên thanh Top-Bar/Sidebar của Layout cha
+                        if (txtFullName.getScene() != null) {
+                            Parent root = txtFullName.getScene().getRoot();
+
+                            // Tìm kiếm thẻ Label hiển thị Username trên Main Layout (Hãy đảm bảo ID fx:id="lblHeaderUsername" khớp với FXML của bạn)
+                            Node headerUserLabel = root.lookup("#lblHeaderUsername");
+                            if (headerUserLabel == null) {
+                                headerUserLabel = root.lookup("#lblUsername"); // Dự phòng ID thay thế khác
+                            }
+
+                            if (headerUserLabel instanceof Label lblHeader) {
+                                lblHeader.setText("👤 " + name); // Đồng bộ chữ ngay lập tức mà không gây giật màn hình
+                                System.out.println("🎯 [Sync] Đã cập nhật đồng bộ tên tài khoản lên thanh tiêu đề chính.");
+                            }
                         }
 
                         showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã cập nhật thông tin cá nhân hệ thống!");

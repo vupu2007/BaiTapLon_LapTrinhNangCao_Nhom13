@@ -56,7 +56,7 @@ public class ServerMain {
                 pool.shutdownNow();
             }
 
-            System.out.println("=== 💀 SERVER ĐÃ ĐÓNG HOÀN TOÀN AN TOÀN ===");
+            System.out.println("=== SERVER ĐÃ ĐÓNG HOÀN TOÀN AN TOÀN ===");
         }, "Server-Shutdown-Hook-Thread"));
 
         try {
