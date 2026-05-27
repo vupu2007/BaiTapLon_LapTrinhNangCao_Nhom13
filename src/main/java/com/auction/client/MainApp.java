@@ -30,7 +30,6 @@ public class MainApp {
         }
         @Override
         public void stop() {
-            // 🌟 ĐÃ XÓA dòng AuctionScheduler.getInstance().stop(); ở đây!
             System.out.println("Ứng dụng Client đã đóng an toàn.");
         }
     }
