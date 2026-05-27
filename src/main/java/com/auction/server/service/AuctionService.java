@@ -9,6 +9,7 @@ import com.auction.server.network.ClientHandler;
 import com.auction.shared.model.*;
 import com.auction.shared.network.Response;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -250,19 +251,14 @@ public class AuctionService {
 
     // ⚡ TỐI ƯU TOÀN DIỆN LỊCH SỬ THỐNG KÊ (Hạn chế kéo Object nặng qua Internet)
     public Map<String, Integer> getBidHistoryStats(int userId) {
-        Map<String, Integer> stats = new java.util.HashMap<>();
         try {
-            int total = bidDAO.countBidsByUser(userId); // Dùng hàm đếm bằng COUNT xịn của ông
-            int won   = auctionDAO.countWonAuctions(userId); // Dùng hàm đếm bằng COUNT xịn của ông
-            stats.put("total", total);
-            stats.put("won",   won);
-            stats.put("lost",  Math.max(0, total - won));
+            return auctionDAO.getDashboardStats(userId);
         } catch (Exception e) {
+            Map<String, Integer> stats = new HashMap<>();
             stats.put("total", 0); stats.put("won", 0); stats.put("lost", 0);
+            return stats;
         }
-        return stats;
     }
-
     public boolean setAutoBid(int auctionId, String userId, double maxBid, double increment) {
         try {
             return registerAutoBid(auctionId, Integer.parseInt(userId), maxBid);

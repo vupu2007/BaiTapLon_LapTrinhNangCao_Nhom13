@@ -7,7 +7,9 @@ import com.auction.server.util.DatabaseConnection;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class AuctionDAO {
 
@@ -300,4 +302,25 @@ public class AuctionDAO {
             return ps.executeUpdate() > 0;
         }
     }
+    public Map<String, Integer> getDashboardStats(int userId) throws SQLException {
+        Map<String, Integer> stats = new HashMap<>();
+        String sql = "SELECT " +
+                "(SELECT COUNT(*) FROM Bids WHERE bidder_id = ?) as total, " +
+                "(SELECT COUNT(*) FROM Auctions WHERE winner_id = ?) as won";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, userId);
+            ps.setInt(2, userId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) {
+                int total = rs.getInt("total");
+                int won = rs.getInt("won");
+                stats.put("total", total);
+                stats.put("won", won);
+                stats.put("lost", Math.max(0, total - won));
+            }
+        }
+        return stats;
+    }
+
 }

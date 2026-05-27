@@ -1,6 +1,8 @@
 package com.auction.server.network;
 
+import com.auction.server.dao.ItemDAO;
 import com.auction.server.service.*;
+import com.auction.server.util.DatabaseConnection;
 import com.auction.shared.model.*;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
@@ -8,6 +10,9 @@ import com.auction.shared.network.Response;
 
 import java.io.*;
 import java.net.Socket;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -41,6 +46,7 @@ public class ClientHandler implements Runnable {
     private static final AccountService accountService = new AccountService();
     private static final AuctionService auctionService = new AuctionService();
     private static final ItemService    itemService    = new ItemService();
+    private final ItemDAO itemDAO = new ItemDAO();
 
     private final Socket socket;
     private ObjectInputStream in;
@@ -287,45 +293,34 @@ public class ClientHandler implements Runnable {
                     try {
                         Map<String, Integer> realStats = auctionService.getBidHistoryStats(Integer.parseInt(accountId));
                         if (realStats != null) statsMap.putAll(realStats);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                     return new Response(true, "Lấy số liệu thống kê thành công!", (Serializable) statsMap);
                 }
                 case GET_HOT_AUCTIONS: {
                     List<Item> items = new ArrayList<>();
-                    try {
-                        List<Auction> auctions = auctionService.getAllAuctions();
-                        if (auctions != null) {
-                            for (Auction a : auctions) {
-                                if (a.getStatus() == Auction.AuctionStatus.RUNNING) {
-                                    Item item = itemService.getItemById(a.getItemId());
-                                    if (item != null) {
-                                        item.setStatus(a.getStatus().name());
-                                        items.add(item);
-                                    }
-                                }
-                            }
+                    String sql = "SELECT i.* FROM Items i " +
+                            "JOIN Auctions a ON i.item_id = a.item_id " +
+                            "WHERE a.status = 'RUNNING'";
+                    try (Connection conn = DatabaseConnection.getConnection();
+                         PreparedStatement ps = conn.prepareStatement(sql);
+                         ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            Item item = itemDAO.mapResultSetToItem(rs);
+                            if (item != null) items.add(item);
                         }
                     } catch (Exception e) {
-                        String timestamp = LocalDateTime.now().format(timeFormatter);
-                        System.err.printf("[%s] [%s] ⚠️ Lỗi GET_HOT_AUCTIONS: %s%n",
-                                timestamp, Thread.currentThread().getName(), e.getMessage());
+                        System.err.println("Lỗi GET_HOT_AUCTIONS: " + e.getMessage());
                     }
-                    System.out.println("DEBUG GET_HOT_AUCTIONS trả về: " + items.size() + " items");
                     return new Response(true, "Tải danh sách sản phẩm thành công!", (Serializable) items);
                 }
                 default:
-                    return new Response(false, "Lệnh không được hỗ trợ: " + request.getType(), null);
+                    return new Response(false, "Lệnh không được hỗ trợ!", null);
             }
-        } catch (ClassCastException e) {
-            return new Response(false, "Sai kiểu dữ liệu truyền tải: " + e.getMessage(), null);
         } catch (Exception e) {
-            String timestamp = LocalDateTime.now().format(timeFormatter);
-            System.err.printf("[%s] [%s] ❌ Lỗi xử lý lệnh %s: %s%n",
-                    timestamp, Thread.currentThread().getName(), request.getType(), e.getMessage());
-            return new Response(false, "Lỗi hệ thống Server nội bộ!", null);
+            return new Response(false, "Lỗi hệ thống: " + e.getMessage(), null);
         }
     }
-
     // 📢 PHÁT SÓNG SỰ KIỆN TOÀN HỆ THỐNG
     public static void broadcastSystemUpdate(String updateType) {
         Response broadcastNotification = new Response(true, "Dữ liệu hệ thống có thay đổi mới!");

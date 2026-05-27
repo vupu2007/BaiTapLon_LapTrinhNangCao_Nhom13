@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
 
 public class MainDashboardService {
@@ -22,13 +23,12 @@ public class MainDashboardService {
         t.setDaemon(true);
         return t;
     });
-    private volatile boolean isFetching = false;
+     private static final AtomicBoolean isFetching = new AtomicBoolean(false);
 
 
     @SuppressWarnings("unchecked")
     public void fetchDashboardDataAsync(String accountId, String filter, BiConsumer<Map<String, Integer>, List<Item>> callback) {
-        if (isFetching) return; // ← thêm dòng này
-        isFetching = true;      // ← thêm dòng này
+        if (!isFetching.compareAndSet(false, true)) return;
 
         CompletableFuture.runAsync(() -> {
             try {
@@ -65,8 +65,7 @@ public class MainDashboardService {
                 callback.accept(stats, items);
 
             } finally {
-                isFetching = false; // ← reset sau khi xong dù thành công hay lỗi
-            }
+                isFetching.set(false);            }
         }, networkExecutor);
     }
 }

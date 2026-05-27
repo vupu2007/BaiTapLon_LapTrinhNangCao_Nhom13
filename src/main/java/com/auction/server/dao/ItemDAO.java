@@ -200,7 +200,7 @@ public class ItemDAO {
     }
 
     // --- Helper: map ResultSet sang Item object ---
-    private Item mapResultSetToItem(ResultSet rs) throws SQLException {
+    public Item mapResultSetToItem(ResultSet rs) throws SQLException {
         Item item;
         int categoryId = rs.getInt("category_id");
 
