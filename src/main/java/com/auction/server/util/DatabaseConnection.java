@@ -15,8 +15,8 @@ public class DatabaseConnection {
         config.setPassword("gxvNiCizwruEPSZnfwud"); // Điền pass Clever Cloud của ông
 
         // ⚡ BỘ THÔNG SỐ SIÊU TỐI ƯU CHO HIKARI:
-        config.setMaximumPoolSize(10);        // Dự án BTL chỉ cần tối đa 10 kết nối dùng chung là đủ
-        config.setMinimumIdle(3);             // Luôn giữ ít nhất 3 kết nối "sống" chờ sẵn
+        config.setMaximumPoolSize(4);        // Dự án BTL chỉ cần tối đa 10 kết nối dùng chung là đủ
+        config.setMinimumIdle(1);             // Luôn giữ ít nhất 3 kết nối "sống" chờ sẵn
         config.setIdleTimeout(60000);         // 1 phút không dùng thì giải phóng bớt kết nối thừa
         config.setConnectionTimeout(5000);    // Quá 5 giây không kết nối được thì ngắt (đừng để treo luồng)
         config.setMaxLifetime(1800000);       // 30 phút tự động làm mới kết nối để tránh bị Cloud kích

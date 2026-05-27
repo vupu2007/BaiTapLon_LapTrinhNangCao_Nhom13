@@ -79,6 +79,8 @@ public class MainController {
 
         // Gọi Service lấy dữ liệu bất đồng bộ
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
+            System.out.println("DEBUG items nhận được: " + (items != null ? items.size() : "null")); // ← thêm dòng này
+
 
             // Đẩy việc xử lý FXML đồ sộ vào Thread Pool tập trung
             executorService.submit(() -> {
