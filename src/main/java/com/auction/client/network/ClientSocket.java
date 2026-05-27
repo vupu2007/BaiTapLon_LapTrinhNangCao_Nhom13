@@ -4,6 +4,7 @@ import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 import java.io.*;
 import java.net.Socket;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CompletableFuture;
@@ -30,16 +31,18 @@ public class ClientSocket {
      */
     private synchronized void connectToServer() {
         try {
-            String serverHost = "26.59.59.167";
-            int serverPort = 12345;
+            Properties props = new Properties();
+            try (InputStream is = getClass().getResourceAsStream("/server.properties")) {
+                if (is != null) props.load(is);
+            }
+            String serverHost = props.getProperty("server.host", "localhost");
+            int serverPort = Integer.parseInt(props.getProperty("server.port", "12345"));
 
-            System.out.println("🔌 [ClientSocket] Đang kết nối tới Server tại " + serverHost + ":" + serverPort + "...");
+            System.out.println("🔌 [ClientSocket] Đang kết nối tới " + serverHost + ":" + serverPort);
             this.socket = new Socket(serverHost, serverPort);
-
             this.out = new ObjectOutputStream(socket.getOutputStream());
             this.out.flush();
             this.in = new ObjectInputStream(socket.getInputStream());
-
             this.isRunning = true;
             this.isConnected = true;
 
@@ -48,7 +51,7 @@ public class ClientSocket {
             listenerThread.setDaemon(true);
             listenerThread.start();
 
-            System.out.println("✅ [ClientSocket] Kết nối thành công và đã kích hoạt luồng nghe ngầm!");
+            System.out.println("✅ [ClientSocket] Kết nối thành công!");
         } catch (IOException e) {
             this.isConnected = false;
             this.out = null;
@@ -56,7 +59,6 @@ public class ClientSocket {
             System.err.println("❌ [ClientSocket] Kết nối thất bại: " + e.getMessage());
         }
     }
-
     /**
      * 🔄 Tự động kết nối lại nếu mạch cũ chết
      */
@@ -183,4 +185,5 @@ public class ClientSocket {
         this.in = null;
         this.socket = null;
     }
+
 }

@@ -77,9 +77,12 @@ public class ClientHandler implements Runnable {
 
                 serverWorkerPool.submit(() -> {
                     try {
-                        Response response = handleRequest(request);
+                         Response response = handleRequest(request);
 
                         if (response != null) {
+
+                            response.setType(request.getType().name()); // ← thêm dòng này
+
                             response.setRequestId(request.getRequestId());
 
                             synchronized (out) {
@@ -391,4 +394,5 @@ public class ClientHandler implements Runnable {
         try { if (out    != null) out.close();    } catch (IOException ignored) {}
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
+
 }
