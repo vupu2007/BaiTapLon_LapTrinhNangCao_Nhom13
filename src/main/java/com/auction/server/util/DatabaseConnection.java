@@ -10,8 +10,8 @@ public class DatabaseConnection {
 
     static {
         HikariConfig config = new HikariConfig();
-        // Bắt buộc phải có các tham số tối ưu hóa mạng này ở đuôi URL
-        config.setJdbcUrl("jdbc:mysql://bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com:3306/bvfa8t3qtuhyhyzm2cns?autoReconnect=true&tcpKeepAlive=true&useSSL=false&rewriteBatchedStatements=true");
+        // 🛠️ ĐÃ SỬA: Thêm &allowPublicKeyRetrieval=true vào cuối chuỗi URL kết nối
+        config.setJdbcUrl("jdbc:mysql://bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com:3306/bvfa8t3qtuhyhyzm2cns?autoReconnect=true&tcpKeepAlive=true&useSSL=false&rewriteBatchedStatements=true&allowPublicKeyRetrieval=true");
         config.setUsername("u7xxxxxxxxx"); // Điền user Clever Cloud của ông
         config.setPassword("pxxxxxxxxx"); // Điền pass Clever Cloud của ông
 
@@ -20,7 +20,7 @@ public class DatabaseConnection {
         config.setMinimumIdle(3);             // Luôn giữ ít nhất 3 kết nối "sống" chờ sẵn
         config.setIdleTimeout(60000);         // 1 phút không dùng thì giải phóng bớt kết nối thừa
         config.setConnectionTimeout(5000);    // Quá 5 giây không kết nối được thì ngắt (đừng để treo luồng)
-        config.setMaxLifetime(1800000);       // 30 phút tự động làm mới kết nối để tránh bị Cloud kích
+        config.setMaxLifetime(1800000);       // 30 phút tự zđộng làm mới kết nối để tránh bị Cloud kích
 
         // Tối ưu cache câu lệnh SQL cho MySQL Driver
         config.addDataSourceProperty("cachePrepStmts", "true");
