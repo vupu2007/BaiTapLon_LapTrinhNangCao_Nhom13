@@ -25,7 +25,7 @@ public class ClientSocket {
     private ClientSocket() {
         try {
             // 🌐 MẸO CẤU HÌNH: Thay \"localhost\" bằng IP/Host của Clever Cloud khi Deploy thực tế
-            String serverHost = "localhost";
+            String serverHost = "26.59.59.167";
             int serverPort = 12345;
 
             System.out.println("🔌 [ClientSocket] Đang kết nối tới Server tại " + serverHost + ":" + serverPort + "...");
