@@ -91,10 +91,14 @@ public class MainController {
                             VBox cardLayout = loader.load();
 
                             ProductCardController cardController = loader.getController();
-                            String finalImageUrl = getFinalImageUrl(item.getImagePath());
-                            String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
+                            if (cardController != null) {
+                                String finalImageUrl = getFinalImageUrl(item.getImagePath());
+                                String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
+                                String priceStr = String.format("%,.0f đ", item.getStartingPrice());
 
-                            cardController.setData(item.getName(), String.format("%,.0f đ", item.getStartingPrice()), statusText, finalImageUrl, item.getDescription(), "Người bán ẩn", "", "");
+                                // 🎯 TỐI ƯU: Đổ trực tiếp Model gốc (item) vào Card để xử lý chuyển trang mượt mà không lỗi
+                                cardController.setProductModelData(item, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
+                            }
 
                             cardLayout.setOnMouseClicked(e -> showAuctionDetail(item));
                             bindCardButtons(cardLayout, item);
@@ -134,9 +138,14 @@ public class MainController {
                 VBox cardLayout = loader.load();
 
                 ProductCardController cardController = loader.getController();
-                String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
+                if (cardController != null) {
+                    String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
+                    String priceStr = String.format("%,.0f đ", newAuction.getStartPrice());
 
-                cardController.setData(newAuction.getProductName(), String.format("%,.0f đ", newAuction.getStartPrice()), "Đang diễn ra", finalImageUrl, "Sản phẩm mới.", "Hệ thống", "", "");
+                    // 🎯 Đổ trực tiếp Model gốc (newAuction) vào Card
+                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl, "Sản phẩm mới.");
+                }
+
                 cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
                 bindCardButtons(cardLayout, newAuction);
 
@@ -214,42 +223,42 @@ public class MainController {
     }
 
     /**
-     * 🌟 ĐÃ SỬA LỖI: Tìm kiếm tầng cha (MainLayoutController) một cách linh hoạt qua Scene Graph
-     * Giải quyết triệt để lỗi biên dịch mà không cần gọi Singleton.
+     * 🚀 ĐÃ SỬA LỖI TRIỆT ĐỂ: Tìm kiếm tầng cha (MainLayoutController) một cách linh hoạt qua Scene Graph
+     * Giải quyết hoàn toàn lỗi biên dịch dòng 237-238 mà không cần gọi Singleton.
      */
     public void showAuctionDetail(Object productData) {
+        if (flowPane == null || flowPane.getScene() == null) return;
+
         executorService.submit(() -> {
             try {
-                URL fxmlLocation = getClass().getResource("/view/AuctionDetail.fxml");
-                if (fxmlLocation == null) return;
+                String path = getClass().getResource("/view/AuctionDetailView.fxml") != null
+                        ? "/view/AuctionDetailView.fxml" : "/view/AuctionDetail.fxml";
 
-                FXMLLoader loader = new FXMLLoader(fxmlLocation);
+                FXMLLoader loader = new FXMLLoader(getClass().getResource(path));
                 Parent detailView = loader.load();
 
                 AuctionDetailController detailController = loader.getController();
                 if (detailController != null) {
-                    if (productData instanceof Item) detailController.loadProductDetail((Item) productData);
-                    else if (productData instanceof Auction) detailController.loadProductDetail((Auction) productData);
+                    if (productData instanceof Item item) detailController.loadProductDetail(item);
+                    else if (productData instanceof Auction auction) detailController.loadProductDetail(auction);
                 }
 
                 Platform.runLater(() -> {
-                    if (flowPane != null && flowPane.getScene() != null) {
-                        // Tìm Root Node của cả cửa sổ chính (nơi chứa MainLayout)
+                    if (flowPane.getScene() != null) {
+                        // Tìm kiếm động vùng chứa trung tâm từ Scene chính
                         Parent root = flowPane.getScene().getRoot();
-
-                        // Nếu root chính là thực thể được load từ MainLayoutView, ta lấy Controller của nó thông qua thuộc tính UserData
-                        // Cách chính thống: Ép trực tiếp thông qua việc thay đổi vùng hiển thị ContentArea của Scene chính
                         Node layoutCenter = root.lookup("#contentArea");
+
                         if (layoutCenter instanceof javafx.scene.layout.StackPane contentArea) {
                             contentArea.getChildren().setAll(detailView);
-                            System.out.println("🎯 [UI Switch] Đã nạp thành công trang chi tiết sản phẩm qua cấu trúc Scene Graph.");
+                            System.out.println("🎯 [UI Switch] Điều hướng trang chi tiết sản phẩm thành công từ MainController.");
                         } else {
-                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để chèn trang chi tiết.");
+                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để hiển thị giao diện chi tiết.");
                         }
                     }
                 });
             } catch (IOException e) {
-                System.err.println("❌ Lỗi load trang chi tiết: " + e.getMessage());
+                System.err.println("❌ Lỗi load trang chi tiết ở luồng nền: " + e.getMessage());
             }
         });
     }
