@@ -8,19 +8,26 @@ public class Response implements Serializable {
     private String message;
     private Object data;
     private String type;
-    private String requestId; // 🚀 MẢNH GHÉP MỚI: Đồng bộ khớp mã với Request tương ứng
+    private String requestId;
 
+    // Constructor 1: 3 tham số chuẩn của nhóm ông
     public Response(boolean success, String message, Object data) {
         this.success = success;
         this.message = message;
         this.data = data;
     }
 
+    // 🎯 CONSTRUCTOR NẠP CHỒNG (MỚI): Nhận 2 tham số để bên Server gọi không bị lỗi
+    public Response(boolean success, String message) {
+        this.success = success;
+        this.message = message;
+        this.data = null;
+    }
+
     // Getter/Setter cho thuộc tính mới
     public String getRequestId() { return requestId; }
     public void setRequestId(String requestId) { this.requestId = requestId; }
 
-    // Giữ nguyên toàn bộ code cũ của nhóm ông
     public boolean isSuccess() { return success; }
     public String getMessage() { return message; }
     public Object getData() { return data; }

@@ -15,12 +15,10 @@ public class ClientSocket {
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private boolean isRunning = true;
-    private boolean isConnected = false; // 🎯 Biến cờ kiểm soát trạng thái kết nối vật lý
+    private boolean isConnected = false;
 
-    // 📦 HỘP THƯ TRUNG CHUYỂN: Nơi các luồng gửi đăng ký đợi phản hồi theo ID
+    // 📦 HỘP THƯ TRUNG CHUYỂN: Khớp nối Request - Response theo ID
     private final ConcurrentHashMap<String, CompletableFuture<Response>> pendingRequests = new ConcurrentHashMap<>();
-
-    // 🎯 REAL-TIME OBSERVER MAP: Quản lý các Controller chi tiết đang mở theo ID phiên đấu giá
     private final ConcurrentHashMap<Integer, Object> auctionObservers = new ConcurrentHashMap<>();
 
     private ClientSocket() {
@@ -28,7 +26,7 @@ public class ClientSocket {
     }
 
     /**
-     * 🌐 Thực hiện kết nối vật lý tới hệ thống Server qua mạng
+     * 🌐 Thực hiện kết nối vật lý tới hệ thống Server
      */
     private synchronized void connectToServer() {
         try {
@@ -38,7 +36,6 @@ public class ClientSocket {
             System.out.println("🔌 [ClientSocket] Đang kết nối tới Server tại " + serverHost + ":" + serverPort + "...");
             this.socket = new Socket(serverHost, serverPort);
 
-            // Khởi tạo luồng ghi dữ liệu trước để tránh deadlock dòng stream
             this.out = new ObjectOutputStream(socket.getOutputStream());
             this.out.flush();
             this.in = new ObjectInputStream(socket.getInputStream());
@@ -46,7 +43,6 @@ public class ClientSocket {
             this.isRunning = true;
             this.isConnected = true;
 
-            // 🚀 KHỞI CHẠY LUỒNG LẮNG NGHE DUY NHẤT
             Thread listenerThread = new Thread(this::listenFromServer);
             listenerThread.setName("SocketListenerThread");
             listenerThread.setDaemon(true);
@@ -57,13 +53,12 @@ public class ClientSocket {
             this.isConnected = false;
             this.out = null;
             this.in = null;
-            System.err.println("❌ [ClientSocket] Kết nối thất bại (Server chưa bật hoặc sai Port): " + e.getMessage());
+            System.err.println("❌ [ClientSocket] Kết nối thất bại: " + e.getMessage());
         }
     }
 
     /**
-     * 🔄 SỬA LỖI ĐÓNG BĂNG SINGLETON:
-     * Nếu lần trước kết nối lỗi, lần gọi sau sẽ tự động thử kết nối lại thay vì ôm thực thể lỗi.
+     * 🔄 Tự động kết nối lại nếu mạch cũ chết
      */
     public static synchronized ClientSocket getInstance() {
         if (instance == null) {
@@ -76,58 +71,54 @@ public class ClientSocket {
     }
 
     /**
-     * Hàm gửi Request an toàn đa luồng tuyệt đối (Non-blocking Stream)
+     * Hàm gửi Request an toàn đa luồng bất đồng bộ
      */
     public Response sendRequest(Request request) {
-        // 🎯 VÁ LỖI DÒNG 115: Thêm null cho đối số thứ 3 (Object data) nhằm chặn đứng crash
+        // 🎯 ĐÃ SỬA: Dùng Constructor 2 tham số mới tối ưu
         if (!isConnected || out == null) {
-            System.err.println("❌ [ClientSocket] Không thể gửi yêu cầu. Đường truyền mạng tới Server đang ngoại tuyến.");
-            return new Response(false, "Mất kết nối vật lý tới máy chủ đấu giá! Vui lòng kiểm tra Radmin VPN hoặc Server Backend.", null);
+            System.err.println("❌ [ClientSocket] Không thể gửi yêu cầu. Mạng ngoại tuyến.");
+            return new Response(false, "Mất kết nối vật lý tới máy chủ đấu giá! Vui lòng kiểm tra Radmin VPN hoặc Server Backend.");
         }
 
-        // 1. Cấp mã định danh độc nhất cho Request
         String requestId = UUID.randomUUID().toString();
         request.setRequestId(requestId);
 
-        // 2. Tạo một hộp thư trống chờ sẵn trong Map
         CompletableFuture<Response> futureResponse = new CompletableFuture<>();
         pendingRequests.put(requestId, futureResponse);
 
-        // 3. Đẩy gói tin lên mạng
         try {
             synchronized (out) {
                 out.writeObject(request);
                 out.flush();
-                out.reset(); // Dọn sạch bộ đệm Object để tránh trùng lặp dữ liệu cũ
+                out.reset();
             }
         } catch (IOException e) {
             pendingRequests.remove(requestId);
             System.err.println("❌ Lỗi gửi dữ liệu dọc đường: " + e.getMessage());
             this.isConnected = false;
 
-            // 🎯 VÁ LỖI DÒNG 85: Thêm null cho đối số thứ 3 (Object data) khi mất kết nối dọc đường
-            Response failResponse = new Response(false, "Đường truyền mạng bị đứt đoạn khi đang gửi dữ liệu!", null);
+            // 🎯 ĐÃ SỬA: Bỏ tham số null thừa thãi
+            Response failResponse = new Response(false, "Đường truyền mạng bị đứt đoạn khi đang gửi dữ liệu!");
             failResponse.setRequestId(requestId);
             return failResponse;
         }
 
-        // 4. Đứng chờ thư phản hồi bay về đúng hòm thư (Hạn định 10 giây chống treo đứng UI)
         try {
             return futureResponse.get(10, TimeUnit.SECONDS);
         } catch (Exception e) {
             System.err.println("⚠️ Tác vụ chờ phản hồi quá hạn (Timeout) cho ID: " + requestId);
 
-            // 🎯 VÁ LỖI DÒNG 107: Thêm null cho đối số thứ 3 (Object data) và gán ID để luồng giải phóng
-            Response timeoutResponse = new Response(false, "Thời gian phản hồi từ máy chủ quá hạn (Timeout)!", null);
+            // 🎯 ĐÃ SỬA: Bỏ tham số null thừa thãi
+            Response timeoutResponse = new Response(false, "Thời gian phản hồi từ máy chủ quá hạn (Timeout)!");
             timeoutResponse.setRequestId(requestId);
             return timeoutResponse;
         } finally {
-            pendingRequests.remove(requestId); // Xóa hòm thư sau khi giải quyết xong
+            pendingRequests.remove(requestId);
         }
     }
 
     /**
-     * 👁️ LUỒNG NGẦM LẮNG NGHE: Đọc data liên tục, phân phối đúng luồng xử lý bằng ID
+     * 👁️ LUỒNG NGẦM LẮNG NGHE
      */
     private void listenFromServer() {
         while (isRunning) {
@@ -138,18 +129,15 @@ public class ClientSocket {
                 if (obj instanceof Response response) {
                     String requestId = response.getRequestId();
 
-                    // TRƯỜNG HỢP 1: Đây là gói phản hồi trực tiếp cho một Request đã gửi trước đó
                     if (requestId != null && pendingRequests.containsKey(requestId)) {
                         pendingRequests.get(requestId).complete(response);
-                    }
-                    // TRƯỜNG HỢP 2: Thông báo cập nhật Real-time chủ động từ Server
-                    else {
+                    } else {
                         handleRealtimeNotification(response);
                     }
                 }
             } catch (Exception e) {
                 if (isRunning) {
-                    System.err.println("❌ Luồng lắng nghe Socket gặp lỗi dứt mạch hoặc Server ngắt kết nối: " + e.getMessage());
+                    System.err.println("❌ Luồng lắng nghe Socket gặp lỗi hoặc Server ngắt kết nối: " + e.getMessage());
                     this.isConnected = false;
                     closeConnection();
                 }
@@ -161,13 +149,13 @@ public class ClientSocket {
     public void addAuctionObserver(int auctionId, Object observer) {
         if (observer != null) {
             auctionObservers.put(auctionId, observer);
-            System.out.println("🎯 [Realtime-Observer] Đã đăng ký lắng nghe biến động cho Auction ID: " + auctionId);
+            System.out.println("🎯 [Realtime-Observer] Đã đăng ký lắng nghe phiên ID: " + auctionId);
         }
     }
 
     public void removeAuctionObserver(int auctionId) {
         auctionObservers.remove(auctionId);
-        System.out.println("🔌 [Realtime-Observer] Đã hủy lắng nghe Auction ID: " + auctionId);
+        System.out.println("🔌 [Realtime-Observer] Đã hủy lắng nghe phiên ID: " + auctionId);
     }
 
     public void removeAuctionObserver(int auctionId, Object observer) {
