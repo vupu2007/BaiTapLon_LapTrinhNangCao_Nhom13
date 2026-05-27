@@ -2,12 +2,14 @@ package com.auction.client.service;
 
 import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Auction;
+import com.auction.shared.model.BidTransaction;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 import com.auction.shared.model.Item;
 import javafx.application.Platform;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
@@ -58,6 +60,21 @@ public class AuctionDetailService {
                         new Request(MessageType.GET_AUCTION_BY_ITEM_ID, itemId));
                 if (response != null && response.isSuccess()) {
                     callback.accept((Auction) response.getData());
+                } else {
+                    callback.accept(null);
+                }
+            } catch (Exception e) {
+                callback.accept(null);
+            }
+        });
+    }
+    public void fetchBidHistoryAsync(int auctionId, Consumer<List<BidTransaction>> callback) {
+        CompletableFuture.runAsync(() -> {
+            try {
+                Response response = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_BID_HISTORY, auctionId));
+                if (response != null && response.isSuccess()) {
+                    callback.accept((List<BidTransaction>) response.getData());
                 } else {
                     callback.accept(null);
                 }

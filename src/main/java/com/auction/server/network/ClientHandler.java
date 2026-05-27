@@ -1,6 +1,7 @@
 package com.auction.server.network;
 
 import com.auction.server.dao.AuctionDAO;
+import com.auction.server.dao.BidDAO;
 import com.auction.server.dao.ItemDAO;
 import com.auction.server.service.*;
 import com.auction.server.util.DatabaseConnection;
@@ -24,6 +25,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 import static com.auction.shared.network.MessageType.GET_AUCTION_BY_ITEM_ID;
+import static com.auction.shared.network.MessageType.GET_BID_HISTORY;
 
 public class ClientHandler implements Runnable {
 
@@ -52,6 +54,7 @@ public class ClientHandler implements Runnable {
     private static final ItemService    itemService    = new ItemService();
     private final ItemDAO itemDAO = new ItemDAO();
     private final AuctionDAO auctionDAO = new AuctionDAO();
+    private final BidDAO bidDAO = new BidDAO();
 
     private final Socket socket;
     private ObjectInputStream in;
@@ -327,7 +330,14 @@ public class ClientHandler implements Runnable {
                     } catch (SQLException e) {
                         return new Response(false, "Lỗi DB: " + e.getMessage(), null);
                     }
+
                 }
+                case GET_BID_HISTORY: {
+                    int auctionId = (int) request.getPayload();
+                    List<BidTransaction> bids = bidDAO.getBidsByAuction(auctionId);
+                    return new Response(true, "OK", (Serializable) bids);
+                }
+
                 default:
                     return new Response(false, "Lệnh không được hỗ trợ!", null);
             }

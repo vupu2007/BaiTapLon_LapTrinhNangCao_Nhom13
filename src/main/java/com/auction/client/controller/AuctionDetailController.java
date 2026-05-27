@@ -4,6 +4,7 @@ import com.auction.client.service.AuctionDetailService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.client.util.ImageLoader;
 import com.auction.client.network.ClientSocket;
+import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Observer;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
@@ -187,10 +188,26 @@ public class AuctionDetailController implements Observer {
                         Platform.runLater(() -> update(newPrice, username));
                     }
                 });
+
                 Platform.runLater(() -> {
                     startCountdownClock(a.getEndTime());
                     if (lblCurrentPrice != null)
                         lblCurrentPrice.setText(String.format("%,.0f đ", a.getCurrentPrice()));
+                });
+                detailService.fetchBidHistoryAsync(a.getId(), bids -> {
+                    Platform.runLater(() -> {
+                        if (vboxBidHistoryContainer != null && bids != null) {
+                            vboxBidHistoryContainer.getChildren().clear();
+                            for (BidTransaction bid : bids) {
+                                Label label = new Label(String.format("• %s đặt %,.0f đ",
+                                        bid.getBidderUsername(), bid.getBidAmount()));
+                                label.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
+                                vboxBidHistoryContainer.getChildren().add(label);
+                                bidCount++;
+                                priceSeries.getData().add(new XYChart.Data<>(bidCount, bid.getBidAmount()));
+                            }
+                        }
+                    });
                 });
             }
         });
@@ -215,6 +232,7 @@ public class AuctionDetailController implements Observer {
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0) ? "Thành viên #" + auction.getWinnerId() : "Chưa có";
 
+
             Platform.runLater(() -> {
                 fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
 
@@ -228,6 +246,19 @@ public class AuctionDetailController implements Observer {
                 priceSeries.getData().clear();
                 bidCount = 0;
                 priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
+            });
+        });
+        detailService.fetchBidHistoryAsync(auction.getId(), bids -> {
+            Platform.runLater(() -> {
+                if (vboxBidHistoryContainer != null && bids != null) {
+                    vboxBidHistoryContainer.getChildren().clear();
+                    for (BidTransaction bid : bids) {
+                        Label label = new Label(String.format("• %s đặt %,.0f đ",
+                                bid.getBidderUsername(), bid.getBidAmount()));
+                        label.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
+                        vboxBidHistoryContainer.getChildren().add(label);
+                    }
+                }
             });
         });
 
