@@ -10,6 +10,9 @@ import java.io.File;
 import java.nio.file.Files;
 import java.util.Base64;
 import java.util.function.Consumer;
+import javax.imageio.ImageIO;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 
 public class CreateProductService {
 
@@ -23,10 +26,30 @@ public class CreateProductService {
         Thread worker = new Thread(() -> {
             try {
                 // 1. Xử lý chuyển đổi file ảnh sang chuỗi Base64
+                // 1. Xử lý chuyển đổi file ảnh sang chuỗi Base64
                 String imagePathResult = null;
                 if (imgFile != null && imgFile.exists()) {
-                    byte[] fileBytes = Files.readAllBytes(imgFile.toPath());
-                    imagePathResult = "base64:" + Base64.getEncoder().encodeToString(fileBytes);
+                    try {
+                        BufferedImage original = ImageIO.read(imgFile);
+                        if (original != null) {
+                            int maxW = 800, maxH = 600;
+                            int w = original.getWidth(), h = original.getHeight();
+                            if (w > maxW || h > maxH) {
+                                double scale = Math.min((double)maxW/w, (double)maxH/h);
+                                w = (int)(w * scale);
+                                h = (int)(h * scale);
+                                BufferedImage scaled = new BufferedImage(w, h, BufferedImage.TYPE_INT_RGB);
+                                scaled.getGraphics().drawImage(
+                                        original.getScaledInstance(w, h, java.awt.Image.SCALE_SMOOTH), 0, 0, null);
+                                original = scaled;
+                            }
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            ImageIO.write(original, "jpg", baos);
+                            imagePathResult = "base64:" + Base64.getEncoder().encodeToString(baos.toByteArray());
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Lỗi xử lý ảnh: " + e.getMessage());
+                    }
                 }
 
                 // 2. Tạo thực thể Vật phẩm (Electronics)

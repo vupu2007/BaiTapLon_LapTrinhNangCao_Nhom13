@@ -52,4 +52,12 @@ public abstract class Item implements Entity, java.io.Serializable {
 
     // abstract để buộc class con override
     public abstract void printInfo();
+
+    private int auctionId;
+    private double currentPrice;
+
+    public int getAuctionId() { return auctionId; }
+    public void setAuctionId(int auctionId) { this.auctionId = auctionId; }
+    public double getCurrentPrice() { return currentPrice; }
+    public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
 }

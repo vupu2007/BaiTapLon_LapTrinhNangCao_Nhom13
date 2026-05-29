@@ -4,6 +4,7 @@ package com.auction.shared.model;
 public class Electronics extends Item  {
     private String brand;
     private int warrantyMonths;
+    private static final long serialVersionUID = 1L;
 
     // 1. Constructor rỗng
     public Electronics() {

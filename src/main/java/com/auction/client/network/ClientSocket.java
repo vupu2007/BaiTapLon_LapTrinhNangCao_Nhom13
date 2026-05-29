@@ -115,7 +115,7 @@ public class ClientSocket {
         }
 
         try {
-            return futureResponse.get(10, TimeUnit.SECONDS);
+            return futureResponse.get(20, TimeUnit.SECONDS);
         } catch (Exception e) {
             System.err.println("⚠️ Tác vụ chờ phản hồi quá hạn (Timeout) cho ID: " + requestId);
 

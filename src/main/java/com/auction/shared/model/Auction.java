@@ -34,7 +34,12 @@ public class Auction implements Serializable {
     private String imagePath;
     private String description;         // 🔥 THÊM: Sửa lỗi "Cannot resolve method 'setDescription'" cho MainLayoutController
 
-    private Account account;            // Thông tin tài khoản người bán đính kèm từ DB
+    private Account account;// Thông tin tài khoản người bán đính kèm từ DB
+
+    private String sellerName;
+
+    public String getSellerName() { return sellerName; }
+    public void setSellerName(String sellerName) { this.sellerName = sellerName; }
 
     /**
      * 🔥 SỬA KIẾN TRÚC: Thêm từ khóa 'transient'

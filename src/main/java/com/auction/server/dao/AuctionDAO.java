@@ -270,8 +270,10 @@ public class AuctionDAO {
         auction.setStartPrice(rs.getDouble("start_price"));
         auction.setCurrentPrice(rs.getDouble("current_price"));
         auction.setMinIncrement(rs.getDouble("min_increment"));
-        auction.setStartTime(rs.getObject("start_time", LocalDateTime.class));
-        auction.setEndTime(rs.getObject("end_time", LocalDateTime.class));
+        Timestamp startTs = rs.getTimestamp("start_time");
+        if (startTs != null) auction.setStartTime(startTs.toLocalDateTime());
+        Timestamp endTs = rs.getTimestamp("end_time");
+        if (endTs != null) auction.setEndTime(endTs.toLocalDateTime());
         auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
 
         try {
@@ -327,8 +329,13 @@ public class AuctionDAO {
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, itemId);
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) return mapResultSetToAuction(rs);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Auction a = mapResultSetToAuction(rs);
+                    System.out.println("DEBUG startTime=" + a.getStartTime() + " endTime=" + a.getEndTime());
+                    return a;
+                }
+            }
         }
         return null;
     }

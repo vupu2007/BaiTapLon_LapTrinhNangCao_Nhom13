@@ -219,6 +219,15 @@ public class AuctionService {
         return auctionDAO.getAuctionById(auctionId);
     }
 
+    public Auction getAuctionByItemId(String itemId) {
+        try {
+            return auctionDAO.getAuctionByItemId(itemId);
+        } catch (Exception e) {
+            System.err.println("Lỗi getAuctionByItemId: " + e.getMessage());
+            return null;
+        }
+    }
+
     public List<BidTransaction> getBidHistory(int auctionId) {
         return bidDAO.getBidsByAuction(auctionId);
     }
@@ -307,4 +316,5 @@ public class AuctionService {
     public List<Auction> getAuctionsByStatus_wrapper(Auction.AuctionStatus status) {
         return auctionDAO.getAuctionsByStatus(status);
     }
+
 }

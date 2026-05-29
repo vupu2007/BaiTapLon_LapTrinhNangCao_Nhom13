@@ -40,6 +40,7 @@ public class AuctionDetailController implements Observer {
     @FXML private Button btnSubmitBid;
     @FXML private ToggleButton btnAutoBid;
     @FXML private VBox vboxBidHistoryContainer;
+    @FXML private Label lblAuctionId;
 
     private Auction currentAuction;
     private Item currentItem;
@@ -214,6 +215,10 @@ public class AuctionDetailController implements Observer {
     }
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
+        System.out.println("DEBUG auction: id=" + auction.getId()
+                + " startTime=" + auction.getStartTime()
+                + " endTime=" + auction.getEndTime()
+                + " productName=" + auction.getProductName()); // ← thêm dòng này
         this.currentAuction = auction;
         this.currentItem = null;
 
@@ -227,15 +232,15 @@ public class AuctionDetailController implements Observer {
             double currentPriceVal = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
             String currentPriceStr = String.format("%,.0f đ", currentPriceVal);
 
-            String sellerName = "Người bán #" + auction.getSellerId();
+            String sellerName = (auction.getSellerName() != null) ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0) ? "Thành viên #" + auction.getWinnerId() : "Chưa có";
 
 
             Platform.runLater(() -> {
-                fillTextFields(pName, startPriceStr, "Mã phiên: " + auction.getId(), sellerName, startTimeStr, endTimeStr);
-
+                fillTextFields(pName, startPriceStr, auction.getDescription() != null ? auction.getDescription() : "", sellerName, startTimeStr, endTimeStr);
+                if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
                 if (lblTopBidder != null) lblTopBidder.setText(winnerText);
 

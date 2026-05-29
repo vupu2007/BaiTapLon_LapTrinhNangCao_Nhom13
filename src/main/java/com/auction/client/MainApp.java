@@ -24,6 +24,8 @@ public class MainApp {
             Scene scene = new Scene(root);
 
             primaryStage.setTitle("Hệ thống đấu giá trực tuyến - Nhóm 13");
+
+
             primaryStage.setScene(scene);
             primaryStage.setMaximized(true);
             primaryStage.show();

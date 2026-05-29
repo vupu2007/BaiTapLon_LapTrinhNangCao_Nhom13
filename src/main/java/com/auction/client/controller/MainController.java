@@ -1,5 +1,6 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.service.MainDashboardService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
@@ -7,6 +8,9 @@ import com.auction.shared.model.Account;
 import com.auction.shared.model.User;
 import com.auction.shared.model.Item;
 
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -103,7 +107,26 @@ public class MainController {
                                 cardController.setProductModelData(item, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
                             }
 
-                            cardLayout.setOnMouseClicked(e -> showAuctionDetail(item));
+                            cardLayout.setOnMouseClicked(e -> {
+                                System.out.println("DEBUG auctionId=" + item.getAuctionId()); // ← thêm
+                                if (item.getAuctionId() > 0) {
+                                    executorService.submit(() -> {
+                                        try {
+                                            Response response = ClientSocket.getInstance().sendRequest(
+                                                    new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
+                                            if (response != null && response.isSuccess()) {
+                                                Auction auction = (Auction) response.getData();
+                                                if (auction != null) { showAuctionDetail(auction); return; }
+                                            }
+                                        } catch (Exception ex) {
+                                            System.err.println("Lỗi load auction: " + ex.getMessage());
+                                        }
+                                        showAuctionDetail(item);
+                                    });
+                                } else {
+                                    showAuctionDetail(item);
+                                }
+                            });
                             bindCardButtons(cardLayout, item);
 
                             renderedCards.add(cardLayout);
@@ -175,7 +198,23 @@ public class MainController {
             if (actionBtn instanceof Button button) {
                 button.setOnAction(e -> {
                     e.consume();
-                    showAuctionDetail(originData);
+                    if (originData instanceof Item item && item.getAuctionId() > 0) {
+                        executorService.submit(() -> {
+                            try {
+                                Response response = ClientSocket.getInstance().sendRequest(
+                                        new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
+                                if (response != null && response.isSuccess()) {
+                                    Auction auction = (Auction) response.getData();
+                                    if (auction != null) { showAuctionDetail(auction); return; }
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Lỗi load auction: " + ex.getMessage());
+                            }
+                            showAuctionDetail(originData);
+                        });
+                    } else {
+                        showAuctionDetail(originData);
+                    }
                 });
             }
         } catch (Exception ignored) {}
@@ -230,6 +269,8 @@ public class MainController {
      * Giải quyết hoàn toàn lỗi biên dịch dòng 237-238 mà không cần gọi Singleton.
      */
     public void showAuctionDetail(Object productData) {
+        System.out.println("DEBUG showAuctionDetail type: " + productData.getClass().getSimpleName()); // ← thêm dòng này
+
         if (flowPane == null || flowPane.getScene() == null) return;
 
         executorService.submit(() -> {

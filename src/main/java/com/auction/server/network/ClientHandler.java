@@ -1,5 +1,6 @@
 package com.auction.server.network;
 
+import com.auction.server.dao.AccountDAO;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidDAO;
 import com.auction.server.dao.ItemDAO;
@@ -55,6 +56,7 @@ public class ClientHandler implements Runnable {
     private final ItemDAO itemDAO = new ItemDAO();
     private final AuctionDAO auctionDAO = new AuctionDAO();
     private final BidDAO bidDAO = new BidDAO();
+    private final AccountDAO accountDAO = new AccountDAO();
 
     private final Socket socket;
     private ObjectInputStream in;
@@ -209,8 +211,13 @@ public class ClientHandler implements Runnable {
                     boolean ok = auctionService.createAuction(
                             (String) d[0], (int) d[1], (double) d[2], (String) d[3], (String) d[4]
                     );
-                    if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
-                    return new Response(ok, ok ? "Tạo phiên đấu giá thành công!" : "Tạo thất bại!", null);
+                    if (ok) {
+                        broadcastSystemUpdate("AUCTION_UPDATE");
+                        // Lấy auction vừa tạo để trả về ID
+                        Auction created = auctionService.getAuctionByItemId((String) d[0]);
+                        return new Response(true, "Tạo phiên đấu giá thành công!", created);
+                    }
+                    return new Response(false, "Tạo thất bại!", null);
                 }
                 case GET_ALL_AUCTIONS: {
                     List<Auction> auctions = auctionService.getAllAuctions();
@@ -219,9 +226,19 @@ public class ClientHandler implements Runnable {
                 case GET_AUCTION_BY_ID: {
                     int id = (int) request.getPayload();
                     Auction a = auctionService.getAuctionById(id);
-                    return a != null
-                            ? new Response(true, "OK", a)
-                            : new Response(false, "Không tìm thấy phiên!", null);
+                    if (a == null) return new Response(false, "Không tìm thấy phiên!", null);
+
+                    Item item = itemService.getItemById(a.getItemId());
+                    if (item != null) {
+                        a.setProductName(item.getName());
+                        a.setImagePath(item.getImagePath());
+                        a.setDescription(item.getDescription());
+                    }
+
+                    Account seller = accountDAO.getAccountById(a.getSellerId());
+                    if (seller != null) a.setSellerName(seller.getUsername());
+
+                    return new Response(true, "OK", a);
                 }
                 case GET_AUCTIONS_BY_BIDDER: {
                     int bidderId = (int) request.getPayload();
@@ -304,7 +321,9 @@ public class ClientHandler implements Runnable {
                 }
                 case GET_HOT_AUCTIONS: {
                     List<Item> items = new ArrayList<>();
-                    String sql = "SELECT i.* FROM Items i " +
+                    String sql = "SELECT i.*, a.auction_id, a.current_price, a.start_time, a.end_time, " +
+                            "a.seller_id, a.start_price, a.min_increment " +
+                            "FROM Items i " +
                             "JOIN Auctions a ON i.item_id = a.item_id " +
                             "WHERE a.status = 'RUNNING'";
                     try (Connection conn = DatabaseConnection.getConnection();
@@ -312,7 +331,11 @@ public class ClientHandler implements Runnable {
                          ResultSet rs = ps.executeQuery()) {
                         while (rs.next()) {
                             Item item = itemDAO.mapResultSetToItem(rs);
-                            if (item != null) items.add(item);
+                            if (item != null) {
+                                item.setAuctionId(rs.getInt("auction_id"));
+                                item.setCurrentPrice(rs.getDouble("current_price"));
+                                items.add(item);
+                            }
                         }
                     } catch (Exception e) {
                         System.err.println("Lỗi GET_HOT_AUCTIONS: " + e.getMessage());
@@ -324,13 +347,22 @@ public class ClientHandler implements Runnable {
                     String itemId = (String) request.getPayload();
                     try {
                         Auction auction = auctionDAO.getAuctionByItemId(itemId);
-                        return auction != null
-                                ? new Response(true, "OK", auction)
-                                : new Response(false, "Không tìm thấy phiên!", null);
+                        if (auction == null) return new Response(false, "Không tìm thấy phiên!", null);
+
+                        Item item = itemService.getItemById(auction.getItemId());
+                        if (item != null) {
+                            auction.setProductName(item.getName());
+                            auction.setImagePath(item.getImagePath());
+                            auction.setDescription(item.getDescription());
+                        }
+
+                        com.auction.shared.model.Account seller = accountDAO.getAccountById(auction.getSellerId());
+                        if (seller != null) auction.setSellerName(seller.getUsername());
+
+                        return new Response(true, "OK", auction);
                     } catch (SQLException e) {
                         return new Response(false, "Lỗi DB: " + e.getMessage(), null);
                     }
-
                 }
                 case GET_BID_HISTORY: {
                     int auctionId = (int) request.getPayload();

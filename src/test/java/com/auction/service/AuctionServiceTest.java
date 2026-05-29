@@ -39,8 +39,9 @@ class AuctionServiceTest
                 500_000.0, 500_000.0, 50_000.0, null,
                 LocalDateTime.now().minusMinutes(10),
                 FUTURE,
+                null,                          // originalEndTime
                 Auction.AuctionStatus.RUNNING,
-                null
+                null                           // account
         );
 
         bidder = new Bidder("5", "alice", "pass", "alice@mail.com", 2_000_000);

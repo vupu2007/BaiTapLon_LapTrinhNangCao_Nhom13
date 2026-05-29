@@ -85,6 +85,7 @@ public class CreateProductController {
         }
     }
 
+    private boolean isCreating = false;
     @FXML
     private void handleCreateAuction() {
         if (CurrentAccount.getAccount() == null) {
@@ -139,26 +140,30 @@ public class CreateProductController {
                 productImgFile, startTimeStr, endTimeStr, response -> {
 
                     Platform.runLater(() -> {
+                        isCreating = false; // ← unlock sau khi nhận response
                         if (response != null && response.isSuccess()) {
-                            Auction newAuction = new Auction();
-                            newAuction.setItemId(itemId);
+                            Auction newAuction = (response.getData() instanceof Auction)
+                                    ? (Auction) response.getData()
+                                    : new Auction();
+
+                            if (!(response.getData() instanceof Auction)) {
+                                newAuction.setItemId(itemId);
+                                newAuction.setStartPrice(startPrice);
+                                newAuction.setCurrentPrice(startPrice);
+                                newAuction.setStartTime(startTime);
+                                newAuction.setEndTime(endTime);
+                                newAuction.setSellerId(ownerId);
+                                newAuction.setStatus(Auction.AuctionStatus.OPEN);
+                            }
                             newAuction.setProductName(name);
-                            newAuction.setStartPrice(startPrice);
-                            newAuction.setCurrentPrice(startPrice);
-                            newAuction.setStartTime(startTime);
-                            newAuction.setEndTime(endTime);
-                            newAuction.setSellerId(ownerId);
-                            newAuction.setStatus(Auction.AuctionStatus.OPEN);
-                            newAuction.setAccount(CurrentAccount.getAccount());
 
                             showAlert(Alert.AlertType.INFORMATION, "Thành công", "Tạo phiên đấu giá cho sản phẩm [" + name + "] thành công!");
                             handleCancel();
 
-                            // 🚀 SỬA LỖI GIẢI PHÓNG SINGLETON: Tự động chuyển hướng trang dựa vào việc quét cây Scene Graph
+                            final Auction finalAuction = newAuction;
                             PauseTransition pause = new PauseTransition(Duration.millis(300));
-                            pause.setOnFinished(pEvent -> navigateToDetailView(newAuction));
+                            pause.setOnFinished(pEvent -> navigateToDetailView(finalAuction));
                             pause.play();
-
                         } else {
                             String errorMsg = (response != null) ? response.getMessage() : "Máy chủ không phản hồi.";
                             showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Không thể kích hoạt phiên: " + errorMsg);
