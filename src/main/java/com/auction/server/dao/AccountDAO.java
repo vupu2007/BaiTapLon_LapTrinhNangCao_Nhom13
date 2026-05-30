@@ -251,15 +251,17 @@ public class AccountDAO {
     // =========================================================================
 
     public boolean executeAtomicWalletUpdate(int accountId, double amount, String type) {
-        String sql = "UPDATE Accounts SET balance = balance " + ("DEPOSIT".equals(type) ? "+" : "-") + " ? WHERE account_id = ?";
+        String sql = "DEPOSIT".equals(type)
+                ? "UPDATE Accounts SET balance = balance + ?, total_deposit = total_deposit + ? WHERE account_id = ?"
+                : "UPDATE Accounts SET balance = balance - ?, total_withdraw = total_withdraw + ? WHERE account_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setDouble(1, amount);
-            pstmt.setInt(2, accountId);
+            pstmt.setDouble(2, amount);
+            pstmt.setInt(3, accountId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
-            System.err.println("❌ Lỗi cập nhật ví nguyên tử: " + e.getMessage());
-            e.printStackTrace();
+            System.err.println("❌ Lỗi cập nhật ví: " + e.getMessage());
             return false;
         }
     }

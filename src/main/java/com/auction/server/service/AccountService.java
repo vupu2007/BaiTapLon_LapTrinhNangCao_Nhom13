@@ -114,7 +114,11 @@ public class AccountService {
             boolean ok = accountDAO.executeAtomicWalletUpdate(accountId, amount, type);
 
             if (ok) {
-                accountDAO.insertTransaction(accountId, amount, type);
+                Account updated = accountDAO.getAccountById(accountId);
+                double balanceAfter = 0;
+                if (updated instanceof Bidder) balanceAfter = ((Bidder) updated).getBalance();
+                else if (updated instanceof Seller) balanceAfter = ((Seller) updated).getBalance();
+                accountDAO.insertTransaction(accountId, type, amount, balanceAfter);
                 System.out.println("💰 Ví #" + accountId + " [" + type + "]: " + amount + " đ thành công.");
             }
             return ok;
