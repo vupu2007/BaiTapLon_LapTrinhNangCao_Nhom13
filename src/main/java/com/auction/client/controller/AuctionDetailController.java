@@ -184,11 +184,7 @@ public class AuctionDetailController implements Observer {
             if (a != null) {
                 this.currentAuction = a;
                 ClientSocket.getInstance().addAuctionObserver(a.getId(), this);
-                ClientSocket.getInstance().setBidUpdateListener((auctionId, newPrice, username) -> {
-                    if (auctionId == currentAuction.getId()) {
-                        Platform.runLater(() -> update(newPrice, username));
-                    }
-                });
+
 
                 Platform.runLater(() -> {
                     startCountdownClock(a.getEndTime());
