@@ -187,8 +187,14 @@ public class ClientSocket {
         String typeOrMessage = response.getType() != null ? response.getType() : response.getMessage();
         if ("BID_UPDATE".equalsIgnoreCase(typeOrMessage)) {
             Object[] data = (Object[]) response.getData();
-            if (bidUpdateListener != null && data != null) {
-                bidUpdateListener.onBidUpdate((int) data[0], (double) data[1], (String) data[2]);
+            if (data == null) return;
+            int auctionId = (int) data[0];
+            double newPrice = (double) data[1];
+            String username = (String) data[2];
+
+            Object observer = auctionObservers.get(auctionId);
+            if (observer instanceof com.auction.client.controller.AuctionDetailController) {
+                ((com.auction.client.controller.AuctionDetailController) observer).update(newPrice, username);
             }
         }
     }

@@ -206,6 +206,7 @@ public class AuctionDetailController implements Observer {
                                 vboxBidHistoryContainer.getChildren().add(label);
                                 bidCount++;
                                 priceSeries.getData().add(new XYChart.Data<>(bidCount, bid.getBidAmount()));
+
                             }
                         }
                     });
@@ -235,42 +236,46 @@ public class AuctionDetailController implements Observer {
             String sellerName = (auction.getSellerName() != null) ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-            String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0) ? "Thành viên #" + auction.getWinnerId() : "Chưa có";
-
+            String winnerText;
+            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
+                com.auction.shared.model.Account winner = accountDAO.getAccountById(auction.getWinnerId());
+                winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
+            } else {
+                winnerText = "Chưa có";
+            }
+            final String finalWinnerText = winnerText;
 
             Platform.runLater(() -> {
                 fillTextFields(pName, startPriceStr, auction.getDescription() != null ? auction.getDescription() : "", sellerName, startTimeStr, endTimeStr);
                 if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
-                if (lblTopBidder != null) lblTopBidder.setText(winnerText);
-
+                if (lblTopBidder != null) lblTopBidder.setText(finalWinnerText);
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
                 startCountdownClock(auction.getEndTime());
                 checkBiddingPermissions(auction.getSellerId());
-
-                priceSeries.getData().clear();
-                bidCount = 0;
-                priceSeries.getData().add(new XYChart.Data<>(bidCount, currentPriceVal));
             });
         });
         detailService.fetchBidHistoryAsync(auction.getId(), bids -> {
             Platform.runLater(() -> {
                 if (vboxBidHistoryContainer != null && bids != null) {
                     vboxBidHistoryContainer.getChildren().clear();
-                    for (BidTransaction bid : bids) {
-                        Label label = new Label(String.format("• %s đặt %,.0f đ",
-                                bid.getBidderUsername(), bid.getBidAmount()));
+                    priceSeries.getData().clear(); // THÊM
+                    bidCount = 0;
+                    priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));                    for (BidTransaction bid : bids) {
+                        Label label = new Label(String.format("• [%s] %s đặt %,.0f đ",
+                                bid.getBidTime() != null
+                                        ? bid.getBidTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                                        : "--:--:--",
+                                bid.getBidderUsername(),
+                                bid.getBidAmount()));
                         label.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
                         vboxBidHistoryContainer.getChildren().add(label);
+                        bidCount++;
+                        priceSeries.getData().add(new XYChart.Data<>(bidCount, bid.getBidAmount()));
                     }
                 }
             });
-        });
-
-        ClientSocket.getInstance().setBidUpdateListener((auctionId, newPrice, username) -> {
-            if (auctionId == currentAuction.getId()) {
-                Platform.runLater(() -> update(newPrice, username));
-            }
         });
     }
     private void fillTextFields(String title, String price, String desc, String seller, String start, String end) {

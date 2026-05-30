@@ -84,10 +84,6 @@ public class MainController {
 
         // Gọi Service lấy dữ liệu bất đồng bộ
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
-            System.out.println("DEBUG items nhận được: " + (items != null ? items.size() : "null")); // ← thêm dòng này
-
-
-            // Đẩy việc xử lý FXML đồ sộ vào Thread Pool tập trung
             executorService.submit(() -> {
                 List<VBox> renderedCards = new ArrayList<>();
                 if (items != null && cachedFxmlLocation != null) {
@@ -96,57 +92,42 @@ public class MainController {
                         try {
                             FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
                             VBox cardLayout = loader.load();
-
                             ProductCardController cardController = loader.getController();
                             if (cardController != null) {
                                 String finalImageUrl = getFinalImageUrl(item.getImagePath());
                                 String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
-                                String priceStr = String.format("%,.0f đ", item.getStartingPrice());
-
-                                // 🎯 TỐI ƯU: Đổ trực tiếp Model gốc (item) vào Card để xử lý chuyển trang mượt mà không lỗi
-                                cardController.setProductModelData(item, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
+                                String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
+                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
                             }
-
                             cardLayout.setOnMouseClicked(e -> {
-                                System.out.println("DEBUG auctionId=" + item.getAuctionId()); // ← thêm
-                                if (item.getAuctionId() > 0) {
-                                    executorService.submit(() -> {
-                                        try {
-                                            Response response = ClientSocket.getInstance().sendRequest(
-                                                    new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
-                                            if (response != null && response.isSuccess()) {
-                                                Auction auction = (Auction) response.getData();
-                                                if (auction != null) { showAuctionDetail(auction); return; }
-                                            }
-                                        } catch (Exception ex) {
-                                            System.err.println("Lỗi load auction: " + ex.getMessage());
+                                executorService.submit(() -> {
+                                    try {
+                                        Response response = ClientSocket.getInstance().sendRequest(
+                                                new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
+                                        if (response != null && response.isSuccess()) {
+                                            Auction full = (Auction) response.getData();
+                                            if (full != null) { showAuctionDetail(full); return; }
                                         }
-                                        showAuctionDetail(item);
-                                    });
-                                } else {
+                                    } catch (Exception ex) {
+                                        System.err.println("Lỗi load auction: " + ex.getMessage());
+                                    }
                                     showAuctionDetail(item);
-                                }
+                                });
                             });
                             bindCardButtons(cardLayout, item);
-
                             renderedCards.add(cardLayout);
                         } catch (IOException e) {
-                            System.err.println("❌ Lỗi nạp FXML ngầm cho item: " + item.getName());
+                            System.err.println("❌ Lỗi nạp FXML: " + item.getName());
                         }
                     }
                 }
-
-                // Cập nhật lên UI Thread sau khi chuẩn bị xong danh sách card
                 Platform.runLater(() -> {
                     if (flowPane == null) return;
-
                     if (stats != null) {
                         if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
                         if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
                     }
-
                     updateFilterButtonStyles();
-
                     flowPane.getChildren().clear();
                     flowPane.getChildren().addAll(renderedCards);
                 });

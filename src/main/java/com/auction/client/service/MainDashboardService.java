@@ -23,7 +23,7 @@ public class MainDashboardService {
         t.setDaemon(true);
         return t;
     });
-     private static final AtomicBoolean isFetching = new AtomicBoolean(false);
+    private static final AtomicBoolean isFetching = new AtomicBoolean(false);
 
 
     @SuppressWarnings("unchecked")
@@ -32,10 +32,8 @@ public class MainDashboardService {
 
         CompletableFuture.runAsync(() -> {
             try {
-                // Chạy tuần tự — tránh tranh connection DB
                 Map<String, Integer> stats = null;
                 try {
-                    System.out.println("⚡ [Parallel-Net] Luồng 1 xuất phát bắn request: GET_DASHBOARD_STATS");
                     Response statsResponse = ClientSocket.getInstance().sendRequest(
                             new Request(MessageType.GET_DASHBOARD_STATS, accountId));
                     if (statsResponse != null && statsResponse.isSuccess()) {
@@ -47,25 +45,20 @@ public class MainDashboardService {
 
                 List<Item> items = new ArrayList<>();
                 try {
-                    System.out.println("⚡ [Parallel-Net] Luồng 2 xuất phát bắn request: GET_HOT_AUCTIONS với Filter: " + filter);
                     Response itemsResponse = ClientSocket.getInstance().sendRequest(
                             new Request(MessageType.GET_HOT_AUCTIONS, new String[]{accountId, filter}));
                     if (itemsResponse != null && itemsResponse.isSuccess()) {
                         List<Item> dbItems = (List<Item>) itemsResponse.getData();
                         if (dbItems != null) items.addAll(dbItems);
-                    } else {
-                        String errMsg = (itemsResponse != null) ? itemsResponse.getMessage() : "Mạng không phản hồi.";
-                        System.err.println("⚠️ [Service Log] Server báo THẤT BẠI khi lấy sản phẩm. Message: " + errMsg);
                     }
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi Items: " + e.getMessage());
                 }
 
-                System.out.println("✅ [Parallel-Net] Cả 2 luồng đã hoàn tất đồng thời! Đẩy dữ liệu về Callback cho Controller.");
                 callback.accept(stats, items);
-
             } finally {
-                isFetching.set(false);            }
+                isFetching.set(false);
+            }
         }, networkExecutor);
     }
 }
