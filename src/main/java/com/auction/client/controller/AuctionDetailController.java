@@ -265,7 +265,7 @@ public class AuctionDetailController implements Observer {
                     priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));                    for (BidTransaction bid : bids) {
                         Label label = new Label(String.format("• [%s] %s đặt %,.0f đ",
                                 bid.getBidTime() != null
-                                        ? bid.getBidTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                                        ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))
                                         : "--:--:--",
                                 bid.getBidderUsername(),
                                 bid.getBidAmount()));
