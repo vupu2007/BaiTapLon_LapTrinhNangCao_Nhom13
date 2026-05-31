@@ -29,24 +29,84 @@ import java.time.format.DateTimeFormatter;
 public class MainLayoutController {
 
     @FXML private StackPane contentArea;
-    @FXML private VBox buyerMenu, sellerMenu, roleBox;
+    @FXML private VBox buyerMenu, sellerMenu, adminMenu, roleBox; // Đã thêm adminMenu vào đây
     @FXML private Label lblRoleSidebar, lblClock, nameLabel;
     @FXML private MenuButton roleMenuButton;
 
     // ================= BUTTON MENU =================
     @FXML private Button btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings;
+    @FXML private Button btnDashboard, btnUserMgmt; // Khai báo thêm các nút đặc quyền Admin
 
     private Timeline clockTimeline;
 
     @FXML
     public void initialize() {
-        if (CurrentAccount.getAccount() != null) {
-            nameLabel.setText("👤 " + CurrentAccount.getAccount().getUsername());
-        }
         startRealtimeClock();
 
-        // Mở trang chủ ngay khi giao diện tổng thể vừa khởi tạo xong
-        openHome();
+        // Kiểm tra thông tin tài khoản hiện tại từ bộ nhớ tạm (CurrentAccount)
+        if (CurrentAccount.getAccount() != null) {
+            String username = CurrentAccount.getAccount().getUsername();
+            String role = CurrentAccount.getAccount().getRole(); // Giả định Model Account của bạn có hàm getRole()
+
+            nameLabel.setText("👤 " + username);
+
+            // PHÂN QUYỀN GIAO DIỆN NGAY KHI KHỞI TẠO
+            if ("ADMIN".equalsIgnoreCase(role)) {
+                setupAdminUI();
+            } else {
+                setupUserUI();
+            }
+        } else {
+            // Trường hợp dự phòng nếu chưa có session tài khoản
+            setupUserUI();
+        }
+    }
+
+    /**
+     * Cấu hình giao diện đặc quyền cho Admin
+     */
+    private void setupAdminUI() {
+        if (lblRoleSidebar != null) lblRoleSidebar.setText("🔑 Admin");
+
+        // Ẩn Menu đổi vai trò Người mua / Người bán (Vì Admin có vai trò cố định)
+        if (roleMenuButton != null) {
+            roleMenuButton.setVisible(false);
+            roleMenuButton.setManaged(false);
+        }
+
+        // Ẩn các menu giao dịch của người dùng thường
+        if (buyerMenu != null) { buyerMenu.setVisible(false); buyerMenu.setManaged(false); }
+        if (sellerMenu != null) { sellerMenu.setVisible(false); sellerMenu.setManaged(false); }
+
+        // BẬT MENU QUẢN TRỊ ADMIN
+        if (adminMenu != null) {
+            adminMenu.setVisible(true);
+            adminMenu.setManaged(true);
+        }
+
+        if (roleBox != null) {
+            roleBox.getStyleClass().removeAll("role-buyer", "role-seller");
+            roleBox.getStyleClass().add("role-admin"); // Bạn có thể định nghĩa thêm màu nền cho Admin trong style.css
+        }
+
+        // Mặc định mở trang Tổng quan khi Admin vừa vào hệ thống
+        openDashboard();
+    }
+
+    /**
+     * Giao diện chuẩn dành cho User thường (Buyer / Seller)
+     */
+    private void setupUserUI() {
+        if (adminMenu != null) {
+            adminMenu.setVisible(false);
+            adminMenu.setManaged(false);
+        }
+        if (roleMenuButton != null) {
+            roleMenuButton.setVisible(true);
+            roleMenuButton.setManaged(true);
+        }
+        // Mặc định ban đầu cho User thường là vai trò người mua
+        switchToBuyer();
     }
 
     /**
@@ -71,7 +131,6 @@ public class MainLayoutController {
 
     /**
      * 🚀 CHUẨN XỬ LÝ DỰ ÁN LỚN: Tải FXML bất đồng bộ thông qua JavaFX Task
-     * Giúp UI chính không bao giờ bị đơ (freeze) khi load các trang có giao diện nặng.
      */
     private void loadPageAsync(String fxmlPath) {
         Task<Parent> loadTask = new Task<> () {
@@ -82,17 +141,15 @@ public class MainLayoutController {
                     throw new IllegalArgumentException("Không tìm thấy file FXML tại đường dẫn: " + fxmlPath);
                 }
                 FXMLLoader loader = new FXMLLoader(fxmlUrl);
-                return loader.load(); // Load file thô ở luồng ngầm (I/O Thread)
+                return loader.load();
             }
         };
 
-        // Khi tiến trình chạy ngầm thành công, đẩy giao diện mới lên UI Thread tại đây
         loadTask.setOnSucceeded(workerStateEvent -> {
             Parent page = loadTask.getValue();
             if (contentArea != null && page != null) {
                 contentArea.getChildren().clear();
 
-                // Tự động co giãn kích thước linh hoạt theo khung contentArea cha
                 if (page instanceof Region region) {
                     region.prefWidthProperty().bind(contentArea.widthProperty());
                     region.prefHeightProperty().bind(contentArea.heightProperty());
@@ -105,20 +162,15 @@ public class MainLayoutController {
             }
         });
 
-        // Xử lý khi xảy ra lỗi load file hệ thống
         loadTask.setOnFailed(workerStateEvent ->
                 System.err.println("❌ Lỗi nghiêm trọng khi tải giao diện: " + fxmlPath + " -> " + loadTask.getException().getMessage())
         );
 
-        // Kích hoạt chạy luồng ngầm an toàn (Daemon Thread)
         Thread thread = new Thread(loadTask);
         thread.setDaemon(true);
         thread.start();
     }
 
-    /**
-     * Nhận trực tiếp một Node giao diện từ bên ngoài (Ví dụ từ trang MainController đẩy qua)
-     */
     public void setContent(Node content) {
         if (contentArea != null && content != null) {
             if (Platform.isFxApplicationThread()) {
@@ -130,10 +182,10 @@ public class MainLayoutController {
     }
 
     /**
-     * Quản lý trạng thái Active của các nút Menu thông qua CSS class sạch sẽ
+     * Quản lý trạng thái Active: Đã thêm btnDashboard và btnUserMgmt để quản lý hiệu ứng đổi màu nút bấm của Admin
      */
     private void setActive(Button activeButton) {
-        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings};
+        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings, btnDashboard, btnUserMgmt};
         for (Button btn : buttons) {
             if (btn != null) {
                 btn.getStyleClass().remove("nav-button-active");
@@ -149,9 +201,6 @@ public class MainLayoutController {
 
     // ================= CHUYỂN TRANG CHI TIẾT ĐẤU GIÁ =================
 
-    /**
-     * Điều hướng sang trang chi tiết bằng cách nạp bất đồng bộ và truyền thẳng Model dữ liệu vào Controller mới
-     */
     public void openAuctionDetailWithObject(Object data) {
         if (data == null) return;
 
@@ -160,7 +209,6 @@ public class MainLayoutController {
 
         setActive(btnAuction);
 
-        // Đưa việc biên dịch FXML chi tiết nặng nề xuống luồng nền
         Task<Parent> loadTask = new Task<>() {
             @Override
             protected Parent call() throws Exception {
@@ -187,7 +235,7 @@ public class MainLayoutController {
         thread.start();
     }
 
-    // ================= SỰ KIỆN MENU ĐIỀU HƯỚNG SẠCH SẼ (Bỏ hoàn toàn runLater thừa) =================
+    // ================= SỰ KIỆN ĐIỀU HƯỚNG USER THƯỜNG =================
 
     @FXML public void openHome() { setActive(btnHome); loadPageAsync("/view/MainView.fxml"); }
     @FXML public void openSelling() { setActive(btnSelling); loadPageAsync("/view/MyProducts.fxml"); }
@@ -198,6 +246,20 @@ public class MainLayoutController {
     @FXML private void openSettings() { setActive(btnSettings); loadPageAsync("/view/Settings.fxml"); }
 
     public void showCreateProductView() { openCreateAuction(); }
+
+    // ================= SỰ KIỆN ĐIỀU HƯỚNG DÀNH RIÊNG ADMIN =================
+
+    @FXML
+    public void openDashboard() {
+        setActive(btnDashboard);
+        loadPageAsync("/view/AdminDashboard.fxml"); // Hoặc đường dẫn file Dashboard admin của bạn
+    }
+
+    @FXML
+    public void openUserMgmt() {
+        setActive(btnUserMgmt);
+        loadPageAsync("/view/UserManagement.fxml"); // Hoặc đường dẫn file Quản lý user của bạn
+    }
 
     // ================= CẤU HÌNH PHÂN QUYỀN VAI TRÒ QUA CSS CLASS =================
 
@@ -211,15 +273,12 @@ public class MainLayoutController {
         updateRoleUI("role-seller", "🏪 Người bán", false, true);
     }
 
-    /**
-     * Tối ưu hóa UI: Thay đổi theme bằng CSS Class thay vì viết code màu Hex cứng trong Java
-     */
     private void updateRoleUI(String cssClass, String roleText, boolean showBuyer, boolean showSeller) {
         if (lblRoleSidebar != null) lblRoleSidebar.setText(roleText);
         if (roleMenuButton != null) roleMenuButton.setText("🔄 " + roleText.substring(2));
 
         if (roleBox != null) {
-            roleBox.getStyleClass().removeAll("role-buyer", "role-seller");
+            roleBox.getStyleClass().removeAll("role-buyer", "role-seller", "role-admin");
             roleBox.getStyleClass().add(cssClass);
         }
         if (buyerMenu != null) { buyerMenu.setVisible(showBuyer); buyerMenu.setManaged(showBuyer); }
@@ -228,7 +287,6 @@ public class MainLayoutController {
 
     @FXML
     private void handleLogout(ActionEvent event) {
-        // Giải phóng luồng và dập tắt đồng hồ chạy ngầm hoàn toàn chống tràn RAM hệ thống
         if (clockTimeline != null) {
             clockTimeline.stop();
         }
