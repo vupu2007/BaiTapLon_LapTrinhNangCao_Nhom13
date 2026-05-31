@@ -39,7 +39,6 @@ public class MainController {
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
 
-
     // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
     private final ExecutorService executorService = Executors.newFixedThreadPool(
             Runtime.getRuntime().availableProcessors(),
@@ -99,6 +98,8 @@ public class MainController {
                                 String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
                                 cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
                             }
+
+                            // 🎯 ĐÃ SỬA: Bọc luồng if-else chặt chẽ ngăn chặn item thô đè lên full dữ liệu
                             cardLayout.setOnMouseClicked(e -> {
                                 executorService.submit(() -> {
                                     try {
@@ -106,14 +107,21 @@ public class MainController {
                                                 new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
                                         if (response != null && response.isSuccess()) {
                                             Auction full = (Auction) response.getData();
-                                            if (full != null) { showAuctionDetail(full); return; }
+                                            if (full != null) {
+                                                showAuctionDetail(full);
+                                            } else {
+                                                showAuctionDetail(item);
+                                            }
+                                        } else {
+                                            showAuctionDetail(item);
                                         }
                                     } catch (Exception ex) {
                                         System.err.println("Lỗi load auction: " + ex.getMessage());
+                                        showAuctionDetail(item);
                                     }
-                                    showAuctionDetail(item);
                                 });
                             });
+
                             bindCardButtons(cardLayout, item);
                             renderedCards.add(cardLayout);
                         } catch (IOException e) {
@@ -138,7 +146,6 @@ public class MainController {
     public void addAuctionToRealtimeUI(Auction newAuction) {
         if (newAuction == null || cachedFxmlLocation == null) return;
 
-        // Tận dụng Thread Pool thay vì tạo "new Thread()" bừa bãi
         executorService.submit(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
@@ -148,8 +155,6 @@ public class MainController {
                 if (cardController != null) {
                     String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
                     String priceStr = String.format("%,.0f đ", newAuction.getStartPrice());
-
-                    // 🎯 Đổ trực tiếp Model gốc (newAuction) vào Card
                     cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl, "Sản phẩm mới.");
                 }
 
@@ -173,12 +178,13 @@ public class MainController {
         return SERVER_IMAGE_BASE_URL + rawImagePath;
     }
 
+    // 🎯 ĐÃ SỬA: Sắp xếp lại luồng rẽ nhánh an toàn cho nút bấm hành động
     private void bindCardButtons(VBox cardLayout, Object originData) {
         try {
             Node actionBtn = cardLayout.lookup("#actionButton");
             if (actionBtn instanceof Button button) {
                 button.setOnAction(e -> {
-                    e.consume();
+                    e.consume(); // Ngăn chặn sự kiện nổi bọt kích hoạt click đúp
                     if (originData instanceof Item item && item.getAuctionId() > 0) {
                         executorService.submit(() -> {
                             try {
@@ -186,12 +192,18 @@ public class MainController {
                                         new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
                                 if (response != null && response.isSuccess()) {
                                     Auction auction = (Auction) response.getData();
-                                    if (auction != null) { showAuctionDetail(auction); return; }
+                                    if (auction != null) {
+                                        showAuctionDetail(auction);
+                                    } else {
+                                        showAuctionDetail(item);
+                                    }
+                                } else {
+                                    showAuctionDetail(item);
                                 }
                             } catch (Exception ex) {
-                                System.err.println("Lỗi load auction: " + ex.getMessage());
+                                System.err.println("Lỗi load auction tại button: " + ex.getMessage());
+                                showAuctionDetail(originData);
                             }
-                            showAuctionDetail(originData);
                         });
                     } else {
                         showAuctionDetail(originData);
@@ -227,7 +239,7 @@ public class MainController {
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentAccount.logOut();
-        shutdownExecutor(); // Dọn dẹp luồng khi thoát màn hình chính
+        shutdownExecutor();
 
         executorService.submit(() -> {
             try {
@@ -245,12 +257,8 @@ public class MainController {
         });
     }
 
-    /**
-     * 🚀 ĐÃ SỬA LỖI TRIỆT ĐỂ: Tìm kiếm tầng cha (MainLayoutController) một cách linh hoạt qua Scene Graph
-     * Giải quyết hoàn toàn lỗi biên dịch dòng 237-238 mà không cần gọi Singleton.
-     */
     public void showAuctionDetail(Object productData) {
-        System.out.println("DEBUG showAuctionDetail type: " + productData.getClass().getSimpleName()); // ← thêm dòng này
+        System.out.println("DEBUG showAuctionDetail type: " + productData.getClass().getSimpleName());
 
         if (flowPane == null || flowPane.getScene() == null) return;
 
@@ -270,15 +278,14 @@ public class MainController {
 
                 Platform.runLater(() -> {
                     if (flowPane.getScene() != null) {
-                        // Tìm kiếm động vùng chứa trung tâm từ Scene chính
                         Parent root = flowPane.getScene().getRoot();
                         Node layoutCenter = root.lookup("#contentArea");
 
                         if (layoutCenter instanceof javafx.scene.layout.StackPane contentArea) {
                             contentArea.getChildren().setAll(detailView);
-                            System.out.println("🎯 [UI Switch] Điều hướng trang chi tiết sản phẩm thành công từ MainController.");
+                            System.out.println("🎯 [UI Switch] Điều hướng trang chi tiết sản phẩm thành công.");
                         } else {
-                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để hiển thị giao diện chi tiết.");
+                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để hiển thị giao diện.");
                         }
                     }
                 });
@@ -288,7 +295,6 @@ public class MainController {
         });
     }
 
-    // Đóng dọn dẹp Executor Service để tránh thất thoát tài nguyên hệ thống
     public void shutdownExecutor() {
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
