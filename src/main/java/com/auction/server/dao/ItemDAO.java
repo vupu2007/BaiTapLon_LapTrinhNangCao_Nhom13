@@ -18,14 +18,7 @@ public class ItemDAO {
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
-
-            // 🛠️ ĐÃ SỬA: Ép chuỗi String itemId sang kiểu Int khi truyền vào cột INT trong DB
-            try {
-                stmt.setInt(1, Integer.parseInt(item.getItemId()));
-            } catch (NumberFormatException e) {
-                stmt.setNull(1, Types.INTEGER); // Đề phòng trường hợp id bị rỗng
-            }
-
+            stmt.setString(1, item.getItemId());
             stmt.setString(2, item.getName());
             stmt.setString(3, item.getDescription());
             stmt.setDouble(4, item.getStartingPrice());
@@ -46,14 +39,11 @@ public class ItemDAO {
         String sql = "SELECT * FROM Items WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 🛠️ ĐÃ SỬA: Chuyển tham số String đầu vào sang Int để truy vấn DB chuẩn xác
-            pstmt.setInt(1, Integer.parseInt(itemId));
-
+            pstmt.setString(1, itemId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) return mapResultSetToItem(rs);
             }
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
@@ -104,24 +94,19 @@ public class ItemDAO {
         }
         return list;
     }
-
     // 5. Cập nhật trạng thái sản phẩm
     public boolean updateStatus(String itemId, String newStatus) {
         String sql = "UPDATE Items SET status = ? WHERE item_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, newStatus);
-
-            // 🛠️ ĐÃ SỬA: Dùng setInt thay vì setString
-            pstmt.setInt(2, Integer.parseInt(itemId));
-
+            pstmt.setString(2, itemId);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
-
     // 6. Cập nhật thông tin sản phẩm
     public boolean updateItem(Item item) {
         String sql = "UPDATE Items SET name = ?, description = ?, starting_price = ?, category_id = ?, image_path = ? WHERE item_id = ?";
@@ -132,12 +117,9 @@ public class ItemDAO {
             pstmt.setDouble(3, item.getStartingPrice());
             pstmt.setInt(4, item.getCategoryId());
             pstmt.setString(5, item.getImagePath());
-
-            // 🛠️ ĐÃ SỬA: Dùng setInt thay vì setString
-            pstmt.setInt(6, Integer.parseInt(item.getItemId()));
-
+            pstmt.setString(6, item.getItemId());
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
@@ -148,12 +130,9 @@ public class ItemDAO {
         String sql = "DELETE FROM Items WHERE item_id = ? AND status = 'AVAILABLE'";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 🛠️ ĐÃ SỬA: Dùng setInt thay vì setString
-            pstmt.setInt(1, Integer.parseInt(itemId));
-
+            pstmt.setString(1, itemId);
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
@@ -177,29 +156,24 @@ public class ItemDAO {
         }
         return list;
     }
-
     // 9. Kích hoạt phiên đấu giá mới
     public boolean startAuction(String itemId, int sellerId, double startPrice, String startTime, String endTime) {
         String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, start_time, end_time, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, 'RUNNING')";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 🛠️ ĐÃ SỬA: Dùng setInt thay vì setString
-            pstmt.setInt(1, Integer.parseInt(itemId));
-
+            pstmt.setString(1, itemId);
             pstmt.setInt(2, sellerId);
             pstmt.setDouble(3, startPrice);
             pstmt.setDouble(4, startPrice);
             pstmt.setString(5, startTime);
             pstmt.setString(6, endTime);
-            return pstmt.executeUpdate() > 0; // Hoặc pstmt.executeUpdate()
-        } catch (SQLException | NumberFormatException e) {
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
-
     // --- Helper: map ResultSet sang Item object ---
     public Item mapResultSetToItem(ResultSet rs) throws SQLException {
         Item item;
@@ -213,10 +187,7 @@ public class ItemDAO {
             item = new Vehicle();
         }
 
-        // 🛠️ ĐÃ SỬA: Đọc kiểu số nguyên (getInt) từ DB lên rồi ép thành String gán vào Model Java
-        int idFromDB = rs.getInt("item_id");
-        item.setItemId(String.valueOf(idFromDB));
-
+        item.setItemId(rs.getString("item_id"));
         item.setName(rs.getString("name"));
         item.setDescription(rs.getString("description"));
         item.setStartingPrice(rs.getDouble("starting_price"));

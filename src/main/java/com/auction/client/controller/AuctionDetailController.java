@@ -8,6 +8,9 @@ import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Observer;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
+import com.auction.shared.network.MessageType;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -165,7 +168,18 @@ public class AuctionDetailController implements Observer {
         this.currentAuction = null;
 
         String formattedPrice = String.format("%,.0f đ", item.getStartingPrice());
-        String sellerName = "Người bán #" + item.getOwnerId();
+
+        String fetchedSeller;
+        try {
+            Response sellerResp = ClientSocket.getInstance().sendRequest(
+                    new Request(MessageType.GET_ACCOUNT_BY_ID, item.getOwnerId()));
+            com.auction.shared.model.Account seller = (sellerResp != null && sellerResp.isSuccess())
+                    ? (com.auction.shared.model.Account) sellerResp.getData() : null;
+            fetchedSeller = (seller != null) ? seller.getUsername() : "Người bán #" + item.getOwnerId();
+        } catch (Exception e) {
+            fetchedSeller = "Người bán #" + item.getOwnerId();
+        }
+        final String sellerName = fetchedSeller;
 
         Platform.runLater(() -> {
             fillTextFields(item.getName(), formattedPrice, item.getDescription(), sellerName, "--/--/---- --:--", "--/--/---- --:--");
@@ -185,7 +199,6 @@ public class AuctionDetailController implements Observer {
                 this.currentAuction = a;
                 ClientSocket.getInstance().addAuctionObserver(a.getId(), this);
 
-
                 Platform.runLater(() -> {
                     startCountdownClock(a.getEndTime());
                     if (lblCurrentPrice != null)
@@ -202,7 +215,6 @@ public class AuctionDetailController implements Observer {
                                 vboxBidHistoryContainer.getChildren().add(label);
                                 bidCount++;
                                 priceSeries.getData().add(new XYChart.Data<>(bidCount, bid.getBidAmount()));
-
                             }
                         }
                     });
@@ -226,15 +238,34 @@ public class AuctionDetailController implements Observer {
             double currentPriceVal = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
             String currentPriceStr = String.format("%,.0f đ", currentPriceVal);
 
-            String sellerName = (auction.getSellerName() != null) ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
-            String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+            String fetchedSeller;
+            try {
+                Response sellerResp = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getSellerId()));
+                com.auction.shared.model.Account seller = (sellerResp != null && sellerResp.isSuccess())
+                        ? (com.auction.shared.model.Account) sellerResp.getData() : null;
+                fetchedSeller = (seller != null) ? seller.getUsername() : "Người bán #" + auction.getSellerId();
+            } catch (Exception e) {
+                fetchedSeller = "Người bán #" + auction.getSellerId();
+            }
+            final String sellerName = fetchedSeller;            String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
 
-            String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0)
-                    ? (auction.getWinnerName() != null ? auction.getWinnerName() : "Thành viên #" + auction.getWinnerId())
-                    : "Chưa có";
+            String winnerText;
+            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                try {
+                    Response winnerResp = ClientSocket.getInstance().sendRequest(
+                            new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getWinnerId()));
+                    com.auction.shared.model.Account winner = (winnerResp != null && winnerResp.isSuccess())
+                            ? (com.auction.shared.model.Account) winnerResp.getData() : null;
+                    winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
+                } catch (Exception e) {
+                    winnerText = "Thành viên #" + auction.getWinnerId();
+                }
+            } else {
+                winnerText = "Chưa có";
+            }
             final String finalWinnerText = winnerText;
-
             Platform.runLater(() -> {
                 fillTextFields(pName, startPriceStr, (finalItem != null && finalItem.getDescription() != null) ? finalItem.getDescription() : "", sellerName, startTimeStr, endTimeStr);
                 if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));

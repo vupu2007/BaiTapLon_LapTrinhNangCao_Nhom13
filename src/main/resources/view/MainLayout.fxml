@@ -38,7 +38,6 @@
 
             <Region HBox.hgrow="ALWAYS" />
             <Label fx:id="nameLabel" style="-fx-background-color: #f1f5f9; -fx-padding: 8 15; -fx-background-radius: 10;" text="👤 test" />
-
             <MenuButton fx:id="roleMenuButton" style="-fx-background-color: #A21CAF; -fx-background-radius: 10;" text="🔄 Người mua" textFill="WHITE">
                 <items>
                     <MenuItem onAction="#switchToBuyer" text="Người mua - Tham gia đấu giá" />
@@ -69,7 +68,7 @@
             </VBox>
 
             <HBox alignment="CENTER_LEFT" spacing="12.0" style="-fx-background-color: #e0f2fe; -fx-background-radius: 15; -fx-padding: 12 20;">
-                <Label style="-fx-font-size: 18;" text="⏰" />
+                <Label text="⏰" style="-fx-font-size: 18;" />
                 <VBox alignment="CENTER_LEFT">
                     <Label style="-fx-font-size: 9; -fx-font-weight: bold;" text="HỆ THỐNG REALTIME" textFill="#0369a1" />
                     <Label fx:id="lblClock" text="00:00:00" textFill="#0284c7">
@@ -87,8 +86,9 @@
 
                 <Button fx:id="btnHome" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openHome" prefHeight="45.0" styleClass="nav-button-active" text="🏠 Trang chủ" />
 
+                <Button fx:id="btnWallet" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openWallet" prefHeight="45.0" styleClass="nav-button" text="👛 Ví tiền" />
+
                 <VBox fx:id="buyerMenu" spacing="8.0">
-                    <Button fx:id="btnWallet" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openWallet" prefHeight="45.0" styleClass="nav-button" text="👛 Ví tiền" />
                     <Button fx:id="btnAuction" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openAuction" prefHeight="45.0" styleClass="nav-button" text="🔨 Phiên của tôi " />
                 </VBox>
 
@@ -97,22 +97,13 @@
                     <Button fx:id="btnCreateAuction" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openCreateAuction" prefHeight="45.0" styleClass="nav-button" text="➕ Tạo sản phẩm" />
                 </VBox>
 
-                <VBox fx:id="adminMenu" managed="false" spacing="8.0" visible="false">
-                    <Button fx:id="btnDashboard" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openDashboard" prefHeight="45.0" styleClass="nav-button" text="📊 Tổng quan" />
-                    <Button fx:id="btnUserMgmt" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openUserMgmt" prefHeight="45.0" styleClass="nav-button" text="👥 Quản lý thành viên" />
-                </VBox>
-
                 <Button fx:id="btnHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openHistory" prefHeight="45.0" styleClass="nav-button" text="🕒 Lịch sử" />
+
                 <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openSettings" prefHeight="45.0" styleClass="nav-button" text="⚙ Cài đặt" />
             </VBox>
         </VBox>
     </left>
-
     <center>
-        <StackPane fx:id="contentArea" alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" BorderPane.alignment="CENTER">
-            <padding>
-                <Insets bottom="20.0" left="10.0" right="20.0" top="25.0" />
-            </padding>
-        </StackPane>
+        <StackPane fx:id="contentArea" alignment="TOP_CENTER" maxHeight="1.7976931348623157E308" maxWidth="1.7976931348623157E308" BorderPane.alignment="CENTER" />
     </center>
 </BorderPane>
