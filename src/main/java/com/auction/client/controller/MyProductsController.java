@@ -1,8 +1,13 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.service.MyProductsService;
 import com.auction.client.util.CurrentAccount;
+import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -79,6 +84,18 @@ public class MyProductsController {
                             String sellerName = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Tôi";
                             String startTimeStr = "--/--/---- --:--";
                             String endTimeStr = "--/--/---- --:--";
+                            try {
+                                Response auctionResp = ClientSocket.getInstance().sendRequest(
+                                        new Request(MessageType.GET_AUCTION_BY_ITEM_ID, item.getItemId()));                                if (auctionResp != null && auctionResp.isSuccess()) {
+                                    Auction auction = (Auction) auctionResp.getData();
+                                    if (auction != null && auction.getEndTime() != null) {
+                                        endTimeStr = auction.getEndTime().format(
+                                                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                                        startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(
+                                                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : startTimeStr;
+                                    }
+                                }
+                            } catch (Exception ignored) {}
 
                             cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
                                     description, sellerName, startTimeStr, endTimeStr);

@@ -111,6 +111,7 @@ public class ActiveAuctionsController {
                         }
                         dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
                         dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                        System.out.println("DEBUG endTime=" + auction.getEndTime() + " endTimeStr=" + dto.endTimeStr);
 
                         long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
                         dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
