@@ -97,8 +97,7 @@ public class MainController {
                                 String finalImageUrl = getFinalImageUrl(item.getImagePath());
                                 String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
                                 String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
-                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription());
-                            }
+                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), item.getEndTimeStr());                            }
                             cardLayout.setOnMouseClicked(e -> {
                                 executorService.submit(() -> {
                                     try {
@@ -150,8 +149,8 @@ public class MainController {
                     String priceStr = String.format("%,.0f đ", newAuction.getStartPrice());
 
                     // 🎯 Đổ trực tiếp Model gốc (newAuction) vào Card
-                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl, "Sản phẩm mới.");
-                }
+                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl, newAuction.getDescription() != null ? newAuction.getDescription() : "",
+                            newAuction.getEndTime() != null ? newAuction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);                }
 
                 cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
                 bindCardButtons(cardLayout, newAuction);
