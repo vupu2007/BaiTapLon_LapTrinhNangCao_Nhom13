@@ -193,7 +193,7 @@ public class ItemDAO {
         item.setStartingPrice(rs.getDouble("starting_price"));
         item.setCategoryId(categoryId);
         item.setOwnerId(rs.getInt("owner_id"));
-        item.setStatus(rs.getString("status"));
+        item.setAuctionStatus(rs.getString("status"));
         item.setImagePath(rs.getString("image_path"));
 
         return item;

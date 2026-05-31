@@ -2,6 +2,7 @@ package com.auction.shared.model;
 
 // THAY ĐỔI: đổi thành abstract vì Electronics/Art/Vehicle mới là class cụ thể
 public abstract class Item implements Entity, java.io.Serializable {
+    private static final long serialVersionUID = 1L;
     protected String imagePath;
     protected String itemId;
     protected String name;
@@ -64,4 +65,8 @@ public abstract class Item implements Entity, java.io.Serializable {
     private String endTimeStr;
     public String getEndTimeStr() { return endTimeStr; }
     public void setEndTimeStr(String endTimeStr) { this.endTimeStr = endTimeStr; }
+
+    private String auctionStatus;
+    public String getAuctionStatus() { return auctionStatus; }
+    public void setAuctionStatus(String auctionStatus) { this.auctionStatus = auctionStatus; }
 }
