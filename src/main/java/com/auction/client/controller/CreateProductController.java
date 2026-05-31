@@ -44,6 +44,7 @@ public class CreateProductController {
     private File productImgFile = null;
     private final CreateProductService productService = new CreateProductService();
 
+
     @FXML
     public void initialize() {
         ObservableList<String> hours = FXCollections.observableArrayList();
@@ -88,7 +89,10 @@ public class CreateProductController {
     private boolean isCreating = false;
     @FXML
     private void handleCreateAuction() {
+        if (isCreating) return;
+        isCreating = true;
         if (CurrentAccount.getAccount() == null) {
+            isCreating = false;
             showAlert(Alert.AlertType.ERROR, "Lỗi phân quyền", "Vui lòng đăng nhập để tạo phiên đấu giá!");
             return;
         }
