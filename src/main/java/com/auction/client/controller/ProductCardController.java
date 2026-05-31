@@ -163,4 +163,8 @@ public class ProductCardController {
         navigationWorker.setDaemon(true);
         navigationWorker.start();
     }
+    public void setOriginProductData(Object data) {
+        this.originProductData = data;
+    }
+
 }

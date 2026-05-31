@@ -138,6 +138,7 @@ public class ActiveAuctionsController {
                     if (controller != null) {
                         controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
                                 dto.sellerName, dto.startTimeStr, dto.endTimeStr);
+                        controller.setOriginProductData(dto.auction);
                     }
 
                     // Thêm card thẳng vào container hiển thị
