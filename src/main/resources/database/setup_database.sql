@@ -1,8 +1,8 @@
--- 1. Đồng bộ tên database khớp với application.properties
-CREATE DATABASE IF NOT EXISTS auction_db;
-USE auction_db;
+-- 1. Tạo Database
+CREATE DATABASE IF NOT EXISTS online_auction_db;
+USE online_auction_db;
 
--- 2. Bảng Accounts
+-- 2. Bảng Accounts (Thay thế cho bảng Users để khớp với Class Account trong Java)
 CREATE TABLE Accounts (
                           account_id INT AUTO_INCREMENT PRIMARY KEY,
                           username VARCHAR(50) UNIQUE NOT NULL,
@@ -10,37 +10,34 @@ CREATE TABLE Accounts (
                           email VARCHAR(100),
                           role ENUM('ADMIN', 'SELLER', 'BIDDER') DEFAULT 'BIDDER',
                           balance DECIMAL(15, 2) DEFAULT 0.0,
-                          total_deposit DECIMAL(15, 2) DEFAULT 0.0,   -- Tích hợp gọn gàng vào lệnh tạo bảng
-                          total_withdraw DECIMAL(15, 2) DEFAULT 0.0,  -- Tích hợp gọn gàng vào lệnh tạo bảng
                           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Bảng Categories
+-- 3. Bảng Categories (Giữ nguyên)
 CREATE TABLE Categories (
                             category_id INT AUTO_INCREMENT PRIMARY KEY,
                             name VARCHAR(100) NOT NULL
 );
 
--- 4. Bảng Items (Đồng bộ item_id sang INT để khớp cấu trúc Model ID trong Java)
+-- 4. Bảng Items
 CREATE TABLE Items (
-                       item_id INT AUTO_INCREMENT PRIMARY KEY,
+                       item_id VARCHAR(20) PRIMARY KEY,
                        name VARCHAR(100) NOT NULL,
                        description TEXT,
                        starting_price DECIMAL(15, 2) NOT NULL,
                        category_id INT,
                        owner_id INT,
                        status ENUM('AVAILABLE', 'IN_AUCTION', 'SOLD') DEFAULT 'AVAILABLE',
-                       image_path MEDIUMTEXT,                  -- Tích hợp lưu trữ chuỗi base64 hoặc đường dẫn ảnh dài
-                       attributes JSON,
                        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                       FOREIGN KEY (category_id) REFERENCES Categories(category_id) ON DELETE SET NULL,
-                       FOREIGN KEY (owner_id) REFERENCES Accounts(account_id) ON DELETE CASCADE
+                       FOREIGN KEY (category_id) REFERENCES Categories(category_id),
+                       FOREIGN KEY (owner_id) REFERENCES Accounts(account_id),
+                       attributes JSON
 );
 
--- 5. Bảng Auctions (Đồng bộ item_id sang INT)
+-- 5. Bảng Auctions
 CREATE TABLE Auctions (
                           auction_id INT AUTO_INCREMENT PRIMARY KEY,
-                          item_id INT,
+                          item_id VARCHAR(20),
                           seller_id INT NOT NULL,
                           start_price DECIMAL(15, 2) NOT NULL,
                           current_price DECIMAL(15, 2) DEFAULT NULL,
@@ -49,9 +46,9 @@ CREATE TABLE Auctions (
                           end_time DATETIME,
                           status ENUM('OPEN', 'RUNNING', 'FINISHED', 'PAID', 'CANCELED') DEFAULT 'OPEN',
                           winner_id INT NULL,
-                          FOREIGN KEY (item_id) REFERENCES Items(item_id) ON DELETE CASCADE,
-                          FOREIGN KEY (seller_id) REFERENCES Accounts(account_id) ON DELETE CASCADE,
-                          FOREIGN KEY (winner_id) REFERENCES Accounts(account_id) ON DELETE SET NULL
+                          FOREIGN KEY (item_id) REFERENCES Items(item_id),
+                          FOREIGN KEY (seller_id) REFERENCES Accounts(account_id),
+                          FOREIGN KEY (winner_id) REFERENCES Accounts(account_id)
 );
 
 -- 6. Bảng Bids
@@ -61,21 +58,26 @@ CREATE TABLE Bids (
                       bidder_id INT,
                       bid_amount DECIMAL(15, 2) NOT NULL,
                       bid_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                      FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id) ON DELETE CASCADE,
-                      FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id) ON DELETE CASCADE
+                      FOREIGN KEY (auction_id) REFERENCES Auctions(auction_id),
+                      FOREIGN KEY (bidder_id) REFERENCES Accounts(account_id)
 );
 
--- 7. Bảng Transactions (Đồng bộ số dư DECIMAL và bổ sung Khóa ngoại)
+-- 1. Thêm 2 cột mới vào bảng Accounts một cách độc lập
+ALTER TABLE Accounts ADD COLUMN total_deposit DECIMAL(15, 2) DEFAULT 0.0;
+ALTER TABLE Accounts ADD COLUMN total_withdraw DECIMAL(15, 2) DEFAULT 0.0;
+
+-- 2. Cập nhật giá trị mặc định cho tài khoản 'mhuyen' để tránh bị lỗi NULL dữ liệu
+UPDATE Accounts SET total_deposit = 0.0, total_withdraw = 0.0 WHERE username = 'mhuyen';
+
+ALTER TABLE Items ADD COLUMN image_path VARCHAR(255);
+
+ALTER TABLE Items MODIFY COLUMN image_path MEDIUMTEXT;
+-- Tạo thêm bản Transactions để lưu trữ số dư
 CREATE TABLE Transactions (
                               transaction_id INT AUTO_INCREMENT PRIMARY KEY,
                               account_id INT NOT NULL,
                               type VARCHAR(50) NOT NULL,
-                              amount DECIMAL(15, 2) NOT NULL,          -- Đổi từ DOUBLE sang DECIMAL thống nhất hệ thống
+                              amount DOUBLE NOT NULL,
                               description VARCHAR(255),
-                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                              FOREIGN KEY (account_id) REFERENCES Accounts(account_id) ON DELETE CASCADE
+                              created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-
--- 8. Chèn dữ liệu mẫu an toàn chống lỗi dữ liệu trống
-INSERT INTO Accounts (username, password, email, role, balance, total_deposit, total_withdraw)
-VALUES ('mhuyen', '123456', 'mhuyen@auction.com', 'BIDDER', 5000.00, 5000.00, 0.00);
