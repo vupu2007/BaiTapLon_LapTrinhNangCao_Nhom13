@@ -4,11 +4,11 @@ import com.auction.client.service.AuctionDetailService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.client.util.ImageLoader;
 import com.auction.client.network.ClientSocket;
-import com.auction.shared.model.*;
+import com.auction.shared.model.BidTransaction;
+import com.auction.shared.model.Observer;
+import com.auction.shared.model.Item;
+import com.auction.shared.model.Auction;
 
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.application.Platform;
@@ -233,20 +233,9 @@ public class AuctionDetailController implements Observer {
             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String winnerText;
-            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
-                Account winner = null;
-                if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
-                    try {
-                        Response winnerResp = ClientSocket.getInstance().sendRequest(
-                                new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getWinnerId()));
-                        winner = (winnerResp != null && winnerResp.isSuccess()) ? (Account) winnerResp.getData() : null;
-                        winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
-                    } catch (Exception ex) {
-                        winnerText = "Thành viên #" + auction.getWinnerId();
-                    }
-                } else {
-                    winnerText = "Chưa có";
-                }
+             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
+                com.auction.shared.model.Account winner = accountDAO.getAccountById(auction.getWinnerId());
                 winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
             } else {
                 winnerText = "Chưa có";
