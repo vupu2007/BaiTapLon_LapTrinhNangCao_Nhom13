@@ -212,10 +212,7 @@ public class AuctionDetailController implements Observer {
     }
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
-        System.out.println("DEBUG auction: id=" + auction.getId()
-                + " startTime=" + auction.getStartTime()
-                + " endTime=" + auction.getEndTime()
-                + " productName=" + auction.getProductName()); // ← thêm dòng này
+        System.out.println("seller=" + auction.getSellerName() + " desc=" + auction.getDescription());
         this.currentAuction = auction;
         this.currentItem = null;
 
@@ -232,18 +229,14 @@ public class AuctionDetailController implements Observer {
             String sellerName = (auction.getSellerName() != null) ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-            String winnerText;
-             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
-                com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
-                com.auction.shared.model.Account winner = accountDAO.getAccountById(auction.getWinnerId());
-                winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
-            } else {
-                winnerText = "Chưa có";
-            }
+
+            String winnerText = (auction.getWinnerId() != null && auction.getWinnerId() > 0)
+                    ? (auction.getWinnerName() != null ? auction.getWinnerName() : "Thành viên #" + auction.getWinnerId())
+                    : "Chưa có";
             final String finalWinnerText = winnerText;
 
             Platform.runLater(() -> {
-                fillTextFields(pName, startPriceStr, auction.getDescription() != null ? auction.getDescription() : "", sellerName, startTimeStr, endTimeStr);
+                fillTextFields(pName, startPriceStr, (finalItem != null && finalItem.getDescription() != null) ? finalItem.getDescription() : "", sellerName, startTimeStr, endTimeStr);
                 if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
                 if (lblTopBidder != null) lblTopBidder.setText(finalWinnerText);

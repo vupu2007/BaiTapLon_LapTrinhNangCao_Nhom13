@@ -82,7 +82,7 @@ public class MainController {
                     ? String.format("%,.0f VND", ((User) current).getBalance()) : "N/A");
         }
 
-        // Gọi Service lấy dữ liệu bất đồng bộ
+        // Gọi Service lấy dữ liệu bất đồng bộ.
         dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
             executorService.submit(() -> {
                 List<VBox> renderedCards = new ArrayList<>();

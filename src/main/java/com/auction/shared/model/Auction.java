@@ -6,9 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Auction implements Serializable {
-    private static final long serialVersionUID = 1L;
-
-    // Các trạng thái phiên đấu giá đồng bộ khớp chuẩn cơ sở dữ liệu
+    private static final long serialVersionUID = 3L;    // Các trạng thái phiên đấu giá đồng bộ khớp chuẩn cơ sở dữ liệu
     public enum AuctionStatus {
         OPEN,      // Chờ bắt đầu
         RUNNING,   // Đang diễn ra
@@ -37,6 +35,10 @@ public class Auction implements Serializable {
     private Account account;// Thông tin tài khoản người bán đính kèm từ DB
 
     private String sellerName;
+
+    private String winnerName;
+    public String getWinnerName() { return winnerName; }
+    public void setWinnerName(String winnerName) { this.winnerName = winnerName; }
 
     public String getSellerName() { return sellerName; }
     public void setSellerName(String sellerName) { this.sellerName = sellerName; }
