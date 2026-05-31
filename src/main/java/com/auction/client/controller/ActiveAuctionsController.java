@@ -97,8 +97,18 @@ public class ActiveAuctionsController {
                         dto.name = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
                         dto.image = (item != null) ? item.getImagePath() : null;
                         dto.description = (item != null) ? item.getDescription() : "Không có mô tả.";
-                        dto.sellerName = (item != null) ? "Người bán #" + item.getOwnerId() : "Ẩn danh";
-
+                        if (item != null) {
+                            try {
+                                Request sellerReq = new Request(MessageType.GET_ACCOUNT_BY_ID, item.getOwnerId());
+                                Response sellerResp = ClientSocket.getInstance().sendRequest(sellerReq);
+                                Account seller = (sellerResp != null && sellerResp.isSuccess()) ? (Account) sellerResp.getData() : null;
+                                dto.sellerName = (seller != null) ? seller.getUsername() : "Người bán #" + item.getOwnerId();
+                            } catch (Exception ex) {
+                                dto.sellerName = "Người bán #" + item.getOwnerId();
+                            }
+                        } else {
+                            dto.sellerName = "Ẩn danh";
+                        }
                         dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
                         dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
 
@@ -136,7 +146,11 @@ public class ActiveAuctionsController {
 
                     // Đổ dữ liệu thô lên Controller của Card
                     if (controller != null) {
-                        controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
+                        String statusText = "Đang diễn ra";
+                        if (dto.auction.getEndTime() != null && LocalDateTime.now().isAfter(dto.auction.getEndTime())) {
+                            statusText = "Đã kết thúc";
+                        }
+                        controller.setData(dto.name, dto.price, statusText, dto.image, dto.description,
                                 dto.sellerName, dto.startTimeStr, dto.endTimeStr);
                         controller.setOriginProductData(dto.auction);
                     }
@@ -155,8 +169,8 @@ public class ActiveAuctionsController {
                                         Platform.runLater(() -> {
                                             try {
                                                 FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
-                                                Parent detailView = loader.load();
-                                                AuctionDetailController detailController = loader.getController();
+                                                Parent detailView = detailLoader.load();
+                                                AuctionDetailController detailController = detailLoader.getController();
                                                 if (detailController != null) detailController.loadProductDetail(full);
 
                                                 Parent root = card.getScene().getRoot();
