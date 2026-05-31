@@ -10,7 +10,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToHeight="true" fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF; -fx-padding: 10 0 0 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ActiveAuctionsController">
+<ScrollPane fitToHeight="false" fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF; -fx-padding: 10 0 0 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ActiveAuctionsController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="20.0" style="-fx-background-color: #F0F9FF;">
             <padding>
