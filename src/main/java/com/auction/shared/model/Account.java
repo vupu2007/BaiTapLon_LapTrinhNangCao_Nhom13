@@ -11,6 +11,7 @@ public abstract class Account implements Entity,Serializable {
     protected String password;
     protected String role;
     protected String email;
+    private boolean isLocked;
     // BỔ SUNG: Thuộc tính số dư ví tiền dùng chung cho các tài khoản kế thừa
     protected Double balance;
 
@@ -49,6 +50,14 @@ public abstract class Account implements Entity,Serializable {
     }
     public void setId(String id) {
         this.id = id;
+    }
+
+    public boolean isLocked() {
+        return isLocked;
+    }
+
+    public void setLocked(boolean isLocked) {
+        this.isLocked = isLocked;
     }
 
     // --- PHƯƠNG THỨC TRỪU TƯỢNG ---

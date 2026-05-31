@@ -29,7 +29,7 @@ public enum MessageType {
     GET_ITEMS_BY_OWNER,
     UPDATE_ITEM,
     DELETE_ITEM,
-    GET_PRODUCTS,        // 🌟 THÊM DÒNG NÀY VÀO ĐỂ HỢP THỨC HOÁ CODE CLIENT
+    GET_PRODUCTS,
 
     // ── Auction ───────────────────────────────────────
     CREATE_AUCTION,

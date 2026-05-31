@@ -42,18 +42,36 @@ public class AdminUserMgmtController {
         colBalance.setCellValueFactory(cellData -> cellData.getValue().balanceProperty());
         colStatus.setCellValueFactory(cellData -> cellData.getValue().statusProperty());
 
-        // 🌟 CHUẨN HÓA: Tạo Cell Factory thông minh tự động hoán đổi Khóa / Mở khóa
+        // 🌟 NÂNG CẤP: Tô màu cho Cột Trạng Thái (Status Column)
+        colStatus.setCellFactory(column -> new TableCell<AdminUserRow, String>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) {
+                    setText(null);
+                    setStyle("");
+                } else {
+                    if ("BANNED".equalsIgnoreCase(item) || "LOCKED".equalsIgnoreCase(item)) {
+                        setStyle("-fx-text-fill: #ef4444; -fx-font-weight: bold;"); // Đỏ: Khóa
+                        setText("ĐÃ BỊ KHÓA");
+                    } else {
+                        setStyle("-fx-text-fill: #16a34a; -fx-font-weight: bold;"); // Xanh: Hoạt động
+                        setText("HOẠT ĐỘNG");
+                    }
+                }
+            }
+        });
+
+        // 🌟 CHUẨN HÓA: Nút Action tự động đổi màu và chức năng Khóa / Mở khóa
         colAction.setCellFactory(param -> new TableCell<AdminUserRow, Void>() {
             private final Button btnAction = new Button();
 
             {
                 btnAction.setPrefWidth(120);
                 btnAction.setPrefHeight(25);
-                btnAction.setStyle("-fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
-
                 btnAction.setOnAction(event -> {
                     AdminUserRow selected = getTableView().getItems().get(getIndex());
-                    toggleUserStatus(selected); // Gọi hàm xử lý mạng ngầm
+                    toggleUserStatus(selected);
                 });
             }
 
@@ -64,7 +82,6 @@ public class AdminUserMgmtController {
                     setGraphic(null);
                 } else {
                     AdminUserRow currentRow = getTableView().getItems().get(getIndex());
-                    // Đổi giao diện nút bấm dựa trên trạng thái thực tế của User
                     if ("BANNED".equalsIgnoreCase(currentRow.getStatus()) || "LOCKED".equalsIgnoreCase(currentRow.getStatus())) {
                         btnAction.setText("Mở khóa");
                         btnAction.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #16a34a; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;");
@@ -78,20 +95,15 @@ public class AdminUserMgmtController {
         });
     }
 
-    /**
-     * 🚀 XỬ LÝ LIÊN KẾT MẠNG: Khóa hoặc Mở khóa tài khoản chạy bất đồng bộ
-     */
     private void toggleUserStatus(AdminUserRow userRow) {
         if ("ADMIN".equalsIgnoreCase(userRow.getRole())) {
             showAlert(Alert.AlertType.WARNING, "Không được phép", "Không thể khóa tài khoản Admin!");
             return;
         }
         String currentStatus = userRow.getStatus();
-        // Xác định trạng thái mới sẽ cập nhật lên DB
         String newStatus = ("BANNED".equalsIgnoreCase(currentStatus) || "LOCKED".equalsIgnoreCase(currentStatus)) ? "ACTIVE" : "BANNED";
         String actionName = "ACTIVE".equals(newStatus) ? "mở khóa" : "khóa";
 
-        // Tạo mảng dữ liệu đẩy lên Server xử lý (Khớp với cấu trúc Server nhận diện)
         String[] updateData = { userRow.getId(), newStatus };
         Request request = new Request(MessageType.UPDATE_USER_STATUS, updateData);
 
@@ -101,10 +113,8 @@ public class AdminUserMgmtController {
 
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
-                        // Cập nhật trạng thái ngay lập tức trên bảng UI mà không cần tải lại toàn bộ DB
                         userRow.setStatus(newStatus);
                         userTable.refresh();
-
                         showAlert(Alert.AlertType.INFORMATION, "Thành công",
                                 "Hệ thống đã thực hiện " + actionName + " tài khoản [" + userRow.getUsername() + "] thành công!");
                     } else {
@@ -188,7 +198,6 @@ public class AdminUserMgmtController {
         alert.showAndWait();
     }
 
-    // ── LỚP TRỢ GIÚP (ĐÃ THÊM SETTER ĐỂ ĐỒNG BỘ UI) ──────────────────────────────────────────
     public static class AdminUserRow {
         private final SimpleStringProperty id;
         private final SimpleStringProperty username;
@@ -216,7 +225,7 @@ public class AdminUserMgmtController {
         public SimpleStringProperty balanceProperty() { return balance; }
 
         public String getStatus() { return status.get(); }
-        public void setStatus(String value) { this.status.set(value); } // 🌟 Thêm hàm set để cập nhật trực tiếp tại chỗ
+        public void setStatus(String value) { this.status.set(value); }
         public SimpleStringProperty statusProperty() { return status; }
     }
 }
