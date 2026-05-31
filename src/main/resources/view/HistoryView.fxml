@@ -88,8 +88,8 @@
                         <font><Font name="System Bold" size="18.0" /></font>
                     </Label>
                     <Region HBox.hgrow="ALWAYS" />
-                    <Button text="🔄 Làm mới" style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" />
-                </children>
+                    <Button text="🔄 Làm mới" onAction="#handleRefresh"
+                            style="-fx-background-color: #f1f5f9; -fx-background-radius: 8; -fx-cursor: hand;" />                </children>
             </HBox>
 
             <TableView fx:id="historyTable" prefHeight="400.0" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-border-color: #e2e8f0; -fx-border-width: 1; -fx-border-radius: 10;">

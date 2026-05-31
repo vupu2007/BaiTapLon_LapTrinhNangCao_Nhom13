@@ -199,9 +199,10 @@ public class AuctionDAO {
     // 10. Lấy các phiên đang diễn ra mà người dùng ĐÃ ĐẶT GIÁ THÀNH CÔNG
     public List<Auction> getAuctionsByBidder(int bidderId) {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT DISTINCT a.* FROM Auctions a " +
+        String sql = "SELECT DISTINCT a.*, i.name as product_name FROM Auctions a " +
                 "JOIN Bids b ON a.auction_id = b.auction_id " +
-                "WHERE a.status = 'RUNNING' AND b.bidder_id = ?";
+                "JOIN Items i ON a.item_id = i.item_id " +
+                "WHERE b.bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, bidderId);
@@ -284,6 +285,9 @@ public class AuctionDAO {
         if (!rs.wasNull()) {
             auction.setWinnerId(winnerId);
         }
+        try {
+            auction.setProductName(rs.getString("product_name"));
+        } catch (SQLException ignored) {}
         return auction;
     }
         public List<Auction> getAllAuctionsWithConnection(Connection conn) throws SQLException {
@@ -338,6 +342,20 @@ public class AuctionDAO {
             }
         }
         return null;
+    }
+
+    public int countFinishedAuctionsByUser(int userId) {
+        String sql = "SELECT COUNT(DISTINCT a.auction_id) FROM Auctions a " +
+                "JOIN Bids b ON a.auction_id = b.auction_id " +
+                "WHERE b.bidder_id = ? AND a.status = 'FINISHED'";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, userId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) return rs.getInt(1);
+            }
+        } catch (SQLException e) { e.printStackTrace(); }
+        return 0;
     }
 
 }

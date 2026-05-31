@@ -272,13 +272,21 @@ public class AuctionService {
 
     // ⚡ TỐI ƯU TOÀN DIỆN LỊCH SỬ THỐNG KÊ (Hạn chế kéo Object nặng qua Internet)
     public Map<String, Integer> getBidHistoryStats(int userId) {
+        Map<String, Integer> stats = new HashMap<>();
         try {
-            return auctionDAO.getDashboardStats(userId);
+            int total = auctionDAO.countActiveAuctionsByUser(userId);
+            int won = auctionDAO.countWonAuctions(userId);
+            int finished = auctionDAO.countFinishedAuctionsByUser(userId);
+            int lost = finished - won;
+            stats.put("total", total);
+            stats.put("won", won);
+            stats.put("lost", Math.max(0, lost));
         } catch (Exception e) {
-            Map<String, Integer> stats = new HashMap<>();
-            stats.put("total", 0); stats.put("won", 0); stats.put("lost", 0);
-            return stats;
+            stats.put("total", 0);
+            stats.put("won", 0);
+            stats.put("lost", 0);
         }
+        return stats;
     }
     public boolean setAutoBid(int auctionId, String userId, double maxBid, double increment) {
         try {
