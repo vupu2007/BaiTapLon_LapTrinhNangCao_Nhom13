@@ -31,6 +31,8 @@ public class ActiveAuctionsController {
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+
+    // 🌟 LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
     private static class AuctionCardDto {
         String name;
         String price;
@@ -59,16 +61,20 @@ public class ActiveAuctionsController {
             return;
         }
 
+        // 🌟 KHỞI TẠO TASK: Luồng này chỉ lấy dữ liệu mạng thuần túy, tuyệt đối không tạo Node UI ở đây
         Task<List<AuctionCardDto>> loadTask = new Task<>() {
             @Override
             protected List<AuctionCardDto> call() throws Exception {
                 List<AuctionCardDto> dataList = new ArrayList<>();
                 int bidderIdInt = Integer.parseInt(currentAcc.getId());
 
+                // 1. Lấy danh sách các phiên đấu giá từ Server
                 Request request = new Request(MessageType.GET_AUCTIONS_BY_BIDDER, bidderIdInt);
                 Response response = ClientSocket.getInstance().sendRequest(request);
 
                 if (response == null || !response.isSuccess()) return dataList;
+
+                // Kiểm tra kiểu dữ liệu an toàn trước khi ép kiểu danh sách phiên đấu giá
                 if (!(response.getData() instanceof List<?> rawList)) return dataList;
 
                 List<Auction> auctions = new ArrayList<>();
@@ -78,6 +84,7 @@ public class ActiveAuctionsController {
 
                 if (auctions.isEmpty()) return dataList;
 
+                // 2. Vòng lặp lấy thông tin Item tương ứng (Chạy ngầm tuần tự)
                 for (Auction auction : auctions) {
                     try {
                         Request itemRequest = new Request(MessageType.GET_ITEM_BY_ID, auction.getItemId());
@@ -85,6 +92,7 @@ public class ActiveAuctionsController {
                         Item item = (itemResponse != null && itemResponse.isSuccess())
                                 ? (Item) itemResponse.getData() : null;
 
+                        // Gom tất cả thông tin dạng String/Dữ liệu thô vào đối tượng DTO
                         AuctionCardDto dto = new AuctionCardDto();
                         dto.name = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
                         dto.image = (item != null) ? item.getImagePath() : null;
@@ -98,6 +106,7 @@ public class ActiveAuctionsController {
                         dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
                         dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
                         dto.auction = auction;
+                        System.out.println("DEBUG dto.auction.getId()=" + auction.getId());
 
                         dataList.add(dto);
                     } catch (Exception e) {
@@ -108,6 +117,7 @@ public class ActiveAuctionsController {
             }
         };
 
+        // 🌟 XỬ LÝ KHI LUỒNG NGẦM CHẠY XONG THÀNH CÔNG (Đã về luồng chính JavaFX Application Thread)
         loadTask.setOnSucceeded(event -> {
             List<AuctionCardDto> results = loadTask.getValue();
             if (results == null || results.isEmpty()) {
@@ -117,91 +127,52 @@ public class ActiveAuctionsController {
 
             showEmptyState(false);
 
+            // Duyệt danh sách data sạch, nạp file FXML dựng giao diện cực kỳ an toàn
             for (AuctionCardDto dto : results) {
                 try {
-                    final Auction currentAuction = dto.auction;
-                    if (currentAuction == null) continue;
-
                     FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
                     Node card = loader.load();
                     ProductCardController controller = loader.getController();
 
+                    // Đổ dữ liệu thô lên Controller của Card
                     if (controller != null) {
                         controller.setData(dto.name, dto.price, dto.time, dto.image, dto.description,
                                 dto.sellerName, dto.startTimeStr, dto.endTimeStr);
                     }
 
+                    // Thêm card thẳng vào container hiển thị
                     cardsContainer.getChildren().add(card);
-
-                    // 🎯 ĐÃ SỬA: Cơ chế khóa chống spam click chuột lan truyền phần tử con
                     card.setOnMouseClicked(e -> {
-                        // Kiểm tra dữ liệu hợp lệ ngay lập tức
-                        if (currentAuction == null || currentAuction.getId() <= 0) {
-                            e.consume();
-                            return;
-                        }
-
-                        // Khóa tương tác của Card tạm thời để tránh người dùng nhấn liên tục khi mạng trễ
-                        card.setDisable(true);
-
-                        Task<Auction> detailTask = new Task<>() {
-                            @Override
-                            protected Auction call() throws Exception {
+                        if (dto.auction == null) return;
+                        new Thread(() -> {
+                            try {
                                 Response res = ClientSocket.getInstance().sendRequest(
-                                        new Request(MessageType.GET_AUCTION_BY_ID, currentAuction.getId()));
+                                        new Request(MessageType.GET_AUCTION_BY_ID, dto.auction.getId()));
                                 if (res != null && res.isSuccess()) {
-                                    return (Auction) res.getData();
-                                }
-                                return null;
-                            }
-                        };
+                                    Auction full = (Auction) res.getData();
+                                    if (full != null) {
+                                        Platform.runLater(() -> {
+                                            try {
+                                                FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
+                                                Parent detailView = loader.load();
+                                                AuctionDetailController detailController = loader.getController();
+                                                if (detailController != null) detailController.loadProductDetail(full);
 
-                        detailTask.setOnSucceeded(de -> {
-                            // Mở khóa lại Card sau khi tiến trình ngầm hoàn tất
-                            card.setDisable(false);
-
-                            Auction fullAuction = detailTask.getValue();
-                            if (fullAuction == null || fullAuction.getId() <= 0) {
-                                System.err.println("⚠️ CẢNH BÁO: Hủy chuyển trang do Server trả về Object lỗi.");
-                                return;
-                            }
-
-                            Platform.runLater(() -> {
-                                try {
-                                    Parent root = card.getScene().getRoot();
-                                    Node contentAreaNode = root.lookup("#contentArea");
-
-                                    if (contentAreaNode != null && contentAreaNode.getScene() != null) {
-                                        String path = getClass().getResource("/view/AuctionDetailView.fxml") != null
-                                                ? "/view/AuctionDetailView.fxml" : "/view/AuctionDetail.fxml";
-
-                                        FXMLLoader detailLoader = new FXMLLoader(getClass().getResource(path));
-                                        Parent detailView = detailLoader.load();
-
-                                        AuctionDetailController detailController = detailLoader.getController();
-                                        if (detailController != null) {
-                                            detailController.loadProductDetail(fullAuction);
-                                        }
-
-                                        if (contentAreaNode instanceof StackPane contentArea) {
-                                            contentArea.getChildren().setAll(detailView);
-                                        }
+                                                Parent root = card.getScene().getRoot();
+                                                Node center = root.lookup("#contentArea");
+                                                if (center instanceof StackPane contentArea) {
+                                                    contentArea.getChildren().setAll(detailView);
+                                                }
+                                            } catch (Exception ex) {
+                                                System.err.println("Lỗi: " + ex.getMessage());
+                                            }
+                                        });
                                     }
-                                } catch (Exception ex) {
-                                    System.err.println("❌ Lỗi chuyển giao diện: " + ex.getMessage());
                                 }
-                            });
-                        });
-
-                        // Giải phóng nút bấm nếu luồng mạng xảy ra lỗi kết nối
-                        detailTask.setOnFailed(df -> {
-                            card.setDisable(false);
-                            System.err.println("❌ Lỗi luồng mạng tải chi tiết phiên ID: " + currentAuction.getId());
-                        });
-
-                        Thread t = new Thread(detailTask);
-                        t.setDaemon(true);
-                        t.start();
+                            } catch (Exception ex) {
+                                System.err.println("Lỗi mở chi tiết: " + ex.getMessage());
+                            }
+                        }).start();
                     });
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi dựng giao diện Card từ FXML: " + e.getMessage());
@@ -209,11 +180,14 @@ public class ActiveAuctionsController {
             }
         });
 
+        // Xử lý khi luồng ngầm bị lỗi (Mất mạng, nghẽn đường truyền...)
         loadTask.setOnFailed(event -> {
-            System.err.println("❌ Lỗi luồng ngầm ActiveAuctions: " + loadTask.getException().getMessage());
+            Throwable e = loadTask.getException();
+            System.err.println("❌ Lỗi luồng ngầm ActiveAuctions: " + e.getMessage());
             showEmptyState(true);
         });
 
+        // Kích hoạt chạy luồng ngầm độc lập
         Thread thread = new Thread(loadTask);
         thread.setDaemon(true);
         thread.start();
@@ -230,6 +204,10 @@ public class ActiveAuctionsController {
         }
     }
 
+    /**
+     * 🚀 SỬA LỖI BIÊN DỊCH TRIỆT ĐỂ: Điều hướng quay lại trang chủ bằng kỹ thuật Scene Graph Lookup
+     * Loại bỏ hoàn toàn sự phụ thuộc vào Singleton static cũ để tránh lỗi compile và rò rỉ RAM.
+     */
     @FXML
     private void openHome() {
         if (cardsContainer == null || cardsContainer.getScene() == null) return;
@@ -238,19 +216,29 @@ public class ActiveAuctionsController {
             try {
                 String homeFxmlPath = "/view/MainView.fxml";
                 java.net.URL fxmlLocation = getClass().getResource(homeFxmlPath);
-                if (fxmlLocation == null) return;
+                if (fxmlLocation == null) {
+                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
+                    return;
+                }
 
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
                 Node homeView = loader.load();
 
+                // Dò tìm động phân vùng chứa trung tâm #contentArea từ cây phân cấp giao diện hiện tại
                 Parent root = cardsContainer.getScene().getRoot();
                 Node layoutCenter = root.lookup("#contentArea");
 
                 if (layoutCenter instanceof StackPane contentArea) {
+                    // Chèn màn hình tổng quan trang chủ quay lại trung tâm màn hình Layout chính
                     contentArea.getChildren().setAll(homeView);
+                    System.out.println("🎯 [Navigation] Đã chuyển đổi màn hình sang Trang chủ từ ActiveAuctions thông qua Scene Graph Lookup.");
+                } else {
+                    System.err.println("❌ Không định vị được vùng hiển thị #contentArea trên giao diện.");
                 }
+
             } catch (Exception e) {
-                System.err.println("❌ Lỗi khi quay lại giao diện trang chủ: " + e.getMessage());
+                System.err.println("❌ Lỗi nghiêm trọng khi quay lại giao diện trang chủ: " + e.getMessage());
+                e.printStackTrace();
             }
         });
     }

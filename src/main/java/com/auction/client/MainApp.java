@@ -7,7 +7,7 @@ import javafx.scene.Scene;
 import javafx.stage.Stage;
 import java.net.URL;
 
-// ❌ XÓA BỎ IMPORT THẰNG SERVER NÀY ĐI
+// ❌ XÓA BỎ IMPORT vdpTHẰNG SERVER NÀY ĐI
 // import com.auction.server.service.AuctionScheduler;
 public class MainApp {
     public static class AppUI extends Application {

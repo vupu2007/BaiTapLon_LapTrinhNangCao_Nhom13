@@ -12,6 +12,7 @@ public enum MessageType {
     CHANGE_PASSWORD,
     GET_USER_BY_ID,
     UPDATE_USER_STATUS,
+    GET_ACCOUNT_BY_ID,
 
     // ── Item (Product) ────────────────────────────────
     CREATE_ITEM,
@@ -32,6 +33,7 @@ public enum MessageType {
     GET_DASHBOARD_STATS,
     GET_HOT_AUCTIONS,
     LOCK_USER,
+
 
     // ── Bidding ───────────────────────────────────────
     PLACE_BID,

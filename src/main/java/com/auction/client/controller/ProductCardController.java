@@ -60,37 +60,43 @@ public class ProductCardController {
     public void setData(String name, String price, String statusText, String imageFileName,
                         String description, String sellerName, String startTime, String endTime) {
 
-        setDataInternal(name, price, statusText, imageFileName, description);
+        setDataInternal(name, price, statusText, imageFileName, description, endTime);
     }
 
     /**
      * 🌟 HÀM NÂNG CAO: Nạp dữ liệu đồng thời gán dữ liệu Model Object gốc (Item hoặc Auction)
      * Giúp hệ thống không bao giờ phải chạy vào khối logic dự phòng (Fallback) khi đổi trang
      */
-    public void setProductModelData(Object originModel, String name, String price, String statusText, String imageFileName, String description) {
+    public void setProductModelData(Object originModel, String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
         this.originProductData = originModel;
-        setDataInternal(name, price, statusText, imageFileName, description);
+        setDataInternal(name, price, statusText, imageFileName, description, endTimeStr);
     }
-
-    private void setDataInternal(String name, String price, String statusText, String imageFileName, String description) {
-        // 🌟 ĐỒNG BỘ DỮ LIỆU CHỮ VỚI FXML
+    private void setDataInternal(String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
+        System.out.println("statusText=" + statusText);
         if (productName != null) productName.setText(name);
         if (currentPrice != null) currentPrice.setText(price);
         if (productDesc != null) productDesc.setText(description);
 
         // Gán text trạng thái (Đang diễn ra / Sắp diễn ra)
-        if (statusBadge != null) {
-            statusBadge.setText(statusText);
-            if ("Sắp diễn ra".equals(statusText)) {
-                statusBadge.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-background-radius: 20; -fx-font-weight: bold;");
-            } else {
-                statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
-            }
+        statusBadge.setText(statusText);
+        if ("Sắp diễn ra".equals(statusText)) {
+            statusBadge.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-background-radius: 20; -fx-font-weight: bold;");
+        } else if ("Đã kết thúc".equals(statusText) || "Sắp kết thúc".equals(statusText)) {
+            statusBadge.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 20; -fx-font-weight: bold;");
+        } else {
+            statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
         }
 
         if (timeRemaining != null) {
-            timeRemaining.setText("Sắp diễn ra".equals(statusText) ? "--:--:--" : "02:45:10");
-        }
+            try {
+                java.time.LocalDateTime end = java.time.LocalDateTime.parse(endTimeStr,
+                        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                java.time.Duration d = java.time.Duration.between(java.time.LocalDateTime.now(), end);
+                timeRemaining.setText(d.isNegative() ? "Đã kết thúc"
+                        : String.format("%02dh %02dm", d.toHours(), d.toMinutesPart()));
+            } catch (Exception e) {
+                timeRemaining.setText("--:--");
+            }        }
 
         // 🚀 CHUẨN KIẾN TRÚC LỚN: ỦY THÁC TOÀN BỘ VIỆC LOAD ẢNH + CACHE CHO IMAGELOADER
         ImageLoader.tryLoadImageToView(productImage, imageFileName);
@@ -163,4 +169,8 @@ public class ProductCardController {
         navigationWorker.setDaemon(true);
         navigationWorker.start();
     }
+    public void setOriginProductData(Object data) {
+        this.originProductData = data;
+    }
+
 }

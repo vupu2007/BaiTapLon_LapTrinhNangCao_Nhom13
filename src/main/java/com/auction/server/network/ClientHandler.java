@@ -13,10 +13,7 @@ import com.auction.shared.network.Response;
 
 import java.io.*;
 import java.net.Socket;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -240,6 +237,13 @@ public class ClientHandler implements Runnable {
 
                     return new Response(true, "OK", a);
                 }
+                case GET_ACCOUNT_BY_ID: {
+                    int id = (int) request.getPayload();
+                    Account acc = accountDAO.getAccountById(id);
+                    return acc != null
+                            ? new Response(true, "OK", acc)
+                            : new Response(false, "Không tìm thấy!", null);
+                }
                 case GET_AUCTIONS_BY_BIDDER: {
                     int bidderId = (int) request.getPayload();
                     List<Auction> list = auctionService.getAuctionsByBidder(bidderId);
@@ -334,6 +338,9 @@ public class ClientHandler implements Runnable {
                             if (item != null) {
                                 item.setAuctionId(rs.getInt("auction_id"));
                                 item.setCurrentPrice(rs.getDouble("current_price"));
+                                Timestamp et = rs.getTimestamp("end_time");
+                                if (et != null) item.setEndTimeStr(et.toLocalDateTime()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                                 items.add(item);
                             }
                         }

@@ -60,4 +60,8 @@ public abstract class Item implements Entity, java.io.Serializable {
     public void setAuctionId(int auctionId) { this.auctionId = auctionId; }
     public double getCurrentPrice() { return currentPrice; }
     public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
+
+    private String endTimeStr;
+    public String getEndTimeStr() { return endTimeStr; }
+    public void setEndTimeStr(String endTimeStr) { this.endTimeStr = endTimeStr; }
 }
