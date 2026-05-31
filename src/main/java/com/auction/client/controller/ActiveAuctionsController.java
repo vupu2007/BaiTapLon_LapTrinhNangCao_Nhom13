@@ -171,6 +171,8 @@ public class ActiveAuctionsController {
                                                 FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
                                                 Parent detailView = detailLoader.load();
                                                 AuctionDetailController detailController = detailLoader.getController();
+                                                full.setSellerName(dto.sellerName);
+                                                full.setDescription(dto.description);
                                                 if (detailController != null) detailController.loadProductDetail(full);
 
                                                 Parent root = card.getScene().getRoot();

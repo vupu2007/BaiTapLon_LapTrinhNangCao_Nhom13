@@ -234,6 +234,10 @@ public class ClientHandler implements Runnable {
 
                     Account seller = accountDAO.getAccountById(a.getSellerId());
                     if (seller != null) a.setSellerName(seller.getUsername());
+                    if (a.getWinnerId() != null && a.getWinnerId() > 0) {
+                        Account winner = accountDAO.getAccountById(a.getWinnerId());
+                        if (winner != null) a.setWinnerName(winner.getUsername());
+                    }
 
                     return new Response(true, "OK", a);
                 }
