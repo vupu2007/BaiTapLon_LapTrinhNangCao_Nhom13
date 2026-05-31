@@ -61,53 +61,23 @@
 .sidebar {
     -fx-pref-width: 250px;
 }
-/* ========================================================
-   ĐỊNH NGHĨA MÀU SẮC PHÂN QUYỀN CHỦ ĐỘNG (ĐÃ ĐỔI ĐÚNG MÀU)
-   ======================================================== */
-
-/* --- CHẾ ĐỘ NGƯỜI MUA (MÀU XANH DƯƠNG) --- */
-
-/* 1. Đổi màu khung VBox ở Sidebar */
-.vbox.role-buyer {
-    -fx-background-color: #e0f2fe; /* Màu xanh dương rất nhạt */
+/* Định nghĩa màu sắc phân quyền chủ động */
+.role-buyer {
+    -fx-background-color: #fae8ff;
     -fx-background-radius: 15;
     -fx-padding: 20;
 }
-
-/* 2. Đổi màu cho nút MenuButton trên Header */
-.menu-button.role-buyer {
-    -fx-background-color: #0284c7; /* Nền xanh dương đậm */
-    -fx-text-fill: white;
-    -fx-background-radius: 20;
-}
-/* Đảm bảo chữ bên trong nút MenuButton cũng chuyển sang màu trắng */
-.menu-button.role-buyer .label {
-    -fx-text-fill: white;
-}
-/* Đổi màu mũi tên nhỏ trên nút MenuButton thành màu trắng cho hợp tông */
-.menu-button.role-buyer .arrow {
-    -fx-background-color: white;
-}
-
-
-/* --- CHẾ ĐỘ NGƯỜI BÁN (MÀU TÍM / HỒNG) --- */
-
-/* 1. Đổi màu khung VBox ở Sidebar */
-.vbox.role-seller {
-    -fx-background-color: #fae8ff; /* Màu tím/hồng nhạt */
+.role-seller {
+    -fx-background-color: #dbeafe;
     -fx-background-radius: 15;
     -fx-padding: 20;
 }
-
-/* 2. Đổi màu cho nút MenuButton trên Header */
-.menu-button.role-seller {
-    -fx-background-color: #a21caf; /* Nền màu tím đậm */
-    -fx-text-fill: white;
-    -fx-background-radius: 20;
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #475569;
 }
-.menu-button.role-seller .label {
+.nav-button-active {
+    -fx-background-color: #0ea5e9;
     -fx-text-fill: white;
-}
-.menu-button.role-seller .arrow {
-    -fx-background-color: white;
+    -fx-font-weight: bold;
 }

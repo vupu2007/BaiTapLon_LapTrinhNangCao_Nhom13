@@ -44,7 +44,7 @@ public class ClientSocket {
             try (InputStream is = getClass().getResourceAsStream("/server.properties")) {
                 if (is != null) props.load(is);
             }
-            String serverHost = props.getProperty("server.host", "26.59.59.167");
+            String serverHost = props.getProperty("server.host", "localhost");
             int serverPort = Integer.parseInt(props.getProperty("server.port", "12345"));
 
             System.out.println("🔌 [ClientSocket] Đang kết nối tới " + serverHost + ":" + serverPort);

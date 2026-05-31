@@ -17,12 +17,10 @@ public class AuctionDAO {
     public boolean insertAuction(Auction auction) {
         String sql = "INSERT INTO Auctions (item_id, seller_id, start_price, current_price, min_increment, start_time, end_time, original_end_time, status) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        // ✅ ĐÃ SỬA: Đưa conn vào try() để tự động giải phóng về Pool
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            // 🛠️ ĐÃ SỬA: Ép kiểu sang dữ liệu Int để khớp cột INT trong DB
-            pstmt.setInt(1, Integer.parseInt(auction.getItemId()));
-
+            pstmt.setString(1, auction.getItemId());
             pstmt.setInt(2, auction.getSellerId());
             pstmt.setDouble(3, auction.getStartPrice());
             pstmt.setDouble(4, auction.getStartPrice());
@@ -33,7 +31,7 @@ public class AuctionDAO {
             pstmt.setString(9, auction.getStatus().name());
 
             return pstmt.executeUpdate() > 0;
-        } catch (SQLException | NumberFormatException e) {
+        } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
@@ -41,10 +39,7 @@ public class AuctionDAO {
 
     // 2. Lấy phiên đấu giá theo ID
     public Auction getAuctionById(int auctionId) {
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id " +
-                "WHERE a.auction_id = ?";
+        String sql = "SELECT * FROM Auctions WHERE auction_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, auctionId);
@@ -62,9 +57,7 @@ public class AuctionDAO {
     // 3. Lấy tất cả phiên đấu giá
     public List<Auction> getAllAuctions() {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id";
+        String sql = "SELECT * FROM Auctions";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
@@ -80,10 +73,7 @@ public class AuctionDAO {
     // 4. Lấy các phiên đấu giá theo trạng thái
     public List<Auction> getAuctionsByStatus(AuctionStatus status) {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id " +
-                "WHERE a.status = ?";
+        String sql = "SELECT * FROM Auctions WHERE status = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, status.name());
@@ -101,10 +91,7 @@ public class AuctionDAO {
     // 5. Lấy các phiên đấu giá của một Seller
     public List<Auction> getAuctionsBySeller(int sellerId) {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id " +
-                "WHERE a.seller_id = ?";
+        String sql = "SELECT * FROM Auctions WHERE seller_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, sellerId);
@@ -125,8 +112,10 @@ public class AuctionDAO {
         String updatePriceSql  = "UPDATE Auctions SET current_price = ?, winner_id = ? " +
                 "WHERE auction_id = ? AND status = 'RUNNING' AND current_price < ?";
 
+        // ✅ ĐÃ SỬA: Đóng gói conn trong try lớn để auto-close tránh nghẽn luồng khi rollback/commit
         try (Connection conn = DatabaseConnection.getConnection()) {
             conn.setAutoCommit(false);
+
             try {
                 try (PreparedStatement ps1 = conn.prepareStatement(insertBidSql)) {
                     ps1.setInt(1, bid.getAuctionId());
@@ -147,13 +136,14 @@ public class AuctionDAO {
                         return false;
                     }
                 }
+
                 conn.commit();
                 return true;
             } catch (SQLException e) {
                 conn.rollback();
-                throw e;
+                throw e; // Ném ra ngoài để khối catch tổng xử lý log
             } finally {
-                conn.setAutoCommit(true);
+                conn.setAutoCommit(true); // Đưa về trạng thái ban đầu trước khi trả lại cho Pool
             }
         } catch (SQLException e) {
             e.printStackTrace();
@@ -211,7 +201,7 @@ public class AuctionDAO {
         List<Auction> list = new ArrayList<>();
         String sql = "SELECT DISTINCT a.auction_id, a.item_id, a.seller_id, a.start_price, " +
                 "a.current_price, a.min_increment, a.start_time, a.end_time, a.status, " +
-                "a.winner_id, a.original_end_time, i.name as product_name, i.image_path, i.description " +
+                "a.winner_id, a.original_end_time, i.name as product_name " +
                 "FROM Auctions a " +
                 "JOIN Bids b ON a.auction_id = b.auction_id " +
                 "JOIN Items i ON a.item_id = i.item_id " +
@@ -259,7 +249,7 @@ public class AuctionDAO {
         return 0;
     }
 
-    // 13. Đếm số lượng phiên active bằng COUNT
+    // ⚡ 13. TỐI ƯU TỐC ĐỘ: Đếm số lượng phiên active bằng COUNT
     public int countActiveAuctionsByUser(int userId) {
         String sql = "SELECT COUNT(DISTINCT auction_id) FROM Bids WHERE bidder_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
@@ -276,25 +266,18 @@ public class AuctionDAO {
         return 0;
     }
 
-    // 🛠️ ĐÃ TỐI ƯU TOÀN DIỆN: Hàm map ResultSet sang Object Auction bảo vệ thuộc tính
     private Auction mapResultSetToAuction(ResultSet rs) throws SQLException {
         Auction auction = new Auction();
         auction.setId(rs.getInt("auction_id"));
-
-        // Trả về String tương thích với cấu trúc của Model, đồng bộ với DB kiểu INT
-        auction.setItemId(String.valueOf(rs.getInt("item_id")));
-
+        auction.setItemId(rs.getString("item_id"));
         auction.setSellerId(rs.getInt("seller_id"));
         auction.setStartPrice(rs.getDouble("start_price"));
         auction.setCurrentPrice(rs.getDouble("current_price"));
         auction.setMinIncrement(rs.getDouble("min_increment"));
-
         Timestamp startTs = rs.getTimestamp("start_time");
         if (startTs != null) auction.setStartTime(startTs.toLocalDateTime());
-
         Timestamp endTs = rs.getTimestamp("end_time");
         if (endTs != null) auction.setEndTime(endTs.toLocalDateTime());
-
         auction.setStatus(AuctionStatus.valueOf(rs.getString("status")));
 
         try {
@@ -305,26 +288,20 @@ public class AuctionDAO {
         if (!rs.wasNull()) {
             auction.setWinnerId(winnerId);
         }
-
-        // 🛠️ ĐÃ SỬA: Map bổ sung thông tin hiển thị giao diện chi tiết để loại bỏ lỗi "Đang tải..."
-        try { auction.setProductName(rs.getString("product_name")); } catch (SQLException ignored) {}
-        try { auction.setImagePath(rs.getString("image_path")); } catch (SQLException ignored) {}
-        try { auction.setDescription(rs.getString("description")); } catch (SQLException ignored) {}
-
+        try {
+            auction.setProductName(rs.getString("product_name"));
+        } catch (SQLException ignored) {}
         return auction;
     }
-
-    public List<Auction> getAllAuctionsWithConnection(Connection conn) throws SQLException {
-        List<Auction> list = new ArrayList<>();
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id";
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            ResultSet rs = ps.executeQuery();
-            while (rs.next()) list.add(mapResultSetToAuction(rs));
+        public List<Auction> getAllAuctionsWithConnection(Connection conn) throws SQLException {
+            List<Auction> list = new ArrayList<>();
+            String sql = "SELECT * FROM Auctions";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ResultSet rs = ps.executeQuery();
+                while (rs.next()) list.add(mapResultSetToAuction(rs));            }
+            return list;
         }
-        return list;
-    }
+
 
     public boolean updateStatusWithConnection(Connection conn, int id, AuctionStatus status) throws SQLException {
         String sql = "UPDATE Auctions SET status = ? WHERE auction_id = ?";
@@ -334,7 +311,6 @@ public class AuctionDAO {
             return ps.executeUpdate() > 0;
         }
     }
-
     public Map<String, Integer> getDashboardStats(int userId) throws SQLException {
         Map<String, Integer> stats = new HashMap<>();
         String sql = "SELECT " +
@@ -355,18 +331,11 @@ public class AuctionDAO {
         }
         return stats;
     }
-
     public Auction getAuctionByItemId(String itemId) throws SQLException {
-        String sql = "SELECT a.*, i.name AS product_name, i.image_path, i.description " +
-                "FROM Auctions a " +
-                "LEFT JOIN Items i ON a.item_id = i.item_id " +
-                "WHERE a.item_id = ? AND a.status = 'RUNNING' LIMIT 1";
+        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status = 'RUNNING' LIMIT 1";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement ps = conn.prepareStatement(sql)) {
-
-            // 🛠️ ĐÃ SỬA: Chuyển sang setInt để tìm kiếm chuẩn xác kiểu dữ liệu DB mới
-            ps.setInt(1, Integer.parseInt(itemId));
-
+            ps.setString(1, itemId);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     Auction a = mapResultSetToAuction(rs);
@@ -374,8 +343,6 @@ public class AuctionDAO {
                     return a;
                 }
             }
-        } catch (NumberFormatException e) {
-            System.err.println("❌ Lỗi định dạng itemId không phải số nguyên: " + itemId);
         }
         return null;
     }
@@ -393,4 +360,5 @@ public class AuctionDAO {
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
     }
+
 }

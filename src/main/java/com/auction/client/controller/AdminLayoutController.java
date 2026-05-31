@@ -13,6 +13,7 @@ import java.io.IOException;
 import java.net.URL;
 
 public class AdminLayoutController {
+
     private static AdminLayoutController instance;
 
     @FXML private StackPane adminContentArea;
