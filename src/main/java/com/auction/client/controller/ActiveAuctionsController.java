@@ -31,6 +31,7 @@ public class ActiveAuctionsController {
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
+
     // 🌟 LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
     private static class AuctionCardDto {
         String name;
@@ -41,6 +42,7 @@ public class ActiveAuctionsController {
         String sellerName;
         String startTimeStr;
         String endTimeStr;
+        Auction auction;
     }
 
     @FXML
@@ -103,6 +105,8 @@ public class ActiveAuctionsController {
                         long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
                         dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
                         dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
+                        dto.auction = auction;
+                        System.out.println("DEBUG dto.auction.getId()=" + auction.getId());
 
                         dataList.add(dto);
                     } catch (Exception e) {
@@ -138,6 +142,38 @@ public class ActiveAuctionsController {
 
                     // Thêm card thẳng vào container hiển thị
                     cardsContainer.getChildren().add(card);
+                    card.setOnMouseClicked(e -> {
+                        if (dto.auction == null) return;
+                        new Thread(() -> {
+                            try {
+                                Response res = ClientSocket.getInstance().sendRequest(
+                                        new Request(MessageType.GET_AUCTION_BY_ID, dto.auction.getId()));
+                                if (res != null && res.isSuccess()) {
+                                    Auction full = (Auction) res.getData();
+                                    if (full != null) {
+                                        Platform.runLater(() -> {
+                                            try {
+                                                FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
+                                                Parent detailView = loader.load();
+                                                AuctionDetailController detailController = loader.getController();
+                                                if (detailController != null) detailController.loadProductDetail(full);
+
+                                                Parent root = card.getScene().getRoot();
+                                                Node center = root.lookup("#contentArea");
+                                                if (center instanceof StackPane contentArea) {
+                                                    contentArea.getChildren().setAll(detailView);
+                                                }
+                                            } catch (Exception ex) {
+                                                System.err.println("Lỗi: " + ex.getMessage());
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Lỗi mở chi tiết: " + ex.getMessage());
+                            }
+                        }).start();
+                    });
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi dựng giao diện Card từ FXML: " + e.getMessage());
                 }

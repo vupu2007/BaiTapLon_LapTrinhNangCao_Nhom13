@@ -199,7 +199,10 @@ public class AuctionDAO {
     // 10. Lấy các phiên đang diễn ra mà người dùng ĐÃ ĐẶT GIÁ THÀNH CÔNG
     public List<Auction> getAuctionsByBidder(int bidderId) {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT DISTINCT a.*, i.name as product_name FROM Auctions a " +
+        String sql = "SELECT DISTINCT a.auction_id, a.item_id, a.seller_id, a.start_price, " +
+                "a.current_price, a.min_increment, a.start_time, a.end_time, a.status, " +
+                "a.winner_id, a.original_end_time, i.name as product_name " +
+                "FROM Auctions a " +
                 "JOIN Bids b ON a.auction_id = b.auction_id " +
                 "JOIN Items i ON a.item_id = i.item_id " +
                 "WHERE b.bidder_id = ?";

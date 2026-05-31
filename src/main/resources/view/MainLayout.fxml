@@ -89,7 +89,7 @@
                 <Button fx:id="btnWallet" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openWallet" prefHeight="45.0" styleClass="nav-button" text="👛 Ví tiền" />
 
                 <VBox fx:id="buyerMenu" spacing="8.0">
-                    <Button fx:id="btnAuction" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openAuction" prefHeight="45.0" styleClass="nav-button" text="🔨 Đang đấu giá" />
+                    <Button fx:id="btnAuction" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openAuction" prefHeight="45.0" styleClass="nav-button" text="🔨 Phiên đấu giá của tôi " />
                 </VBox>
 
                 <VBox fx:id="sellerMenu" managed="false" spacing="8.0" visible="false">
