@@ -8,10 +8,6 @@ import com.auction.shared.model.BidTransaction;
 import com.auction.shared.model.Observer;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Auction;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
-import com.auction.shared.model.Account;
 
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
@@ -31,7 +27,6 @@ import javafx.util.Duration;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
 
 public class AuctionDetailController implements Observer {
 
@@ -164,6 +159,7 @@ public class AuctionDetailController implements Observer {
     }
 
     public void loadProductDetail(Item item) {
+
         if (item == null) return;
         this.currentItem = item;
         this.currentAuction = null;
@@ -181,18 +177,20 @@ public class AuctionDetailController implements Observer {
             priceSeries.getData().add(new XYChart.Data<>(bidCount, item.getStartingPrice()));
         });
 
+
+        // Fetch auction từ server
         detailService.fetchAuctionByItemIdAsync(item.getId(), a -> {
             System.out.println("Auction nhận được: " + a);
-            if (a != null && a.getId() > 0) {
+            if (a != null) {
                 this.currentAuction = a;
                 ClientSocket.getInstance().addAuctionObserver(a.getId(), this);
+
 
                 Platform.runLater(() -> {
                     startCountdownClock(a.getEndTime());
                     if (lblCurrentPrice != null)
                         lblCurrentPrice.setText(String.format("%,.0f đ", a.getCurrentPrice()));
                 });
-
                 detailService.fetchBidHistoryAsync(a.getId(), bids -> {
                     Platform.runLater(() -> {
                         if (vboxBidHistoryContainer != null && bids != null) {
@@ -204,6 +202,7 @@ public class AuctionDetailController implements Observer {
                                 vboxBidHistoryContainer.getChildren().add(label);
                                 bidCount++;
                                 priceSeries.getData().add(new XYChart.Data<>(bidCount, bid.getBidAmount()));
+
                             }
                         }
                     });
@@ -211,22 +210,15 @@ public class AuctionDetailController implements Observer {
             }
         });
     }
-
     public void loadProductDetail(Auction auction) {
-        if (auction == null || auction.getId() <= 0) {
-            System.err.println("⚠️ CẢNH BÁO: Chặn xử lý dữ liệu Auction bị lỗi ID = 0!");
-            return;
-        }
-
+        if (auction == null) return;
         System.out.println("DEBUG auction: id=" + auction.getId()
                 + " startTime=" + auction.getStartTime()
                 + " endTime=" + auction.getEndTime()
-                + " productName=" + auction.getProductName());
-
+                + " productName=" + auction.getProductName()); // ← thêm dòng này
         this.currentAuction = auction;
         this.currentItem = null;
 
-        // Đăng ký nhận thông tin Realtime qua Socket
         ClientSocket.getInstance().addAuctionObserver(auction.getId(), this);
 
         detailService.fetchItemByIdAsync(auction.getItemId(), finalItem -> {
@@ -240,58 +232,36 @@ public class AuctionDetailController implements Observer {
             String sellerName = (auction.getSellerName() != null) ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-
-            // 🎯 ĐÃ SỬA: Chuyển luồng lấy thông tin người thắng cuộc qua Socket ngầm, chặn đứng lỗi gọi trực tiếp DAO gây freeze UI
-            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
-                new Thread(() -> {
-                    try {
-                        // Tạo request chuẩn để hỏi Server thông qua Socket thay vì gọi DB trực tiếp
-                        Request userReq = new Request(MessageType.GET_USER_BY_ID, auction.getWinnerId());
-                        Response userRes = ClientSocket.getInstance().sendRequest(userReq);
-
-                        String winnerName = "Thành viên #" + auction.getWinnerId();
-                        if (userRes != null && userRes.isSuccess() && userRes.getData() != null) {
-                            // Ép kiểu động theo Model trả về từ server của bạn
-                            if (userRes.getData() instanceof Account acc) {
-                                winnerName = acc.getUsername();
-                            }
-                        }
-
-                        final String finalWinnerName = winnerName;
-                        Platform.runLater(() -> {
-                            if (lblTopBidder != null) lblTopBidder.setText(finalWinnerName);
-                        });
-                    } catch (Exception ex) {
-                        System.err.println("❌ Lỗi lấy thông tin Winner qua mạng Socket: " + ex.getMessage());
-                    }
-                }).start();
+            String winnerText;
+             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                com.auction.server.dao.AccountDAO accountDAO = new com.auction.server.dao.AccountDAO();
+                com.auction.shared.model.Account winner = accountDAO.getAccountById(auction.getWinnerId());
+                winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
             } else {
-                Platform.runLater(() -> {
-                    if (lblTopBidder != null) lblTopBidder.setText("Chưa có");
-                });
+                winnerText = "Chưa có";
             }
+            final String finalWinnerText = winnerText;
 
             Platform.runLater(() -> {
                 fillTextFields(pName, startPriceStr, auction.getDescription() != null ? auction.getDescription() : "", sellerName, startTimeStr, endTimeStr);
                 if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
+                if (lblTopBidder != null) lblTopBidder.setText(finalWinnerText);
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
                 startCountdownClock(auction.getEndTime());
                 checkBiddingPermissions(auction.getSellerId());
             });
         });
-
         detailService.fetchBidHistoryAsync(auction.getId(), bids -> {
             Platform.runLater(() -> {
                 if (vboxBidHistoryContainer != null && bids != null) {
                     vboxBidHistoryContainer.getChildren().clear();
-                    priceSeries.getData().clear();
+                    priceSeries.getData().clear(); // THÊM
                     bidCount = 0;
-                    priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));
-                    for (BidTransaction bid : bids) {
+                    priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));                    for (BidTransaction bid : bids) {
                         Label label = new Label(String.format("• [%s] %s đặt %,.0f đ",
                                 bid.getBidTime() != null
-                                        ? bid.getBidTime().plusHours(7).format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                                        ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))
                                         : "--:--:--",
                                 bid.getBidderUsername(),
                                 bid.getBidAmount()));
@@ -304,7 +274,6 @@ public class AuctionDetailController implements Observer {
             });
         });
     }
-
     private void fillTextFields(String title, String price, String desc, String seller, String start, String end) {
         if (lblProductTitle != null) lblProductTitle.setText(title);
         if (lblInfoName != null) lblInfoName.setText(title);
@@ -434,36 +403,46 @@ public class AuctionDetailController implements Observer {
         alert.showAndWait();
     }
 
+    /**
+     * 🚀 SỬA LỖI ĐỎ BIÊN DỊCH: Sử dụng kỹ thuật định vị cây giao diện động (Scene Graph Lookup)
+     * Thay thế hoàn toàn cơ chế gọi qua Singleton lỗi thời.
+     */
     @FXML
     private void handleBack() {
         if (countdownTimeline != null) countdownTimeline.stop();
-
-        // 🎯 ĐÃ SỬA: Bảo vệ nghiêm ngặt việc gỡ cài đặt Observer, xóa sạch rác luồng chạy ngầm cũ
-        if (currentAuction != null && currentAuction.getId() > 0) {
+        if (currentAuction != null) {
             ClientSocket.getInstance().removeAuctionObserver(currentAuction.getId(), this);
         }
 
-        if (txtBidAmount == null || txtBidAmount.getScene() == null) return;
+        if (txtBidAmount.getScene() == null) return;
 
         Platform.runLater(() -> {
             try {
                 String homeFxmlPath = "/view/MainView.fxml";
                 java.net.URL fxmlLocation = getClass().getResource(homeFxmlPath);
                 if (fxmlLocation == null) {
-                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ.");
+                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
                     return;
                 }
 
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
                 Node homeView = loader.load();
 
+                // Định vị gián tiếp vùng contentArea tổng thể từ Node hiện tại
                 Parent root = txtBidAmount.getScene().getRoot();
                 Node layoutCenter = root.lookup("#contentArea");
 
                 if (layoutCenter instanceof StackPane contentArea) {
+                    // Chèn màn hình MainView quay lại trung tâm màn hình chính
                     contentArea.getChildren().setAll(homeView);
-                    System.out.println("🎯 [Navigation] Quay lại trang chủ thành công và dọn dẹp Observer.");
+                    System.out.println("🎯 [Navigation] Quay lại trang chủ thành công qua cơ chế Scene Graph Lookup.");
+
+                    // Lưu ý: Hàm initialize() trong MainController mới của màn hình Home
+                    // sẽ tự động gọi refreshDashboard() để cập nhật dữ liệu nên không cần gọi thủ công nữa.
+                } else {
+                    System.err.println("❌ Không tìm thấy vùng chứa #contentArea trên giao diện hiện hành.");
                 }
+
             } catch (Exception e) {
                 System.err.println("❌ Lỗi nghiêm trọng khi quay lại trang chủ: " + e.getMessage());
                 e.printStackTrace();
