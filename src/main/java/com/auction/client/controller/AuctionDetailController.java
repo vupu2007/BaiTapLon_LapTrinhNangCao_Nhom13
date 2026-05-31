@@ -135,21 +135,6 @@ public class AuctionDetailController implements Observer {
             disableBiddingFeatures("Vui lòng đăng nhập hệ thống!");
             return;
         }
-        try {
-            int currentUserId = Integer.parseInt(CurrentAccount.getAccount().getId());
-            if (currentUserId == sellerId) {
-                disableBiddingFeatures("Bạn là chủ sở hữu sản phẩm này!");
-                if (btnSubmitBid != null) btnSubmitBid.setText("Sản phẩm của bạn");
-            } else {
-                if (txtBidAmount != null) txtBidAmount.setDisable(false);
-                if (btnSubmitBid != null) {
-                    btnSubmitBid.setDisable(false);
-                    btnSubmitBid.setText("Đặt giá ngay");
-                }
-            }
-        } catch (Exception e) {
-            System.err.println("Lỗi kiểm tra quyền: " + e.getMessage());
-        }
     }
 
     private void disableBiddingFeatures(String message) {
@@ -322,9 +307,11 @@ public class AuctionDetailController implements Observer {
         try {
             double bidAmount = Double.parseDouble(txtBidAmount.getText().trim());
             double currentPrice = getCurrentPriceOnUI();
+            double minBid = currentAuction.getStartPrice() * 0.1;
 
-            if (bidAmount <= currentPrice) {
-                showAlert("Lỗi đặt giá", "Giá đặt mới bắt buộc phải lớn hơn giá hiện tại!");
+            if (bidAmount < currentPrice + minBid) {
+                showAlert("Lỗi đặt giá", "Giá đặt phải cao hơn giá hiện tại ít nhất "
+                        + String.format("%,.0f đ", minBid) + " (10% giá khởi điểm)!");
                 return;
             }
 
@@ -353,15 +340,17 @@ public class AuctionDetailController implements Observer {
         if (btnAutoBid.isSelected()) {
             TextInputDialog dialog = new TextInputDialog("5000000");
             dialog.setTitle("Thiết lập Auto-Bid");
-            dialog.setHeaderText("Hệ thống tự động nâng giá +50,000 đ khi có đối thủ cạnh tranh vượt bạn.");
-            dialog.setContentText("Nhập mức giá tối đa bạn có thể trả:");
+            dialog.setHeaderText("Hệ thống tự động nâng giá tối thiểu 10% giá khởi điểm khi có đối thủ vượt bạn.");            dialog.setContentText("Nhập mức giá tối đa bạn có thể trả:");
 
             var result = dialog.showAndWait();
             if (result.isPresent()) {
                 try {
                     double inputMax = Double.parseDouble(result.get());
-                    if (inputMax <= getCurrentPriceOnUI()) {
-                        showAlert("Lỗi thiết lập", "Mức giới hạn phải lớn hơn giá hiện tại!");
+                    double minBid = currentAuction.getStartPrice() * 0.1;
+
+                    if (inputMax < getCurrentPriceOnUI() + minBid) {
+                        showAlert("Lỗi thiết lập", "Mức giới hạn phải cao hơn giá hiện tại ít nhất "
+                                + String.format("%,.0f đ", minBid) + " (10% giá khởi điểm)!");
                         btnAutoBid.setSelected(false);
                         return;
                     }
