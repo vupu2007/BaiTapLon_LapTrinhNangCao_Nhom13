@@ -96,10 +96,9 @@ public class AuctionService {
                 return false;
             }
 
-             //  TÍNH BƯỚC GIÁ CHUẨN (10% GIÁ KHỞI ĐIỂM + GIÁ HIỆN TẠI)
-            // Lấy thông tin sản phẩm để lấy giá khởi điểm (StartingPrice)
+            // TÍNH BƯỚC GIÁ CHUẨN (10% GIÁ KHỞI ĐIỂM + GIÁ HIỆN TẠI)
             Item item = itemDAO.getItemById(auction.getItemId());
-            double stepPrice = item.getStartingPrice() * 0.10; // 10% mức khởi điểm
+            double stepPrice = item.getStartingPrice() * 0.10;
             double minValidBid = auction.getCurrentPrice() + stepPrice;
 
             System.out.println("====== [DEBUG ĐẶT GIÁ] ======");
@@ -130,29 +129,37 @@ public class AuctionService {
             boolean transactionSuccess = auctionDAO.placeBidTransaction(bid, amount, Integer.parseInt(account.getId()));
             if (!transactionSuccess) return false;
 
-            // Cập nhật giá mới trong Object bằng ĐÚNG số tiền khách đặt, không tính toán sai lệch
+            // Cập nhật giá mới trong Object
             auction.setCurrentPrice(amount);
-
             System.out.println("🔥 Người dùng " + account.getUsername() + " đặt giá thành công: " + amount + " đ");
 
-             // GIA HẠN THỜI GIAN CHUẨN GIÂY (ANTI-SNIPING)
+            // 🛡️ GIA HẠN THỜI GIAN CHUẨN GIÂY CÓ GIỚI HẠN 5 PHÚT (ANTI-SNIPING)
             java.time.LocalDateTime now = java.time.LocalDateTime.now();
             java.time.LocalDateTime endTime = auction.getEndTime();
 
             // Tính số giây còn lại từ bây giờ đến lúc kết thúc phiên
             long secondsLeft = java.time.Duration.between(now, endTime).getSeconds();
 
-            // Nếu thời gian còn lại nằm trong khoảng từ 0 đến 60 giây cuối cùng
+            // Nếu đặt giá trong khoảng 60 giây cuối cùng
             if (secondsLeft > 0 && secondsLeft <= 60) {
-                java.time.LocalDateTime newEndTime = endTime.plusSeconds(60); // Cộng thêm 60 giây
-                auction.setEndTime(newEndTime);
+                // Lấy mốc thời gian kết thúc gốc ban đầu từ DB để check chạm trần
+                java.time.LocalDateTime originalEndTime = auctionDAO.getOriginalEndTime(auction.getId());
+                if (originalEndTime == null) originalEndTime = endTime;
 
-                // Cập nhật mốc thời gian kết thúc mới này xuống Database Clever Cloud
-                auctionDAO.updateEndTime(auction.getId(), newEndTime);
-                System.out.println("⏰ [ANTI-SNIPING] Đặt giá giây cuối (" + secondsLeft + "s)! Tự động gia hạn đến: " + newEndTime);
+                // CHỈ CHO PHÉP GIA HẠN nếu thời gian kết thúc hiện tại CHƯA vượt quá mốc gốc + 5 phút (300 giây)
+                if (endTime.isBefore(originalEndTime.plusSeconds(300))) {
+                    java.time.LocalDateTime newEndTime = endTime.plusSeconds(60); // Cộng thêm 60 giây
+                    auction.setEndTime(newEndTime);
+
+                    // Cập nhật mốc thời gian kết thúc mới này xuống Database
+                    auctionDAO.updateEndTime(auction.getId(), newEndTime);
+                    System.out.println("⏰ [ANTI-SNIPING] Đặt giá giây cuối (" + secondsLeft + "s)! Tự động gia hạn đến: " + newEndTime);
+                } else {
+                    System.out.println("⚠️ [ANTI-SNIPING] Đã chạm mốc tối đa 5 phút của phiên này, không gia hạn thêm nữa!");
+                }
             }
 
-            // Đẩy dữ liệu Real-time chuẩn về Client (Gồm cả endTime mới nếu được gia hạn)
+            // Đẩy dữ liệu Real-time về Client (Gồm cả endTime mới nếu được gia hạn thành công)
             ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), account.getUsername(), auction.getEndTime());
 
             processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
@@ -166,28 +173,6 @@ public class AuctionService {
             auctionLock.unlock();
         }
     }
-
-    private void applyAntiSniping(Auction auction) {
-        LocalDateTime now = LocalDateTime.now();
-        LocalDateTime endTime = auction.getEndTime();
-
-        if (now.isAfter(endTime.minusSeconds(SNIPE_WINDOW_SECONDS)) && now.isBefore(endTime)) {
-            LocalDateTime originalEndTime = auctionDAO.getOriginalEndTime(auction.getId());
-            if (originalEndTime == null) originalEndTime = endTime;
-
-            if (endTime.isBefore(originalEndTime.plusSeconds(MAX_TOTAL_EXTEND_SECONDS))) {
-                LocalDateTime newEndTime = endTime.plusSeconds(EXTEND_SECONDS);
-                auctionDAO.updateEndTime(auction.getId(), newEndTime);
-
-                auction.setEndTime(newEndTime);
-
-                System.out.println("🛡️ [Anti-Sniping] Gia hạn phiên #" + auction.getId() + " thêm 60s -> " + newEndTime);
-            } else {
-                System.out.println("⚠️ [Anti-Sniping] Đã chạm mốc gia hạn kịch trần 5 phút của phiên này.");
-            }
-        }
-    }
-
     private void processAutoBidsChain(int auctionId, int lastBidderId) {
         System.out.println("processAutoBidsChain called for auction: " + auctionId);
 

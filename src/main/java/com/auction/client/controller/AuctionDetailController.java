@@ -61,7 +61,6 @@ public class AuctionDetailController implements Observer {
 
     private boolean isAutoBidEnabled = false;
     private double maxAutoBidAmount = 0.0;
-    private final double autoBidIncrement = 50000.0;
 
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final AuctionDetailService detailService = new AuctionDetailService();
@@ -471,7 +470,16 @@ public class AuctionDetailController implements Observer {
     }
 
     private void triggerAutoBidSystem(double currentOpponentBid) {
-        double myNewPrice = currentOpponentBid + autoBidIncrement;
+        // 🎯 TÍNH BƯỚC GIÁ ĐỘNG 10% TỪ GIÁ KHỞI ĐIỂM CÓ SẴN TRONG AUCTION
+        double stepPrice = 50000.0; // Mặc định phòng hờ nếu object bị null
+
+        if (currentAuction != null) {
+            // Gọi thẳng hàm lấy giá khởi điểm của phiên đấu giá hiện tại
+            stepPrice = currentAuction.getStartPrice() * 0.10;
+        }
+
+        // Mức giá Robot sẽ tự động đặt trả đòn bằng: Giá đối thủ vừa đặt + Bước giá 10% chuẩn
+        double myNewPrice = currentOpponentBid + stepPrice;
 
         if (myNewPrice <= maxAutoBidAmount) {
             Timeline autoBidDelay = new Timeline(new KeyFrame(Duration.seconds(1.5), event -> {
