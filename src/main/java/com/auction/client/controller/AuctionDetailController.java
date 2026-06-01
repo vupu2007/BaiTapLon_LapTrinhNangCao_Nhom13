@@ -261,6 +261,13 @@ public class AuctionDetailController implements Observer {
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
         System.out.println("seller=" + auction.getSellerName() + " desc=" + auction.getDescription());
+        if (auction.getProductName() == null) {
+            auction.setProductName("");
+        }
+        if (auction.getSellerName() == null) {
+            auction.setSellerName("Người bán #" + auction.getSellerId());
+        }
+
         this.currentAuction = auction;
         this.currentItem = null;
 

@@ -181,36 +181,38 @@ public class ActiveAuctionsController {
                     cardsContainer.getChildren().add(card);
                     card.setOnMouseClicked(e -> {
                         if (dto.auction == null) return;
-                        new Thread(() -> {
-                            try {
-                                Response res = ClientSocket.getInstance().sendRequest(
-                                        new Request(MessageType.GET_AUCTION_BY_ID, dto.auction.getId()));
-                                if (res != null && res.isSuccess()) {
-                                    Auction full = (Auction) res.getData();
-                                    if (full != null) {
-                                        Platform.runLater(() -> {
-                                            try {
-                                                FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
-                                                Parent detailView = detailLoader.load();
-                                                AuctionDetailController detailController = detailLoader.getController();
-                                                full.setSellerName(dto.sellerName);
-                                                full.setDescription(dto.description);
-                                                if (detailController != null) detailController.loadProductDetail(full);
-                                                Parent root = card.getScene().getRoot();
-                                                Node center = root.lookup("#contentArea");
-                                                if (center instanceof StackPane contentArea) {
-                                                    contentArea.getChildren().setAll(detailView);
-                                                }
-                                            } catch (Exception ex) {
-                                                System.err.println("Lỗi: " + ex.getMessage());
-                                            }
-                                        });
-                                    }
-                                }
-                            } catch (Exception ex) {
-                                System.err.println("Lỗi: " + ex.getMessage());
+                        try {
+                            FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetail.fxml"));
+                            Parent detailView = detailLoader.load();
+                            AuctionDetailController detailController = detailLoader.getController();
+
+                            // 🎯 BƠM ĐẦY ĐỦ NGUYÊN LIỆU XỊN VÀO ĐÂY
+                            dto.auction.setProductName(dto.name);       // Ép tên SP (Tránh lỗi Sản phẩm #0)
+                            dto.auction.setSellerName(dto.sellerName);   // Ép tên người bán
+                            dto.auction.setDescription(dto.description); // Ép mô tả
+
+                            // Parse thời gian từ Chuỗi hiển thị ngoài Card thành Object LocalDateTime chuẩn
+                            java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                            if (dto.startTimeStr != null) {
+                                try { dto.auction.setStartTime(java.time.LocalDateTime.parse(dto.startTimeStr, dtf)); } catch (Exception ex) {}
                             }
-                        }).start();
+                            if (dto.endTimeStr != null) {
+                                try { dto.auction.setEndTime(java.time.LocalDateTime.parse(dto.endTimeStr, dtf)); } catch (Exception ex) {}
+                            }
+
+                            if (detailController != null) {
+                                detailController.loadProductDetail(dto.auction);
+                            }
+
+                            // Chuyển màn hình
+                            Parent root = card.getScene().getRoot();
+                            Node center = root.lookup("#contentArea");
+                            if (center instanceof StackPane contentArea) {
+                                contentArea.getChildren().setAll(detailView);
+                            }
+                        } catch (Exception ex) {
+                            System.err.println("❌ Lỗi chuyển màn hình chi tiết: " + ex.getMessage());
+                        }
                     });
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi dựng card: " + e.getMessage());

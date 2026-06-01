@@ -113,7 +113,18 @@ public class ProductCardController {
         ImageLoader.tryLoadImageToView(productImage, imageFileName);
         if (actionButton != null) {
             actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
-            actionButton.setOnAction(e -> handleNavigateToDetail());
+
+            actionButton.setOnAction(e -> {
+                // Kiểm tra xem nút bấm có nằm trong Card không
+                if (actionButton.getParent() != null) {
+                    // Lội ngược lên kích hoạt sự kiện MOUSE_CLICKED của Card bọc bên ngoài
+                    actionButton.getParent().fireEvent(new javafx.scene.input.MouseEvent(
+                            javafx.scene.input.MouseEvent.MOUSE_CLICKED, 0, 0, 0, 0,
+                            javafx.scene.input.MouseButton.PRIMARY, 1,
+                            false, false, false, false, true, false, false, true, false, false, null
+                    ));
+                }
+            });
         }
     }
     /**
