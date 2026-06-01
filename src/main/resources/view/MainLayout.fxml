@@ -99,6 +99,8 @@
 
                 <Button fx:id="btnHistory" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openHistory" prefHeight="45.0" styleClass="nav-button" text="🕒 Lịch sử" />
 
+                <Button fx:id="btnContract" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openContract" prefHeight="45.0" styleClass="nav-button" text="📜 Hợp đồng" />
+
                 <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openSettings" prefHeight="45.0" styleClass="nav-button" text="⚙ Cài đặt" />
             </VBox>
         </VBox>

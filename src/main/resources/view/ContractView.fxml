@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.CheckBox?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.control.ScrollPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.text.Font?>
+<?import javafx.scene.text.Text?>
+<?import javafx.scene.text.TextFlow?>
+
+<VBox spacing="25.0" style="-fx-background-color: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ContractController">
+    <padding>
+        <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
+    </padding>
+
+    <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
+        <children>
+            <Label text="Hợp đồng &amp; Điều khoản dịch vụ" textFill="#1a73e8">
+                <font>
+                    <Font name="System Bold" size="28.0" />
+                </font>
+            </Label>
+            <Label text="Quy định chi tiết các chức năng, vai trò và ràng buộc kỹ thuật của hệ thống" textFill="#64748b">
+                <font>
+                    <Font size="14.0" />
+                </font>
+            </Label>
+        </children>
+    </VBox>
+
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background-color: transparent; -fx-background: transparent; -fx-border-color: transparent;">
+        <content>
+            <VBox spacing="25.0" style="-fx-background-color: transparent;">
+                <children>
+
+                    <VBox alignment="CENTER" spacing="5.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #0f172a;" text="CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM" />
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 13; -fx-text-fill: #1e293b;" text="Độc lập - Tự do - Hạnh phúc" />
+                            <Label text="------------------------" textFill="#94a3b8" />
+                        </children>
+                    </VBox>
+
+                    <VBox alignment="CENTER" spacing="5.0">
+                        <children>
+                            <Label alignment="CENTER" style="-fx-font-weight: bold; -fx-font-size: 16; -fx-text-fill: #1e3a8a;" text="HỢP ĐỒNG ĐIỀU KHOẢN VÀ DỊCH VỤ HỆ THỐNG ĐẤU GIÁ TRỰC TUYẾN" textAlignment="CENTER" wrapText="true" />
+                            <Label style="-fx-font-style: italic; -fx-font-size: 13; -fx-text-fill: #475569;" text="(Quy định chi tiết các chức năng và ràng buộc)" />
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 1: ĐỊNH NGHĨA VÀ PHÂN QUYỀN NGƯỜI DÙNG" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #0f172a;" text="Hệ thống quản lý và phân định rõ quyền hạn của người dùng thành ba vai trò cốt lõi:&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Admin (Quản trị viên): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Người có quyền điều hành cao nhất, giám sát toàn bộ hoạt động của hệ thống và giải quyết các vấn đề phát sinh.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Seller (Người bán): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Có quyền quản lý sản phẩm đấu giá do mình đăng tải. Người bán được cấp toàn quyền thực hiện các thao tác CRUD (Tạo mới, Đọc, Cập nhật, Xóa) đối với tài sản của mình.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Bidder (Người tham gia đấu giá): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Có quyền tham gia vào các phiên đấu giá đang mở, thực hiện đặt giá, theo dõi trạng thái hệ thống và nhận các bản cập nhật theo thời gian thực (realtime)." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 2: QUY ĐỊNH VỀ TÀI SẢN ĐẤU GIÁ" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="Tiêu chuẩn hàng hóa đầu vào: " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Hệ thống áp dụng chính sách mở nhằm tạo điều kiện tối đa cho Người bán. Hàng hóa đưa lên sàn đấu giá chỉ cần đảm bảo không vi phạm pháp luật hiện hành và không đi ngược lại với thuần phong mỹ tục của Việt Nam. " />
+                                    <Text style="-fx-font-weight: bold; -fx-font-style: italic; -fx-font-size: 13.5; -fx-fill: #dc2626;" text="Người bán tự chịu mọi trách nhiệm trước pháp luật về tính hợp pháp của tài sản mình đăng tải." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 3: TRÌNH TỰ VÀ TRẠNG THÁI PHIÊN ĐẤU GIÁ" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #0f172a;" text="Mọi phiên đấu giá trên nền tảng phải tuân thủ luồng chuyển đổi trạng thái khép kín như sau:&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Trạng thái OPEN (Mở): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Phiên đấu giá được khởi tạo thành công.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Trạng thái RUNNING (Đang diễn ra): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Phiên đấu giá chính thức mở cổng nhận các lượt đặt giá từ người tham gia. Hệ thống sẽ kiểm tra tính hợp lệ của lệnh và cập nhật giá mới cho tất cả các máy khách (client) theo thời gian thực.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Trạng thái FINISHED (Kết thúc): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Hệ thống sẽ tự động đóng phiên đấu giá khi hết thời gian quy định và lập tức xác định người thắng cuộc (người trả giá hợp lệ cao nhất).&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Trạng thái PAID / CANCELED (Tất toán / Hủy bỏ): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Trạng thái cuối cùng xác nhận người thắng cuộc đã thanh toán xong, hoặc phiên đấu giá bị hủy bỏ." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 4: KỶ LUẬT ĐẶT GIÁ" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Quy định về giá (InvalidBidException): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Lệnh đặt giá phải tuân thủ nghiêm ngặt bước giá quy định. Cụ thể, mức giá đề xuất mới phải cao hơn ít nhất " />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #dc2626;" text="10%" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text=" so với mức giá cao nhất đang được hệ thống ghi nhận tại thời điểm đặt lệnh (không tính trên giá khởi điểm). Hành vi cố tình thao tác hoặc gửi lệnh đặt giá khi phiên đấu giá đã kết thúc đều không có giá trị và hệ thống sẽ báo lỗi " />
+                                    <Text style="-fx-font-family: 'Courier New'; -fx-font-weight: bold; -fx-font-size: 12.5; -fx-fill: #b45309;" text="AuctionClosedException" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text=".&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Vi phạm xác thực (AuthenticationException): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Mọi truy cập trái phép hoặc thao tác sai thông tin tài khoản sẽ bị hệ thống chặn đứng và báo lỗi " />
+                                    <Text style="-fx-font-family: 'Courier New'; -fx-font-weight: bold; -fx-font-size: 12.5; -fx-fill: #b45309;" text="AuthenticationException" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 5: BẢO ĐẢM TÍNH CÔNG BẰNG VÀ XỬ LÝ ĐỒNG THỜI" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #0f172a;" text="Hệ thống cam kết môi trường đấu giá công bằng tuyệt đối: Trong trường hợp có nhiều người tham gia cùng lúc gửi lệnh đặt giá, hệ thống có cơ chế xử lý đấu giá đồng thời (" />
+                                    <Text style="-fx-font-style: italic; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="concurrent bidding" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="). Cam kết ngăn chặn triệt để tình trạng mất lượt cập nhật dữ liệu (" />
+                                    <Text style="-fx-font-style: italic; -fx-font-size: 13.5; -fx-fill: #b45309;" text="lost update" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text=") và tranh chấp thứ tự (" />
+                                    <Text style="-fx-font-style: italic; -fx-font-size: 13.5; -fx-fill: #b45309;" text="race condition" />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="), đảm bảo mọi lệnh hợp lệ đều được ghi nhận đúng trình tự." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox spacing="8.0">
+                        <children>
+                            <Label style="-fx-font-weight: bold; -fx-font-size: 14; -fx-text-fill: #1a73e8;" text="PHẦN 6: CÁC TIỆN ÍCH NÂNG CAO CHO NGƯỜI DÙNG" />
+                            <TextFlow lineSpacing="6.0">
+                                <children>
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #0f172a;" text="Người dùng nền tảng có thể được cung cấp và sử dụng các tính năng tự động hóa tối ưu sau:&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Đấu giá tự động (Auto-Bidding): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Hỗ trợ người dùng thiết lập mức giá tối đa và bước giá tăng dần. Hệ thống sẽ thay mặt người dùng tự động trả giá.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Chống trục lợi phút chót (Anti-sniping): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Để bảo vệ quyền lợi người bán, hệ thống sẽ tự động gia hạn thêm thời gian cho phiên đấu giá nếu phát hiện có bất kỳ lệnh đặt giá nào xuất hiện ở những phút/giây cuối cùng.&#10;" />
+                                    <Text style="-fx-font-weight: bold; -fx-font-size: 13.5; -fx-fill: #0f172a;" text="• Biểu đồ Lịch sử Giá (Bid History Visualization): " />
+                                    <Text style="-fx-font-size: 13.5; -fx-fill: #1e293b;" text="Người dùng có quyền theo dõi biểu đồ đường hiển thị trực quan biến động giá của phiên đấu giá theo thời gian thực." />
+                                </children>
+                            </TextFlow>
+                        </children>
+                    </VBox>
+
+                    <VBox alignment="TOP_RIGHT" spacing="5.0">
+                        <children>
+                            <Label style="-fx-font-style: italic; -fx-font-size: 13; -fx-text-fill: #475569;" text="Hà Nội, ngày 01 tháng 06 năm 2026" />
+                            <VBox alignment="CENTER" maxWidth="250.0" spacing="45.0">
+                                <children>
+                                    <Label style="-fx-font-weight: bold; -fx-font-size: 13; -fx-text-fill: #0f172a;" text="ĐẠI DIỆN HỆ THỐNG ĐẤU GIÁ" textAlignment="CENTER" wrapText="true" />
+                                    <Label style="-fx-font-style: italic; -fx-font-size: 12; -fx-text-fill: #64748b;" text="(Ký và ghi rõ họ tên)" />
+                                </children>
+                                <VBox.margin>
+                                    <Insets right="20.0" top="5.0" />
+                                </VBox.margin>
+                            </VBox>
+                        </children>
+                    </VBox>
+
+                    <HBox alignment="CENTER_LEFT" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.04), 10, 0, 0, 4);">
+                        <children>
+                            <CheckBox mnemonicParsing="false" selected="true" wrapText="true" maxWidth="800.0" style="-fx-font-weight: bold; -fx-font-size: 13; -fx-text-fill: #0f172a;" text="Tôi đã đọc, hiểu rõ và cam kết tuân thủ đầy đủ các điều khoản trên." />
+                        </children>
+                    </HBox>
+
+                </children>
+                <padding>
+                    <Insets bottom="10.0" left="5.0" right="15.0" top="5.0" />
+                </padding>
+            </VBox>
+        </content>
+    </ScrollPane>
+</VBox>
