@@ -62,6 +62,8 @@
                                 <Button fx:id="btnFilterActive" mnemonicParsing="false" onAction="#handleFilterActive" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Đang diễn ra" />
 
                                 <Button fx:id="btnFilterUpcoming" mnemonicParsing="false" onAction="#handleFilterUpcoming" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Sắp diễn ra" />
+
+                                <Button fx:id="btnFilterEnded" mnemonicParsing="false" onAction="#handleFilterEnded" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Đã kết thúc" />
                             </children>
                         </HBox>
 

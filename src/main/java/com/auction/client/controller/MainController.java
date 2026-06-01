@@ -32,7 +32,8 @@ import java.util.concurrent.Executors;
 public class MainController {
 
     @FXML private Label balanceLabel, ongoingLabel, wonLabel, welcomeLabel;
-    @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming;
+    // Thêm btnFilterEnded vào danh sách khai báo FXML
+    @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming, btnFilterEnded;
     @FXML private FlowPane flowPane;
 
     private String currentFilter = "ALL";
@@ -208,11 +209,14 @@ public class MainController {
         if (btnFilterAll != null) btnFilterAll.setStyle(normal);
         if (btnFilterActive != null) btnFilterActive.setStyle(normal);
         if (btnFilterUpcoming != null) btnFilterUpcoming.setStyle(normal);
+        // Reset style nút mới về trạng thái bình thường
+        if (btnFilterEnded != null) btnFilterEnded.setStyle(normal);
 
         Button activeBtn = switch (currentFilter) {
             case "ALL" -> btnFilterAll;
             case "ACTIVE" -> btnFilterActive;
             case "UPCOMING" -> btnFilterUpcoming;
+            case "ENDED" -> btnFilterEnded; // Thêm trạng thái sáng nút cho ENDED
             default -> null;
         };
         if (activeBtn != null) activeBtn.setStyle(active);
@@ -221,6 +225,9 @@ public class MainController {
     @FXML private void handleFilterAll() { currentFilter = "ALL"; refreshDashboard(); }
     @FXML private void handleFilterActive() { currentFilter = "ACTIVE"; refreshDashboard(); }
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
+
+    // Thêm hàm xử lý sự kiện khi ấn nút "Đã kết thúc"
+    @FXML private void handleFilterEnded() { currentFilter = "ENDED"; refreshDashboard(); }
 
     @FXML
     private void handleLogout(ActionEvent event) {

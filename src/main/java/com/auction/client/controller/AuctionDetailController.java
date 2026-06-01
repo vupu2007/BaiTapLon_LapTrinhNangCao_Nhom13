@@ -45,6 +45,11 @@ public class AuctionDetailController implements Observer {
     @FXML private VBox vboxBidHistoryContainer;
     @FXML private Label lblAuctionId;
 
+    // === CÁC THÀNH PHẦN MỚI THÊM ĐỂ HIỂN THỊ NGƯỜI CHIẾN THẮNG ===
+    @FXML private VBox vboxWinnerSection;
+    @FXML private Label lblWinnerName;
+    @FXML private Label lblWinnerPrice;
+
     private Auction currentAuction;
     private Item currentItem;
     private Timeline countdownTimeline;
@@ -116,6 +121,10 @@ public class AuctionDetailController implements Observer {
                     lblTimeRemaining.setStyle("-fx-text-fill: #ff4d4d; -fx-font-weight: bold;");
                 }
                 disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
+
+                // GỌI HÀM HIỂN THỊ Ô NGƯỜI THẮNG CUỘC KHI HẾT GIỜ
+                showWinnerSection();
+
                 countdownTimeline.stop();
             } else {
                 long hours = duration.toHours();
@@ -128,6 +137,29 @@ public class AuctionDetailController implements Observer {
         }));
         countdownTimeline.setCycleCount(Animation.INDEFINITE);
         countdownTimeline.play();
+    }
+
+    /**
+     * HÀM MỚI: Xử lý hiển thị thông tin người thắng cuộc và cấu hình lại trạng thái giao diện
+     */
+    private void showWinnerSection() {
+        if (vboxWinnerSection != null && lblWinnerName != null && lblWinnerPrice != null) {
+            String winner = (lblTopBidder != null) ? lblTopBidder.getText() : "Chưa có";
+            String finalPrice = (lblCurrentPrice != null) ? lblCurrentPrice.getText() : "0 đ";
+
+            // Nếu hết giờ mà nhãn vẫn là mặc định thì xem như không ai đặt
+            if ("Chưa có".equals(winner) || "Chưa xác định".equals(winner)) {
+                lblWinnerName.setText("Không có người tham gia");
+                lblWinnerPrice.setText("Phiên đấu giá không thành công");
+            } else {
+                lblWinnerName.setText(winner);
+                lblWinnerPrice.setText("Giá chung cuộc: " + finalPrice);
+            }
+
+            // Hiển thị ô thông tin lên màn hình
+            vboxWinnerSection.setManaged(true);
+            vboxWinnerSection.setVisible(true);
+        }
     }
 
     private void checkBiddingPermissions(int sellerId) {
@@ -416,10 +448,6 @@ public class AuctionDetailController implements Observer {
         alert.showAndWait();
     }
 
-    /**
-     * 🚀 SỬA LỖI ĐỎ BIÊN DỊCH: Sử dụng kỹ thuật định vị cây giao diện động (Scene Graph Lookup)
-     * Thay thế hoàn toàn cơ chế gọi qua Singleton lỗi thời.
-     */
     @FXML
     private void handleBack() {
         if (countdownTimeline != null) countdownTimeline.stop();
@@ -441,17 +469,12 @@ public class AuctionDetailController implements Observer {
                 FXMLLoader loader = new FXMLLoader(fxmlLocation);
                 Node homeView = loader.load();
 
-                // Định vị gián tiếp vùng contentArea tổng thể từ Node hiện tại
                 Parent root = txtBidAmount.getScene().getRoot();
                 Node layoutCenter = root.lookup("#contentArea");
 
                 if (layoutCenter instanceof StackPane contentArea) {
-                    // Chèn màn hình MainView quay lại trung tâm màn hình chính
                     contentArea.getChildren().setAll(homeView);
                     System.out.println("🎯 [Navigation] Quay lại trang chủ thành công qua cơ chế Scene Graph Lookup.");
-
-                    // Lưu ý: Hàm initialize() trong MainController mới của màn hình Home
-                    // sẽ tự động gọi refreshDashboard() để cập nhật dữ liệu nên không cần gọi thủ công nữa.
                 } else {
                     System.err.println("❌ Không tìm thấy vùng chứa #contentArea trên giao diện hiện hành.");
                 }
