@@ -334,7 +334,8 @@ public class ClientHandler implements Runnable {
                     String statusCondition = switch (filter) {
                         case "UPCOMING" -> "a.status = 'OPEN'";
                         case "ACTIVE" -> "a.status = 'RUNNING'";
-                        default -> "a.status IN ('RUNNING', 'OPEN')";
+                        case "FINISHED" -> "a.status = 'FINISHED'";
+                        default -> "a.status IN ('RUNNING', 'OPEN', 'FINISHED') ORDER BY FIELD(a.status, 'RUNNING', 'OPEN', 'FINISHED')";
                     };
 
                     List<Item> items = new ArrayList<>();

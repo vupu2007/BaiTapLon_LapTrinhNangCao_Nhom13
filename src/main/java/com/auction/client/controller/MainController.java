@@ -35,10 +35,10 @@ public class MainController {
     // Thêm btnFilterEnded vào danh sách khai báo FXML
     @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming, btnFilterEnded;
     @FXML private FlowPane flowPane;
-
     private String currentFilter = "ALL";
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
+
 
 
     // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
@@ -75,6 +75,7 @@ public class MainController {
     }
 
     public void refreshDashboard() {
+        dashboardService.resetFetching();
         final String filterSnapshot = currentFilter;
         Account current = CurrentAccount.getAccount();
         if (current == null) return;
@@ -96,8 +97,10 @@ public class MainController {
                             ProductCardController cardController = loader.getController();
                             if (cardController != null) {
                                 String finalImageUrl = getFinalImageUrl(item.getImagePath());
-                                String statusText = "UPCOMING".equals(filterSnapshot) || "OPEN".equals(item.getAuctionStatus())
-                                        ? "Sắp diễn ra" : "Đang diễn ra";                                String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
+                                String statusText = "OPEN".equals(item.getAuctionStatus()) ? "Sắp diễn ra"
+                                        : "FINISHED".equals(item.getAuctionStatus()) ? "Đã kết thúc"
+                                        : "Đang diễn ra";
+                                String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
                                 cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), item.getEndTimeStr());
                             }
                             cardLayout.setOnMouseClicked(e -> {
@@ -216,7 +219,7 @@ public class MainController {
             case "ALL" -> btnFilterAll;
             case "ACTIVE" -> btnFilterActive;
             case "UPCOMING" -> btnFilterUpcoming;
-            case "ENDED" -> btnFilterEnded; // Thêm trạng thái sáng nút cho ENDED
+            case "FINISHED" -> btnFilterEnded;
             default -> null;
         };
         if (activeBtn != null) activeBtn.setStyle(active);
@@ -227,7 +230,7 @@ public class MainController {
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
 
     // Thêm hàm xử lý sự kiện khi ấn nút "Đã kết thúc"
-    @FXML private void handleFilterEnded() { currentFilter = "ENDED"; refreshDashboard(); }
+    @FXML private void handleFilterEnded() { currentFilter = "FINISHED"; refreshDashboard(); }
 
     @FXML
     private void handleLogout(ActionEvent event) {
