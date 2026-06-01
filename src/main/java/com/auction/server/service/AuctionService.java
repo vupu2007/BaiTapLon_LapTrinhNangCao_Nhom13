@@ -82,19 +82,12 @@ public class AuctionService {
         try {
             User user = (User) account;
             Auction auction = auctionDAO.getAuctionById(auctionId);
-            System.out.println("Check isActive: " + auction.isActive());
-            System.out.println("Check minBid: " + (auction.getCurrentPrice() + auction.getMinIncrement()));
-            System.out.println("Check balance: " + ((User)account).getBalance());
 
             if (auction == null || !auction.isActive()) {
-                return false;
-            }
-
-            if (!auction.isActive()) {
                 throw new AuctionClosedException(
                         "Phiên đấu giá không còn hoạt động",
                         auctionId,
-                        auction.getStatus()
+                        auction != null ? auction.getStatus() : null
                 );
             }
 
@@ -103,7 +96,19 @@ public class AuctionService {
                 return false;
             }
 
-            double minValidBid = auction.getCurrentPrice() + auction.getMinIncrement();
+             //  TÍNH BƯỚC GIÁ CHUẨN (10% GIÁ KHỞI ĐIỂM + GIÁ HIỆN TẠI)
+            // Lấy thông tin sản phẩm để lấy giá khởi điểm (StartingPrice)
+            Item item = itemDAO.getItemById(auction.getItemId());
+            double stepPrice = item.getStartingPrice() * 0.10; // 10% mức khởi điểm
+            double minValidBid = auction.getCurrentPrice() + stepPrice;
+
+            System.out.println("====== [DEBUG ĐẶT GIÁ] ======");
+            System.out.println("+ Giá hiện tại: " + auction.getCurrentPrice());
+            System.out.println("+ Bước giá bắt buộc (10% Khởi điểm): " + stepPrice);
+            System.out.println("+ Mức giá tối thiểu yêu cầu: " + minValidBid);
+            System.out.println("+ Số tiền khách đặt thực tế: " + amount);
+            System.out.println("=============================");
+
             if (amount < minValidBid) {
                 throw new InvalidBidException(
                         "Giá đặt tối thiểu phải là: " + minValidBid,
@@ -125,14 +130,38 @@ public class AuctionService {
             boolean transactionSuccess = auctionDAO.placeBidTransaction(bid, amount, Integer.parseInt(account.getId()));
             if (!transactionSuccess) return false;
 
+            // Cập nhật giá mới trong Object bằng ĐÚNG số tiền khách đặt, không tính toán sai lệch
+            auction.setCurrentPrice(amount);
+
             System.out.println("🔥 Người dùng " + account.getUsername() + " đặt giá thành công: " + amount + " đ");
 
-            applyAntiSniping(auction);
+             // GIA HẠN THỜI GIAN CHUẨN GIÂY (ANTI-SNIPING)
+            java.time.LocalDateTime now = java.time.LocalDateTime.now();
+            java.time.LocalDateTime endTime = auction.getEndTime();
 
-            ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), account.getUsername(), auction.getEndTime());            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
+            // Tính số giây còn lại từ bây giờ đến lúc kết thúc phiên
+            long secondsLeft = java.time.Duration.between(now, endTime).getSeconds();
+
+            // Nếu thời gian còn lại nằm trong khoảng từ 0 đến 60 giây cuối cùng
+            if (secondsLeft > 0 && secondsLeft <= 60) {
+                java.time.LocalDateTime newEndTime = endTime.plusSeconds(60); // Cộng thêm 60 giây
+                auction.setEndTime(newEndTime);
+
+                // Cập nhật mốc thời gian kết thúc mới này xuống Database Clever Cloud
+                auctionDAO.updateEndTime(auction.getId(), newEndTime);
+                System.out.println("⏰ [ANTI-SNIPING] Đặt giá giây cuối (" + secondsLeft + "s)! Tự động gia hạn đến: " + newEndTime);
+            }
+
+            // Đẩy dữ liệu Real-time chuẩn về Client (Gồm cả endTime mới nếu được gia hạn)
+            ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), account.getUsername(), auction.getEndTime());
+
+            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
 
             return true;
 
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
         } finally {
             auctionLock.unlock();
         }

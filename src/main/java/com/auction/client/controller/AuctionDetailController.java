@@ -87,6 +87,11 @@ public class AuctionDetailController implements Observer {
 
     @Override
     public void update(double newPrice, String usernameAndTimeToParse) {
+        // 🎯 CHÈN ĐÚNG 3 DÒNG NÀY ĐỂ DIỆT TẬN GỐC LỖI LẶP LOG VÀ NHẢY GIÁ
+        if (lblCurrentPrice != null && lblCurrentPrice.getText().equals(String.format("%,.0f đ", newPrice))) {
+            return;
+        }
+
         Platform.runLater(() -> {
             String finalUsername = usernameAndTimeToParse;
             String newEndTimeStr = null;
@@ -122,7 +127,7 @@ public class AuctionDetailController implements Observer {
                 log.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
                 vboxBidHistoryContainer.getChildren().add(0, log);
 
-                // 🎯 2. ĐOẠN THÊM MỚI: Nếu có thời gian gia hạn mới, bắn thêm dòng chữ màu cam thông báo
+                // 2. Đoạn thêm mới: Nếu có thời gian gia hạn mới, bắn thêm dòng chữ màu cam thông báo
                 if (newEndTimeStr != null && !newEndTimeStr.isEmpty()) {
                     Label alertLog = new Label(String.format("⚠️ [%s] [HỆ THỐNG] Phát hiện đặt giá giây cuối! Phiên đấu giá được tự động gia hạn thêm 60 giây.",
                             LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))));
@@ -144,7 +149,6 @@ public class AuctionDetailController implements Observer {
             }
         });
     }
-
     private void startCountdownClock(LocalDateTime endTime) {
         if (countdownTimeline != null) countdownTimeline.stop();
         if (endTime == null) {
