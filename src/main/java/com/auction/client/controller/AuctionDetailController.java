@@ -50,6 +50,9 @@ public class AuctionDetailController implements Observer {
     @FXML private Label lblWinnerName;
     @FXML private Label lblWinnerPrice;
 
+    @FXML private Label lblTimeRemainingTitle;
+
+
     private Auction currentAuction;
     private Item currentItem;
     private Timeline countdownTimeline;
@@ -164,9 +167,22 @@ public class AuctionDetailController implements Observer {
 
     private void checkBiddingPermissions(int sellerId) {
         if (CurrentAccount.getAccount() == null) {
-            disableBiddingFeatures("Vui lòng đăng nhập hệ thống!");
-            return;
+            disableBiddingFeatures("Vui lòng đăng nhập!"); return;
         }
+        if (currentAuction != null && currentAuction.getStartTime() != null
+                && java.time.LocalDateTime.now().isBefore(currentAuction.getStartTime())) {
+            disableBiddingFeatures("Phiên đấu giá chưa bắt đầu!"); return;
+        }
+        try {
+            int uid = Integer.parseInt(CurrentAccount.getAccount().getId());
+            if (uid == sellerId) {
+                disableBiddingFeatures("Bạn là chủ sở hữu!");
+                if (btnSubmitBid != null) btnSubmitBid.setText("Sản phẩm của bạn");
+            } else {
+                if (txtBidAmount != null) txtBidAmount.setDisable(false);
+                if (btnSubmitBid != null) { btnSubmitBid.setDisable(false); btnSubmitBid.setText("Đặt giá ngay"); }
+            }
+        } catch (Exception e) { System.err.println("Lỗi kiểm tra quyền: " + e.getMessage()); }
     }
 
     private void disableBiddingFeatures(String message) {
@@ -217,8 +233,11 @@ public class AuctionDetailController implements Observer {
                 ClientSocket.getInstance().addAuctionObserver(a.getId(), this);
 
                 Platform.runLater(() -> {
-                    startCountdownClock(a.getEndTime());
-                    if (lblCurrentPrice != null)
+                    if (a.getStartTime() != null && LocalDateTime.now().isBefore(a.getStartTime())) {
+                        startCountdownClock(a.getStartTime());
+                    } else {
+                        startCountdownClock(a.getEndTime());
+                    }                    if (lblCurrentPrice != null)
                         lblCurrentPrice.setText(String.format("%,.0f đ", a.getCurrentPrice()));
                 });
                 detailService.fetchBidHistoryAsync(a.getId(), bids -> {
@@ -289,7 +308,9 @@ public class AuctionDetailController implements Observer {
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
                 if (lblTopBidder != null) lblTopBidder.setText(finalWinnerText);
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
-                startCountdownClock(auction.getEndTime());
+                boolean notStarted = auction.getStartTime() != null && LocalDateTime.now().isBefore(auction.getStartTime());
+                startCountdownClock(notStarted ? auction.getStartTime() : auction.getEndTime());
+                if (lblTimeRemainingTitle != null) lblTimeRemainingTitle.setText(notStarted ? "Bắt đầu sau" : "Thời gian còn lại");
                 checkBiddingPermissions(auction.getSellerId());
             });
         });

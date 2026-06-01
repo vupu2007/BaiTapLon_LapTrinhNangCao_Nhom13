@@ -55,7 +55,7 @@
                         </VBox>
                         <VBox alignment="CENTER_RIGHT">
                             <children>
-                                <Label text="Thời gian còn lại" textFill="WHITE" />
+                                <Label fx:id="lblTimeRemainingTitle" text="Thời gian còn lại" textFill="WHITE" />
                                 <Label fx:id="lblTimeRemaining" text="00h 00m 00s" textFill="#ff4d4d">
                                     <font>
                                         <Font name="System Bold" size="18.0" />
