@@ -204,13 +204,14 @@ public class MainLayoutController {
     @FXML
     private void switchToBuyer() {
         updateRoleUI("role-buyer", "🛒 Người mua", true, false);
+        openHome();
     }
 
     @FXML
     private void switchToSeller() {
         updateRoleUI("role-seller", "🏪 Người bán", false, true);
+        openHome();
     }
-
     /**
      * Tối ưu hóa UI: Thay đổi theme bằng CSS Class thay vì viết code màu Hex cứng trong Java
      */
