@@ -11,107 +11,85 @@
 <?import javafx.scene.shape.Circle?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: #F0F9FF; -fx-background: #F0F9FF; -fx-border-color: #F0F9FF; -fx-background-insets: 0; -fx-padding: 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.WalletController">
-    <content>
-        <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
-            <padding>
-                <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
-            </padding>
+<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.WalletController">
+    <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
 
-            <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
-                <children>
-                    <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Quản lý ví tiền" textFill="#1a73e8">
-                        <font>
-                            <Font name="System Bold" size="28.0" />
-                        </font>
-                    </Label>
-                    <Label text="Nạp, rút và theo dõi lịch sử giao dịch của bạn" textFill="#64748b">
-                        <font>
-                            <Font size="14.0" />
-                        </font>
-                    </Label>
-                </children>
-            </VBox>
+        <padding>
+            <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
+        </padding>
 
-            <HBox spacing="20.0">
-                <children>
-                    <VBox prefHeight="110.0" HBox.hgrow="ALWAYS"
-                          style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #0d47a1);
-                                 -fx-background-radius: 15;
-                                 -fx-padding: 20;
-                                 -fx-effect: dropshadow(three-pass-box, rgba(26, 115, 232, 0.3), 10, 0, 0, 5);">
-                        <children>
-                            <Label text="Số dư khả dụng" textFill="#e3f2fd" />
-                            <Label fx:id="lblBalance" text="0 đ" textFill="WHITE">
-                                <font><Font name="System Bold" size="32.0" /></font>
-                            </Label>
-                        </children>
-                    </VBox>
-
-                    <VBox prefHeight="110.0" HBox.hgrow="ALWAYS"
-                          style="-fx-background-color: white;
-                                 -fx-background-radius: 15;
-                                 -fx-padding: 20;
-                                 -fx-border-color: #10b981;
-                                 -fx-border-width: 0 0 4 0;
-                                 -fx-border-radius: 15;
-                                 -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
-                        <children>
-                            <Label text="Tổng nạp trong tháng" textFill="#64748b" />
-                            <Label fx:id="lblTotalDeposit" text="0 đ" textFill="#10b981">
-                                <font><Font name="System Bold" size="32.0" /></font>
-                            </Label>
-                        </children>
-                    </VBox>
-
-                    <VBox prefHeight="110.0" HBox.hgrow="ALWAYS"
-                          style="-fx-background-color: white;
-                                 -fx-background-radius: 15;
-                                 -fx-padding: 20;
-                                 -fx-border-color: #ef4444;
-                                 -fx-border-width: 0 0 4 0;
-                                 -fx-border-radius: 15;
-                                 -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);">
-                        <children>
-                            <Label text="Tổng chi tiêu" textFill="#64748b" />
-                            <Label fx:id="lblTotalWithdraw" text="0 đ" textFill="#ef4444">
-                                <font><Font name="System Bold" size="32.0" /></font>
-                            </Label>
-                        </children>
-                    </VBox>
-                </children>
-            </HBox>
-
-            <HBox spacing="25">
-                <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
-                    <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↗ Nạp tiền" textFill="#059669" />
-                    <TextField fx:id="txtDeposit" prefHeight="45" promptText="Nhập số tiền nạp..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
-                    <Button maxWidth="Infinity" onAction="#handleDeposit" prefHeight="45" style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(16,185,129,0.2), 8, 0, 0, 3);" text="Nạp tiền ngay" />
-                </VBox>
-
-                <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
-                    <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↘ Rút tiền" textFill="#dc2626" />
-                    <TextField fx:id="txtWithdraw" prefHeight="45" promptText="Nhập số tiền rút..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
-                    <Button maxWidth="Infinity" onAction="#handleWithdraw" prefHeight="45" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(239,68,68,0.2), 8, 0, 0, 3);" text="Rút tiền" />
-                </VBox>
-            </HBox>
-
-            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
-                <Label style="-fx-font-weight: bold; -fx-font-size: 20;" text="Lịch sử giao dịch" textFill="#1e293b" />
-
-                <VBox fx:id="transactionContainer" spacing="10">
-                    <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-border-color: #f1f5f9; -fx-border-width: 0 0 1 0; -fx-padding: 15 0;">
-                        <Circle fill="#ecfdf5" radius="20" stroke="transparent" />
-                        <VBox spacing="3">
-                            <Label style="-fx-font-weight: bold;" text="Nạp tiền thành công" textFill="#1e293b" />
-                            <Label style="-fx-font-size: 12;" text="Chuyển khoản • 09/05/2026" textFill="#64748b" />
-                        </VBox>
-                        <Region HBox.hgrow="ALWAYS" />
-                        <Label style="-fx-font-weight: bold; -fx-font-size: 16;" text="+5.000.000 đ" textFill="#059669" />
-                    </HBox>
-                </VBox>
-            </VBox>
-
+        <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
+            <children>
+                <!-- Đã sửa thành màu #1a73e8 -->
+                <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Quản lý ví tiền" textFill="#1a73e8">
+                    <font>
+                        <Font name="System Bold" size="28.0" />
+                    </font>
+                </Label>
+                <Label text="Nạp, rút và theo dõi lịch sử giao dịch của bạn" textFill="#64748b">
+                    <font>
+                        <Font size="14.0" />
+                    </font>
+                </Label>
+            </children>
         </VBox>
-    </content>
+
+        <VBox spacing="25" style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #0d47a1); -fx-background-radius: 20; -fx-padding: 30; -fx-effect: dropshadow(three-pass-box, rgba(26,115,232,0.3), 20, 0, 0, 10);">
+            <children>
+                <HBox alignment="CENTER_LEFT" spacing="20">
+                    <VBox alignment="CENTER" style="-fx-background-color: rgba(255,255,255,0.2); -fx-background-radius: 12; -fx-padding: 12;">
+                        <Label style="-fx-font-size: 24;" text="💳" />
+                    </VBox>
+                    <VBox>
+                        <Label style="-fx-font-size: 14;" text="Số dư khả dụng" textFill="#e3f2fd" />
+                        <Label fx:id="lblBalance" style="-fx-font-size: 36; -fx-font-weight: bold;" text="0 đ" textFill="white" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label style="-fx-background-color: rgba(255,255,255,0.15); -fx-padding: 8 15; -fx-background-radius: 10;" text="Tài khoản" textFill="white" />
+                </HBox>
+
+                <HBox spacing="60">
+                    <VBox>
+                        <Label style="-fx-font-size: 13;" text="Tổng nạp trong tháng" textFill="#e3f2fd" />
+                        <Label fx:id="lblTotalDeposit" style="-fx-font-size: 18; -fx-font-weight: bold;" text="0 đ" textFill="white" />
+                    </VBox>
+                    <VBox>
+                        <Label style="-fx-font-size: 13;" text="Tổng chi tiêu" textFill="#e3f2fd" />
+                        <Label fx:id="lblTotalWithdraw" style="-fx-font-size: 18; -fx-font-weight: bold;" text="0 đ" textFill="white" />
+                    </VBox>
+                </HBox>
+            </children>
+        </VBox>
+
+        <HBox spacing="25">
+            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
+                <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↗ Nạp tiền" textFill="#059669" />
+                <TextField fx:id="txtDeposit" prefHeight="45" promptText="Nhập số tiền nạp..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
+                <Button maxWidth="Infinity" onAction="#handleDeposit" prefHeight="45" style="-fx-background-color: #10b981; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="Nạp tiền ngay" />
+            </VBox>
+
+            <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);" HBox.hgrow="ALWAYS">
+                <Label style="-fx-font-weight: bold; -fx-font-size: 18;" text="↘ Rút tiền" textFill="#dc2626" />
+                <TextField fx:id="txtWithdraw" prefHeight="45" promptText="Nhập số tiền rút..." style="-fx-background-radius: 10; -fx-background-color: #f8fafc; -fx-border-color: #e2e8f0; -fx-border-radius: 10;" />
+                <Button maxWidth="Infinity" onAction="#handleWithdraw" prefHeight="45" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10; -fx-cursor: hand;" text="Rút tiền" />
+            </VBox>
+        </HBox>
+
+        <VBox spacing="15" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
+            <Label style="-fx-font-weight: bold; -fx-font-size: 20;" text="Lịch sử giao dịch" textFill="#1e293b" />
+
+            <VBox fx:id="transactionContainer" spacing="10">
+                <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-border-color: #f1f5f9; -fx-border-width: 0 0 1 0; -fx-padding: 15 0;">
+                    <Circle fill="#ecfdf5" radius="20" stroke="transparent" />
+                    <VBox spacing="3">
+                        <Label style="-fx-font-weight: bold;" text="Nạp tiền thành công" textFill="#1e293b" />
+                        <Label style="-fx-font-size: 12;" text="Chuyển khoản • 09/05/2026" textFill="#64748b" />
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS" />
+                    <Label style="-fx-font-weight: bold; -fx-font-size: 16;" text="+5.000.000 đ" textFill="#059669" />
+                </HBox>
+            </VBox>
+        </VBox>
+
+    </VBox>
 </ScrollPane>
