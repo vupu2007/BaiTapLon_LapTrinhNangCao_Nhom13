@@ -36,12 +36,12 @@
             <children>
                 <VBox spacing="4.0">
                     <children>
-                        <Label fx:id="productName" text="Tên sản phẩm" wrapText="true" textFill="#1e293b">
+                        <Label fx:id="productName" text="Tên sản phẩm" wrapText="true" textFill="#1e293b" style="-fx-text-fill: #1e293b;">
                             <font>
                                 <Font name="System Bold" size="16.0" />
                             </font>
                         </Label>
-                        <Label fx:id="productDesc" text="Mô tả ngắn về sản phẩm..." textFill="#64748b" wrapText="true" />
+                        <Label fx:id="productDesc" text="Mô tả ngắn về sản phẩm..." textFill="#64748b" style="-fx-text-fill: #64748b;" wrapText="true" />
                     </children>
                 </VBox>
 
@@ -57,14 +57,15 @@
                         <RowConstraints minHeight="10.0" vgrow="SOMETIMES" />
                     </rowConstraints>
                     <children>
-                        <Label text="Giá hiện tại:" textFill="#64748b" />
-                        <Label fx:id="currentPrice" text="0 đ" textFill="#0284c7" GridPane.rowIndex="1">
+                        <Label text="Giá hiện tại:" textFill="#64748b" style="-fx-text-fill: #64748b;" />
+                        <Label fx:id="currentPrice" text="0 đ" textFill="#0284c7" style="-fx-text-fill: #0284c7;" GridPane.rowIndex="1">
                             <font>
                                 <Font name="System Bold" size="16.0" />
                             </font>
                         </Label>
-                        <Label fx:id="lblTimeRemainingTitle" text="Còn lại:" textFill="#64748b" GridPane.columnIndex="1" />
-                        <Label fx:id="timeRemaining" text="00:00:00" textFill="#ef4444" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label fx:id="lblTimeRemainingTitle" text="Còn lại:" textFill="#64748b" style="-fx-text-fill: #64748b;" GridPane.columnIndex="1" />
+
+                        <Label fx:id="timeRemaining" text="00:00:00" textFill="#1e293b" style="-fx-text-fill: #1e293b;" GridPane.columnIndex="1" GridPane.rowIndex="1">
                             <font>
                                 <Font name="System Bold" size="14.0" />
                             </font>

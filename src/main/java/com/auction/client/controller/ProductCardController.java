@@ -74,47 +74,48 @@ public class ProductCardController {
         setDataInternal(name, price, statusText, imageFileName, description, endTimeStr);
     }
     private void setDataInternal(String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
-        System.out.println("INJECT name=" + name + " | productName bị null? " + (productName == null));        if (productName != null) productName.setText(name);
+        System.out.println("INJECT name=" + name + " price=" + price);
+
+        // 1. Chỉ set dữ liệu (Màu sắc đã được file FXML gán cứng bảo vệ)
+        if (productName != null) productName.setText(name);
         if (currentPrice != null) currentPrice.setText(price);
         if (productDesc != null) productDesc.setText(description);
 
-        // Gán text trạng thái (Đang diễn ra / Sắp diễn ra)
-        statusBadge.setText(statusText);
-        if ("Sắp diễn ra".equals(statusText)) {
-            statusBadge.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-background-radius: 20; -fx-font-weight: bold;");
-        } else if ("Đã kết thúc".equals(statusText) || "Sắp kết thúc".equals(statusText)) {
-            statusBadge.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 20; -fx-font-weight: bold;");
-        } else {
-            statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
+        // 2. Logic động cho Badge trạng thái (Phải giữ vì màu nền thay đổi liên tục theo data)
+        if (statusBadge != null) {
+            statusBadge.setText(statusText);
+            if ("Sắp diễn ra".equals(statusText)) {
+                statusBadge.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-background-radius: 20; -fx-font-weight: bold;");
+            } else if ("Đã kết thúc".equals(statusText) || "Sắp kết thúc".equals(statusText)) {
+                statusBadge.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 20; -fx-font-weight: bold;");
+            } else {
+                statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
+            }
         }
 
+        // 3. Tiêu đề thời gian
         if (lblTimeRemainingTitle != null) {
             lblTimeRemainingTitle.setText("Sắp diễn ra".equals(statusText) ? "Bắt đầu sau:" : "Còn lại:");
         }
 
+        // 4. Tính toán thời gian đếm ngược
         if (timeRemaining != null) {
             try {
-                java.time.LocalDateTime end = java.time.LocalDateTime.parse(endTimeStr,
-                        java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                java.time.LocalDateTime end = java.time.LocalDateTime.parse(endTimeStr, java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
                 java.time.Duration d = java.time.Duration.between(java.time.LocalDateTime.now(), end);
-                timeRemaining.setText(d.isNegative() ? "Đã kết thúc"
-                        : String.format("%02dh %02dm", d.toHours(), d.toMinutesPart()));
+                timeRemaining.setText(d.isNegative() ? "Đã kết thúc" : String.format("%02dh %02dm", d.toHours(), d.toMinutesPart()));
             } catch (Exception e) {
                 timeRemaining.setText("--:--");
             }
         }
 
-        // 🚀 CHUẨN KIẾN TRÚC LỚN: ỦY THÁC TOÀN BỘ VIỆC LOAD ẢNH + CACHE CHO IMAGELOADER
+        // 5. Load ảnh sản phẩm và nút bấm hành động
         ImageLoader.tryLoadImageToView(productImage, imageFileName);
-
-        // Xử lý sự kiện click vào nút Đấu giá ngay / Xem chi tiết
         if (actionButton != null) {
             actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
             actionButton.setOnAction(e -> handleNavigateToDetail());
         }
-        productName.setStyle("-fx-background-color: yellow; -fx-text-fill: red; -fx-min-height: 30px; -fx-opacity: 1; -fx-managed: true;");
     }
-
     /**
      * 🚀 SỬA LỖI BIÊN DỊCH TRIỆT ĐỂ: Tự điều hướng sang trang chi tiết bằng kỹ thuật Scene Graph Lookup
      * Loại bỏ hoàn toàn cơ chế gọi qua Singleton static cũ và sửa lỗi khởi tạo lớp abstract Item.

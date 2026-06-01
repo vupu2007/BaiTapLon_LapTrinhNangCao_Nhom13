@@ -93,3 +93,48 @@
     -fx-text-fill: white;
     -fx-background-radius: 20;
 }
+/* PRODUCT CARD COMPONENT STYLES */
+.card-title {
+    -fx-text-fill: #1e293b;
+    -fx-font-weight: bold;
+}
+
+.card-price {
+    -fx-text-fill: #1a73e8;
+    -fx-font-weight: bold;
+}
+
+.card-desc {
+    -fx-text-fill: #64748b;
+}
+
+.card-time-title {
+    -fx-text-fill: #64748b;
+}
+
+.card-time {
+    -fx-text-fill: #475569;
+    -fx-font-weight: bold;
+}
+
+/* --- Status Badge Modifiers --- */
+.status-upcoming {
+    -fx-background-color: #dbeafe;
+    -fx-text-fill: #1e40af;
+    -fx-background-radius: 20;
+    -fx-font-weight: bold;
+}
+
+.status-ended {
+    -fx-background-color: #fee2e2;
+    -fx-text-fill: #dc2626;
+    -fx-background-radius: 20;
+    -fx-font-weight: bold;
+}
+
+.status-ongoing {
+    -fx-background-color: #dcfce7;
+    -fx-text-fill: #15803d;
+    -fx-background-radius: 20;
+    -fx-font-weight: bold;
+}

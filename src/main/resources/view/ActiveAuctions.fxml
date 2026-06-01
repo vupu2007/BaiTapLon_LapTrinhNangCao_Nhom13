@@ -10,8 +10,7 @@
 <?import javafx.scene.shape.SVGPath?>
 <?import javafx.scene.text.Font?>
 
-<VBox spacing="25.0" style="-fx-background-color: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ActiveAuctionsController">
-    <padding>
+<VBox stylesheets="/css/style.css" spacing="25.0" style="-fx-background-color: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ActiveAuctionsController">    <padding>
         <Insets bottom="30.0" left="30.0" right="30.0" top="25.0" />
     </padding>
 
