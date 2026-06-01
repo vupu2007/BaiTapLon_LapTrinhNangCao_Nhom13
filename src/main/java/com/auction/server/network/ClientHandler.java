@@ -7,7 +7,6 @@ import com.auction.server.dao.ItemDAO;
 import com.auction.server.service.*;
 import com.auction.server.util.DatabaseConnection;
 import com.auction.shared.model.*;
-import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 
@@ -22,8 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.auction.shared.network.MessageType.GET_AUCTION_BY_ITEM_ID;
-import static com.auction.shared.network.MessageType.GET_BID_HISTORY;
+import com.auction.shared.exception.AuthenticationException;
 
 public class ClientHandler implements Runnable {
 
@@ -141,13 +139,17 @@ public class ClientHandler implements Runnable {
                         Account acc = accountService.login(creds[0], creds[1]);
                         System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
 
-                        Response response = acc != null
-                                ? new Response(true, "Đăng nhập thành công!", acc)
-                                : new Response(false, "Sai tài khoản hoặc mật khẩu!", null);
+                        Response response = new Response(true, "Đăng nhập thành công!", acc);
 
                         response.setRequestId(request.getRequestId());
                         System.out.println("➡️ [DEBUG] Đã tạo xong Response, chuẩn bị gửi về Client!");
                         return response;
+
+                    } catch (AuthenticationException e) {
+                        System.err.println("❌ Đăng nhập thất bại: " + e.getMessage());
+                        Response errResponse = new Response(false, e.getMessage(), null);
+                        errResponse.setRequestId(request.getRequestId());
+                        return errResponse;
 
                     } catch (Exception e) {
                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
