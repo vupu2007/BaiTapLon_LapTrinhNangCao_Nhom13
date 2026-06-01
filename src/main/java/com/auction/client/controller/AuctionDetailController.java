@@ -85,68 +85,64 @@ public class AuctionDetailController implements Observer {
         }
     }
 
+    private double lastProcessedPrice = -1;
+
+
     @Override
     public void update(double newPrice, String usernameAndTimeToParse) {
-        // 🎯 CHÈN ĐÚNG 3 DÒNG NÀY ĐỂ DIỆT TẬN GỐC LỖI LẶP LOG VÀ NHẢY GIÁ
-        if (lblCurrentPrice != null && lblCurrentPrice.getText().equals(String.format("%,.0f đ", newPrice))) {
-            return;
+        String finalUsername = usernameAndTimeToParse;
+        String newEndTimeStr = null;
+
+        if (usernameAndTimeToParse != null && usernameAndTimeToParse.contains("|")) {
+            String[] parts = usernameAndTimeToParse.split("\\|");
+            finalUsername = parts[0];
+            newEndTimeStr = parts[1];
         }
 
+        // 🎯 TẠO CÁC BIẾN FINAL ĐỂ FIX TRIỆT ĐỂ LỖI LAMBDA EXPRESSION
+        final String targetUser = finalUsername;
+        final String targetEndTimeStr = newEndTimeStr;
+
+        // 🤖 LUỒNG AUTOBID: Chạy độc lập hoàn toàn
         Platform.runLater(() -> {
-            String finalUsername = usernameAndTimeToParse;
-            String newEndTimeStr = null;
-
-            // Nếu chuỗi chứa dấu |, cắt đôi ra: bên trái là tên, bên phải là thời gian
-            if (usernameAndTimeToParse != null && usernameAndTimeToParse.contains("|")) {
-                String[] parts = usernameAndTimeToParse.split("\\|");
-                finalUsername = parts[0];
-                newEndTimeStr = parts[1];
+            if (isAutoBidEnabled && CurrentAccount.getAccount() != null && !targetUser.equals(CurrentAccount.getAccount().getUsername())) {
+                triggerAutoBidSystem(newPrice);
             }
+        });
 
+        // 🛑 LUỒNG CHẶN LẶP LOG GIAO DIỆN
+        if (newPrice == lastProcessedPrice) {
+            return;
+        }
+        lastProcessedPrice = newPrice;
+
+        // 💻 LUỒNG CẬP NHẬT GIAO DIỆN CHÍNH
+        Platform.runLater(() -> {
             if (lblCurrentPrice != null) lblCurrentPrice.setText(String.format("%,.0f đ", newPrice));
-            if (lblTopBidder != null) lblTopBidder.setText(finalUsername);
+            if (lblTopBidder != null) lblTopBidder.setText(targetUser);
 
-            // Xử lý cập nhật đồng hồ đếm ngược khi có thời gian gia hạn mới
-            if (newEndTimeStr != null && !newEndTimeStr.isEmpty()) {
+            if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
                 try {
                     java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-                    java.time.LocalDateTime newEndTime = java.time.LocalDateTime.parse(newEndTimeStr, dtf);
-                    if (this.currentAuction != null) {
-                        this.currentAuction.setEndTime(newEndTime);
-                    }
-                    startCountdownClock(newEndTime); // Ép đồng hồ nhảy số lại
-                } catch (Exception e) {
-                    System.err.println("❌ Lỗi parse thời gian: " + e.getMessage());
-                }
+                    startCountdownClock(java.time.LocalDateTime.parse(targetEndTimeStr, dtf));
+                } catch (Exception e) { System.err.println("❌ Lỗi: " + e.getMessage()); }
             }
 
             if (vboxBidHistoryContainer != null) {
-                // 1. Dòng log cũ của bạn (Giữ nguyên)
-                Label log = new Label(String.format("• [%s] Người dùng %s đặt mức giá %,.0f đ",
-                        LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss")), finalUsername, newPrice));
+                // Nhật ký giá thường
+                Label log = new Label(String.format("• [%s] %s đặt mức giá %,.0f đ", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")), targetUser, newPrice));
                 log.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
                 vboxBidHistoryContainer.getChildren().add(0, log);
 
-                // 2. Đoạn thêm mới: Nếu có thời gian gia hạn mới, bắn thêm dòng chữ màu cam thông báo
-                if (newEndTimeStr != null && !newEndTimeStr.isEmpty()) {
-                    Label alertLog = new Label(String.format("⚠️ [%s] [HỆ THỐNG] Phát hiện đặt giá giây cuối! Phiên đấu giá được tự động gia hạn thêm 60 giây.",
-                            LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH:mm:ss"))));
-
-                    // Set màu cam nổi bật cho dòng chữ thông báo của hệ thống
+                // Thông báo chữ cam ngắn gọn mỗi khi gia hạn thành công
+                if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
+                    Label alertLog = new Label(String.format("⚡ [%s] [GIA HẠN] Đặt giá giây cuối, phiên đấu giá tăng thêm 60 giây!", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))));
                     alertLog.setStyle("-fx-font-size: 14px; -fx-padding: 5px; -fx-text-fill: #d35400; -fx-font-weight: bold;");
-
-                    // Đẩy dòng thông báo này lên đầu danh sách lịch sử
                     vboxBidHistoryContainer.getChildren().add(0, alertLog);
                 }
             }
-
             bidCount++;
             priceSeries.getData().add(new XYChart.Data<>(bidCount, newPrice));
-
-            if (isAutoBidEnabled && CurrentAccount.getAccount() != null
-                    && !finalUsername.equals(CurrentAccount.getAccount().getUsername())) {
-                triggerAutoBidSystem(newPrice);
-            }
         });
     }
     private void startCountdownClock(LocalDateTime endTime) {
