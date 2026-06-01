@@ -4,6 +4,7 @@ import com.auction.client.network.ClientSocket;
 import com.auction.client.service.MyProductsService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
+import com.auction.shared.model.Electronics;
 import com.auction.shared.model.Item;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
@@ -50,109 +51,88 @@ public class MyProductsController {
 
     public void loadMyProductsData() {
         if (CurrentAccount.getAccount() == null) return;
-
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        // 1. Chạy ngầm lấy dữ liệu từ Server/DB thông qua Socket mạng
-        productsService.loadOwnerProductsAsync(ownerId, myItems -> {
+        new Thread(() -> {
+            try {
+                Response resp = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_AUCTIONS_BY_SELLER, ownerId));
 
-            // Tạo danh sách tạm để chứa các Card giao diện được dựng thô ngay trên luồng ngầm này
-            List<Node> running = new ArrayList<>(), open = new ArrayList<>(), finished = new ArrayList<>();
-            double totalValueCalc = 0;
-            int activeCountCalc = 0;
-            int totalAuctionsCalc = (myItems != null) ? myItems.size() : 0;
+                List<Auction> auctions = (resp != null && resp.isSuccess())
+                        ? (List<Auction>) resp.getData() : null;
 
-            if (myItems != null && !myItems.isEmpty() && productCardFxmlLocation != null) {
-                for (Item item : myItems) {
-                    if (item == null) continue;
-                    try {
-                        FXMLLoader loader = new FXMLLoader(productCardFxmlLocation);
-                        Node card = loader.load();
-                        String statusStr = "Đã kết thúc";
+                List<Node> running = new ArrayList<>(), open = new ArrayList<>(), finished = new ArrayList<>();
+                double totalValueCalc = 0;
+                int activeCountCalc = 0;
+                java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
-                        ProductCardController cardController = loader.getController();
-                        if (cardController != null) {
-                            String priceStr = String.format("%,.0f đ", item.getStartingPrice());
-                            String description = item.getDescription() != null ? item.getDescription() : "Không có mô tả.";
-                            String sellerName = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Tôi";
-                            String startTimeStr = "--/--/---- --:--";
-                            String endTimeStr = "--/--/---- --:--";
+                if (auctions != null && productCardFxmlLocation != null) {
+                    for (Auction auction : auctions) {
+                        if (auction == null) continue;
+                        try {
+                            FXMLLoader loader = new FXMLLoader(productCardFxmlLocation);
+                            Node card = loader.load();
+                            ProductCardController cc = loader.getController();
 
-                            try {
-                                Response auctionResp = ClientSocket.getInstance().sendRequest(
-                                        new Request(MessageType.GET_AUCTION_BY_ITEM_ID, item.getItemId()));
-                                if (auctionResp != null && auctionResp.isSuccess()) {
-                                    Auction auction = (Auction) auctionResp.getData();
-                                    if (auction != null) {
-                                        priceStr = String.format("%,.0f đ", auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice());
-                                        totalValueCalc += auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
-                                        statusStr = auction.getStatus() == Auction.AuctionStatus.RUNNING ? "Đang diễn ra"
-                                                : auction.getStatus() == Auction.AuctionStatus.OPEN ? "Sắp diễn ra" : "Đã kết thúc";
-                                        if (auction.getStatus() == Auction.AuctionStatus.RUNNING) activeCountCalc++;
-                                        if (auction.getEndTime() != null)
-                                            endTimeStr = auction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-                                        if (auction.getStartTime() != null)
-                                            startTimeStr = auction.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
-                                    }
-                                }
-                            } catch (Exception ignored) {}
-
+                            double price = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
+                            String priceStr = String.format("%,.0f đ", price);
+                            String statusStr = auction.getStatus() == Auction.AuctionStatus.RUNNING ? "Đang diễn ra"
+                                    : auction.getStatus() == Auction.AuctionStatus.OPEN ? "Sắp diễn ra" : "Đã kết thúc";
+                            String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(fmt) : "--/--/---- --:--";
+                            String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(fmt) : "--/--/---- --:--";
                             String timeStr = "Sắp diễn ra".equals(statusStr) ? startTimeStr : endTimeStr;
-                            cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
-                                    description, sellerName, startTimeStr, timeStr);
-                            cardController.setSellerMode(
-                                    () -> handleEditProduct(item),
-                                    () -> handleDeleteProduct(item)
-                            );
+
+                            totalValueCalc += price;
+                            if (auction.getStatus() == Auction.AuctionStatus.RUNNING) activeCountCalc++;
+
+                            if (cc != null) {
+                                cc.setData(auction.getProductName(), priceStr, statusStr, auction.getImagePath(),
+                                        auction.getDescription() != null ? auction.getDescription() : "",
+                                        CurrentAccount.getAccount().getUsername(), startTimeStr, timeStr);
+                                cc.setSellerMode(() -> handleEditProduct(getItemFromAuction(auction)),
+                                        () -> handleDeleteProduct(getItemFromAuction(auction)));
+                            }
+
+                            if ("Đang diễn ra".equals(statusStr)) running.add(card);
+                            else if ("Sắp diễn ra".equals(statusStr)) open.add(card);
+                            else finished.add(card);
+                        } catch (Exception e) {
+                            System.err.println("❌ Lỗi card: " + e.getMessage());
                         }
-                        if ("Đang diễn ra".equals(statusStr)) running.add(card);
-                        else if ("Sắp diễn ra".equals(statusStr)) open.add(card);
-                        else finished.add(card);
-                    } catch (Exception e) {
-                        System.err.println("❌ Lỗi nạp card: " + e.getMessage());
                     }
                 }
+
+                List<Node> renderedCards = new ArrayList<>();
+                renderedCards.addAll(running); renderedCards.addAll(open); renderedCards.addAll(finished);
+                final double ftv = totalValueCalc; final int fac = activeCountCalc;
+                final int total = auctions != null ? auctions.size() : 0;
+
+                Platform.runLater(() -> {
+                    if (productsGrid == null) return;
+                    if (total == 0) {
+                        lblTotalAuctions.setText("0"); lblActiveAuctions.setText("0"); lblTotalValue.setText("0 đ");
+                        emptyStateView.setVisible(true); emptyStateView.setManaged(true);
+                        productsGrid.setVisible(false); productsGrid.setManaged(false);
+                        return;
+                    }
+                    emptyStateView.setVisible(false); emptyStateView.setManaged(false);
+                    productsGrid.setVisible(true); productsGrid.setManaged(true);
+                    productsGrid.getChildren().setAll(renderedCards);
+                    lblTotalAuctions.setText(String.valueOf(total));
+                    lblActiveAuctions.setText(String.valueOf(fac));
+                    lblTotalValue.setText(String.format("%,.0f đ", ftv));
+                });
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi load: " + e.getMessage());
             }
+        }, "MyProductsLoader").start();
+    }
 
-            List<Node> renderedCards = new ArrayList<>();
-            renderedCards.addAll(running);
-            renderedCards.addAll(open);
-            renderedCards.addAll(finished);
-
-            // Bản sao dữ liệu cấu hình để đẩy vào luồng UI
-            final double finalTotalValue = totalValueCalc;
-            final int finalActiveCount = activeCountCalc;
-
-            // 2. Đẩy mớ giao diện thô đã dựng xong xuôi về luồng UI vẽ lên màn hình trong tích tắc
-            Platform.runLater(() -> {
-                if (productsGrid == null) return;
-
-                if (myItems == null || myItems.isEmpty()) {
-                    lblTotalAuctions.setText("0");
-                    lblActiveAuctions.setText("0");
-                    lblTotalValue.setText("0 đ");
-
-                    emptyStateView.setVisible(true);
-                    emptyStateView.setManaged(true);
-                    productsGrid.setVisible(false);
-                    productsGrid.setManaged(false);
-                    return;
-                }
-
-                emptyStateView.setVisible(false);
-                emptyStateView.setManaged(false);
-                productsGrid.setVisible(true);
-                productsGrid.setManaged(true);
-
-                // Thêm hàng loạt Node đã dựng sẵn vào cây đồ họa (Vô cùng nhanh)
-                productsGrid.getChildren().clear();
-                productsGrid.getChildren().addAll(renderedCards);
-
-                lblTotalAuctions.setText(String.valueOf(totalAuctionsCalc));
-                lblActiveAuctions.setText(String.valueOf(finalActiveCount));
-                lblTotalValue.setText(String.format("%,.0f đ", finalTotalValue));
-            });
-        });
+    private Item getItemFromAuction(Auction auction) {
+        Electronics item = new Electronics();
+        item.setItemId(auction.getItemId());
+        item.setName(auction.getProductName());
+        return item;
     }
 
     private void handleEditProduct(Item item) {
