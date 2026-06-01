@@ -101,7 +101,8 @@ public class MainController {
                                         : "FINISHED".equals(item.getAuctionStatus()) ? "Đã kết thúc"
                                         : "Đang diễn ra";
                                 String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
-                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), item.getEndTimeStr());
+                                String timeStr = "Sắp diễn ra".equals(statusText) ? item.getStartTimeStr() : item.getEndTimeStr();
+                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), timeStr);
                             }
                             cardLayout.setOnMouseClicked(e -> {
                                 executorService.submit(() -> {

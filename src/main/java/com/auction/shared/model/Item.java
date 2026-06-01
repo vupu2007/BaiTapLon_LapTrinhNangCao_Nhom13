@@ -66,7 +66,12 @@ public abstract class Item implements Entity, java.io.Serializable {
     public String getEndTimeStr() { return endTimeStr; }
     public void setEndTimeStr(String endTimeStr) { this.endTimeStr = endTimeStr; }
 
+    private String startTimeStr;
+    public String getStartTimeStr() { return startTimeStr; }
+    public void setStartTimeStr(String startTimeStr) { this.startTimeStr = startTimeStr; }
+
     private String auctionStatus;
     public String getAuctionStatus() { return auctionStatus; }
     public void setAuctionStatus(String auctionStatus) { this.auctionStatus = auctionStatus; }
 }
+

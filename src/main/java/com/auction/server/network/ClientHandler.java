@@ -355,6 +355,9 @@ public class ClientHandler implements Runnable {
                                 item.setAuctionStatus(rs.getString("auction_status"));                                Timestamp et = rs.getTimestamp("end_time");
                                 if (et != null) item.setEndTimeStr(et.toLocalDateTime()
                                         .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                                Timestamp st = rs.getTimestamp("start_time");
+                                if (st != null) item.setStartTimeStr(st.toLocalDateTime()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                                 items.add(item);
                             }
                         }
