@@ -139,19 +139,15 @@ public class ClientHandler implements Runnable {
                         Account acc = accountService.login(creds[0], creds[1]);
                         System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
 
-                        Response response = new Response(true, "Đăng nhập thành công!", acc);
+                        Response response = acc != null
+                                ? new Response(true, "Đăng nhập thành công!", acc)
+                                : new Response(false, "Sai tài khoản hoặc mật khẩu!", null);
 
                         response.setRequestId(request.getRequestId());
                         System.out.println("➡️ [DEBUG] Đã tạo xong Response, chuẩn bị gửi về Client!");
                         return response;
 
-                    } catch (AuthenticationException e) {
-                        System.err.println("❌ Đăng nhập thất bại: " + e.getMessage());
-                        Response errResponse = new Response(false, e.getMessage(), null);
-                        errResponse.setRequestId(request.getRequestId());
-                        return errResponse;
-
-                    } catch (Exception e) {
+                    }  catch (Exception e) {
                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
                         e.printStackTrace();
                         Response errResponse = new Response(false, "Lỗi máy chủ: " + e.getMessage(), null);
