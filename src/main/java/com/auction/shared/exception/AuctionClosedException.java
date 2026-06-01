@@ -1,10 +1,14 @@
-package com.auction.exception;
+package com.auction.shared.exception;
 
 import com.auction.shared.model.Auction.AuctionStatus;
+
+import java.io.Serial;
 
 // Khi người dùng cố đặt giá vào phiên đấu giá không còn ở trạng thái RUNNING (đã đóng, đã kết thúc, bị hủy...)
 public class AuctionClosedException extends Exception {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final int auctionId;
     private final AuctionStatus currentStatus;
 
