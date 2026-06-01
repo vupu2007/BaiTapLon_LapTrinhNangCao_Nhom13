@@ -105,8 +105,7 @@ public class AuctionScheduler {
         }
 
         try {
-            ClientHandler.pushBidUpdate(auctionId, auction.getCurrentPrice(), "[HỆ THỐNG] - KẾT THÚC!");
-        } catch (Exception e) {
+            ClientHandler.pushBidUpdate(auctionId, auction.getCurrentPrice(), "[HỆ THỐNG] - KẾT THÚC!", auction.getEndTime());        } catch (Exception e) {
             System.err.println("Không thể notify client: " + e.getMessage());
         }
     }
