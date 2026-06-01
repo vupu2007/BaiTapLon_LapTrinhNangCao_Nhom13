@@ -1,5 +1,11 @@
-package com.auction.shared.model;
+package com.auction.model;
 
+import com.auction.shared.model.Account;
+import com.auction.shared.model.Admin;
+import com.auction.shared.model.Bidder;
+import com.auction.shared.model.Seller;
+import com.auction.shared.model.User;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -7,110 +13,164 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Test class cho cây kế thừa User: Bidder, Seller, Admin.
- * Bao gồm: constructor, role, balance, displayRole(), đa hình.
+ * Bao gồm: constructor, role, balance, displayRole(), đa hình,
+ * totalDeposit/totalWithdraw (Bidder và Seller).
+ *
+ * Cây kế thừa:
+ *  Account (abstract)
+ *    ├── User (abstract) → Bidder, Seller
+ *    └── Admin
  */
 @DisplayName("User Hierarchy Tests (Bidder / Seller / Admin)")
 class UserTest {
 
-    // ───────── Bidder ─────────
+    private Bidder bidder;
+    private Seller seller;
+    private Admin  admin;
+
+    @BeforeEach
+    void setUp() {
+        bidder = new Bidder("1", "alice", "pass123", "alice@mail.com", 2_000_000);
+        seller = new Seller("2", "bob",   "pass456", "bob@mail.com",   5_000_000);
+        admin  = new Admin("3",  "admin", "adminpass", "admin@mail.com");
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  Bidder
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Bidder khởi tạo đúng với role = BIDDER")
+    @DisplayName("Bidder: constructor khởi tạo đúng tất cả field")
     void testBidderConstructor() {
-        Bidder bidder = new Bidder("1", "alice", "pass123", "alice@mail.com", 2_000_000);
-        assertEquals("1", bidder.getId());
-        assertEquals("alice", bidder.getUsername());
-        assertEquals("BIDDER", bidder.getRole());
+        assertEquals("1",           bidder.getId());
+        assertEquals("alice",       bidder.getUsername());
+        assertEquals("BIDDER",      bidder.getRole());
         assertEquals("alice@mail.com", bidder.getEmail());
-        assertEquals(2_000_000, bidder.getBalance());
+        assertEquals(2_000_000,     bidder.getBalance());
     }
 
     @Test
-    @DisplayName("Bidder.displayRole() trả về đúng chuỗi")
+    @DisplayName("Bidder.displayRole() trả về 'Bidder (Buyer)'")
     void testBidderDisplayRole() {
-        Bidder bidder = new Bidder("1", "alice", "pass123", "alice@mail.com", 0);
         assertEquals("Bidder (Buyer)", bidder.displayRole());
     }
 
     @Test
     @DisplayName("Bidder.setBalance() cập nhật số dư đúng")
     void testBidderSetBalance() {
-        Bidder bidder = new Bidder("1", "alice", "pass123", "alice@mail.com", 500_000);
         bidder.setBalance(1_500_000);
         assertEquals(1_500_000, bidder.getBalance());
     }
 
     @Test
+    @DisplayName("Bidder: totalDeposit và totalWithdraw mặc định = 0")
+    void testBidderTotalDepositWithdraw_Default() {
+        // Bidder mới khởi tạo → totalDeposit và totalWithdraw phải = 0
+        assertEquals(0.0, bidder.getTotalDeposit(),  "totalDeposit mac dinh phai la 0");
+        assertEquals(0.0, bidder.getTotalWithdraw(), "totalWithdraw mac dinh phai la 0");
+    }
+
+    @Test
+    @DisplayName("Bidder: setTotalDeposit và setTotalWithdraw cập nhật đúng")
+    void testBidderSetTotalDepositWithdraw() {
+        bidder.setTotalDeposit(3_000_000);
+        bidder.setTotalWithdraw(500_000);
+        assertEquals(3_000_000, bidder.getTotalDeposit());
+        assertEquals(500_000,   bidder.getTotalWithdraw());
+    }
+
+    @Test
     @DisplayName("Bidder là instance của User và Account")
     void testBidderPolymorphism() {
-        Bidder bidder = new Bidder("1", "alice", "pass123", "alice@mail.com", 0);
-        assertInstanceOf(User.class, bidder);
-        assertInstanceOf(Account.class, bidder);
+        assertInstanceOf(User.class,    bidder, "Bidder phai la User");
+        assertInstanceOf(Account.class, bidder, "Bidder phai la Account");
     }
 
-    // ───────── Seller ─────────
+
+    // ═══════════════════════════════════════════════════════
+    //  Seller
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Seller khởi tạo đúng với role = SELLER")
+    @DisplayName("Seller: constructor khởi tạo đúng tất cả field")
     void testSellerConstructor() {
-        Seller seller = new Seller("2", "bob", "pass456", "bob@mail.com", 5_000_000);
-        assertEquals("2", seller.getId());
-        assertEquals("bob", seller.getUsername());
-        assertEquals("SELLER", seller.getRole());
-        assertEquals(5_000_000, seller.getBalance());
+        assertEquals("2",          seller.getId());
+        assertEquals("bob",        seller.getUsername());
+        assertEquals("SELLER",     seller.getRole());
+        assertEquals(5_000_000,    seller.getBalance());
     }
 
     @Test
-    @DisplayName("Seller.displayRole() trả về đúng chuỗi")
+    @DisplayName("Seller.displayRole() trả về 'Seller (Merchant)'")
     void testSellerDisplayRole() {
-        Seller seller = new Seller("2", "bob", "pass456", "bob@mail.com", 0);
         assertEquals("Seller (Merchant)", seller.displayRole());
+    }
+
+    @Test
+    @DisplayName("Seller: totalDeposit và totalWithdraw mặc định = 0")
+    void testSellerTotalDepositWithdraw_Default() {
+        assertEquals(0.0, seller.getTotalDeposit(),  "totalDeposit mac dinh phai la 0");
+        assertEquals(0.0, seller.getTotalWithdraw(), "totalWithdraw mac dinh phai la 0");
+    }
+
+    @Test
+    @DisplayName("Seller: setTotalDeposit và setTotalWithdraw cập nhật đúng")
+    void testSellerSetTotalDepositWithdraw() {
+        seller.setTotalDeposit(10_000_000);
+        seller.setTotalWithdraw(2_000_000);
+        assertEquals(10_000_000, seller.getTotalDeposit());
+        assertEquals(2_000_000,  seller.getTotalWithdraw());
     }
 
     @Test
     @DisplayName("Seller là instance của User và Account")
     void testSellerPolymorphism() {
-        Seller seller = new Seller("2", "bob", "pass456", "bob@mail.com", 0);
-        assertInstanceOf(User.class, seller);
-        assertInstanceOf(Account.class, seller);
+        assertInstanceOf(User.class,    seller, "Seller phai la User");
+        assertInstanceOf(Account.class, seller, "Seller phai la Account");
     }
 
-    // ───────── Admin ─────────
+
+    // ═══════════════════════════════════════════════════════
+    //  Admin
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Admin khởi tạo đúng với role = ADMIN")
+    @DisplayName("Admin: constructor khởi tạo đúng tất cả field")
     void testAdminConstructor() {
-        Admin admin = new Admin("3", "admin", "adminpass", "admin@mail.com");
-        assertEquals("3", admin.getId());
-        assertEquals("ADMIN", admin.getRole());
+        assertEquals("3",              admin.getId());
+        assertEquals("ADMIN",          admin.getRole());
         assertEquals("admin@mail.com", admin.getEmail());
     }
 
     @Test
-    @DisplayName("Admin.displayRole() trả về đúng chuỗi")
+    @DisplayName("Admin.displayRole() trả về 'System Administrator'")
     void testAdminDisplayRole() {
-        Admin admin = new Admin("3", "admin", "adminpass", "admin@mail.com");
         assertEquals("System Administrator", admin.displayRole());
     }
 
     @Test
-    @DisplayName("Admin là instance của Account, không có balance")
-    void testAdminNotUser() {
-        Admin admin = new Admin("3", "admin", "adminpass", "admin@mail.com");
-        assertInstanceOf(Account.class, admin);
+    @DisplayName("Admin là instance của Account, không có balance như User")
+    void testAdminIsAccount_NotUser() {
+        assertInstanceOf(Account.class, admin, "Admin phai la Account");
+        // Admin extends Account trực tiếp, không qua User
+        // → Admin không có balance, chỉ kiểm tra role
         assertEquals("ADMIN", admin.getRole());
+        // Admin không phải Bidder hay Seller
+        assertNotEquals("BIDDER", admin.getRole());
+        assertNotEquals("SELLER", admin.getRole());
     }
 
-    // ───────── Đa hình qua Account ─────────
+
+    // ═══════════════════════════════════════════════════════
+    //  Đa hình qua Account
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Bidder và Seller có cùng kiểu cha Account — đa hình hoạt động")
+    @DisplayName("Bidder, Seller, Admin có cùng kiểu cha Account — đa hình hoạt động")
     void testPolymorphicList() {
-        Account[] accounts = {
-            new Bidder("1", "alice", "p1", "a@b.com", 100),
-            new Seller("2", "bob",   "p2", "b@c.com", 200),
-            new Admin("3",  "admin", "p3", "c@d.com")
-        };
+        // Tất cả đều có thể lưu vào mảng Account — đa hình
+        Account[] accounts = { bidder, seller, admin };
 
         assertEquals("BIDDER", accounts[0].getRole());
         assertEquals("SELLER", accounts[1].getRole());
@@ -118,12 +178,21 @@ class UserTest {
     }
 
     @Test
+    @DisplayName("displayRole() đa hình — mỗi class trả về chuỗi riêng")
+    void testDisplayRole_Polymorphic() {
+        Account[] accounts = { bidder, seller, admin };
+
+        assertEquals("Bidder (Buyer)",       accounts[0].displayRole());
+        assertEquals("Seller (Merchant)",    accounts[1].displayRole());
+        assertEquals("System Administrator", accounts[2].displayRole());
+    }
+
+    @Test
     @DisplayName("setUsername và setPassword hoạt động trên Account")
     void testAccountSetters() {
-        Bidder bidder = new Bidder("1", "alice", "oldpass", "alice@mail.com", 0);
         bidder.setUsername("alice_new");
         bidder.setPassword("newpass123");
-        assertEquals("alice_new", bidder.getUsername());
-        assertEquals("newpass123", bidder.getPassword());
+        assertEquals("alice_new",   bidder.getUsername());
+        assertEquals("newpass123",  bidder.getPassword());
     }
 }

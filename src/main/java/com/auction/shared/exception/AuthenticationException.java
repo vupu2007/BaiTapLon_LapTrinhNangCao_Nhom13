@@ -1,4 +1,6 @@
-package com.auction.exception;
+package com.auction.shared.exception;
+
+import java.io.Serial;
 
 /**
  * Ném ra khi xác thực người dùng thất bại:
@@ -8,6 +10,8 @@ package com.auction.exception;
  */
 public class AuthenticationException extends Exception {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
     public enum Reason {
         INVALID_CREDENTIALS,   // Sai username/password
         ACCOUNT_NOT_FOUND,     // Không tìm thấy tài khoản

@@ -20,17 +20,20 @@ class ElectronicsTest {
 
     @BeforeEach
     void setUp() {
+        // Tham số thứ 8 là imagePath — truyền đường dẫn ảnh, không phải brand
         electronics = new Electronics(
                 "ITEM_001",
                 "Laptop Dell XPS",
-                "Laptop cao cấp",
+                "Laptop cao cap",
                 15_000_000,
-                5,        // ownerId
-                1,        // categoryId
+                5,                    // ownerId
+                1,                    // categoryId
                 "AVAILABLE",
-                "Dell",
-                24
+                "images/dell.jpg",    // imagePath (tham số thứ 8)
+                24                    // warrantyMonths (tham số thứ 9)
         );
+        // brand KHÔNG có trong constructor → set riêng qua setter
+        electronics.setBrand("Dell");
     }
 
     // ───────── Constructor & Getter ─────────
@@ -38,15 +41,17 @@ class ElectronicsTest {
     @Test
     @DisplayName("Constructor đầy đủ khởi tạo đúng tất cả field")
     void testConstructorAndGetters() {
-        assertEquals("ITEM_001", electronics.getItemId());
+        assertEquals("ITEM_001",        electronics.getItemId());
         assertEquals("Laptop Dell XPS", electronics.getName());
-        assertEquals("Laptop cao cấp", electronics.getDescription());
-        assertEquals(15_000_000, electronics.getStartingPrice());
-        assertEquals(5, electronics.getOwnerId());
-        assertEquals(1, electronics.getCategoryId());
-        assertEquals("AVAILABLE", electronics.getStatus());
-        assertEquals("Dell", electronics.getBrand());
-        assertEquals(24, electronics.getWarrantyMonths());
+        assertEquals("Laptop cao cap",  electronics.getDescription());
+        assertEquals(15_000_000,        electronics.getStartingPrice());
+        assertEquals(5,                 electronics.getOwnerId());
+        assertEquals(1,                 electronics.getCategoryId());
+        assertEquals("AVAILABLE",       electronics.getStatus());
+        assertEquals("images/dell.jpg", electronics.getImagePath());
+        assertEquals(24,                electronics.getWarrantyMonths());
+        // brand được set qua setBrand() trong setUp()
+        assertEquals("Dell",            electronics.getBrand());
     }
 
     @Test
@@ -61,6 +66,7 @@ class ElectronicsTest {
     @Test
     @DisplayName("getId() trả về itemId (thực thi từ Entity interface)")
     void testGetId() {
+        // Item.getId() trả về itemId — thực thi interface Entity
         assertEquals("ITEM_001", electronics.getId());
     }
 
@@ -115,23 +121,25 @@ class ElectronicsTest {
     @Test
     @DisplayName("Electronics là instance của Item và Entity")
     void testInheritance() {
-        assertInstanceOf(Item.class, electronics);
-        assertInstanceOf(Entity.class, electronics);
+        assertInstanceOf(Item.class,   electronics, "Electronics phai la Item");
+        assertInstanceOf(Entity.class, electronics, "Electronics phai implement Entity");
     }
 
     @Test
     @DisplayName("printInfo() không ném exception")
     void testPrintInfoDoesNotThrow() {
+        // printInfo() là abstract method bắt buộc override — kiểm tra không crash
         assertDoesNotThrow(() -> electronics.printInfo());
     }
 
     // ───────── Giá trị biên ─────────
 
     @Test
-    @DisplayName("startingPrice = 0 vẫn set được (validation thuộc service)")
+    @DisplayName("startingPrice = 0 vẫn set được (validation thuộc service layer)")
     void testStartingPriceZero() {
         electronics.setStartingPrice(0);
-        assertEquals(0, electronics.getStartingPrice());
+        assertEquals(0, electronics.getStartingPrice(),
+                "Model khong tu validate — service layer moi check");
     }
 
     @Test

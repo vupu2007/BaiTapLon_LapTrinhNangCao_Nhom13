@@ -91,13 +91,18 @@ public class AuctionDAO {
     // 5. Lấy các phiên đấu giá của một Seller
     public List<Auction> getAuctionsBySeller(int sellerId) {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT * FROM Auctions WHERE seller_id = ?";
+        String sql = "SELECT a.*, i.name as product_name, i.image_path, i.description " +
+                "FROM Auctions a JOIN Items i ON a.item_id = i.item_id " +
+                "WHERE a.seller_id = ? ORDER BY FIELD(a.status, 'RUNNING', 'OPEN', 'FINISHED', 'CANCELLED')";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, sellerId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToAuction(rs));
+                    Auction a = mapResultSetToAuction(rs);
+                    a.setProductName(rs.getString("product_name"));
+                    a.setImagePath(rs.getString("image_path"));
+                    list.add(a);
                 }
             }
         } catch (SQLException e) {

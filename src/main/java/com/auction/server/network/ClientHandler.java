@@ -7,7 +7,6 @@ import com.auction.server.dao.ItemDAO;
 import com.auction.server.service.*;
 import com.auction.server.util.DatabaseConnection;
 import com.auction.shared.model.*;
-import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 
@@ -22,8 +21,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import static com.auction.shared.network.MessageType.GET_AUCTION_BY_ITEM_ID;
-import static com.auction.shared.network.MessageType.GET_BID_HISTORY;
+import com.auction.shared.exception.AuthenticationException;
 
 public class ClientHandler implements Runnable {
 
@@ -149,7 +147,7 @@ public class ClientHandler implements Runnable {
                         System.out.println("➡️ [DEBUG] Đã tạo xong Response, chuẩn bị gửi về Client!");
                         return response;
 
-                    } catch (Exception e) {
+                    }  catch (Exception e) {
                         System.err.println("❌ [LỖI NGHIÊM TRỌNG TẠI CASE LOGIN]:");
                         e.printStackTrace();
                         Response errResponse = new Response(false, "Lỗi máy chủ: " + e.getMessage(), null);
@@ -236,7 +234,6 @@ public class ClientHandler implements Runnable {
                     if (seller != null) a.setSellerName(seller.getUsername());
                     if (a.getWinnerId() != null && a.getWinnerId() > 0) {
                         Account winner = accountDAO.getAccountById(a.getWinnerId());
-                        if (winner != null) a.setWinnerName(winner.getUsername());
                     }
 
                     return new Response(true, "OK", a);

@@ -1,12 +1,19 @@
 package com.auction.shared.model;
 
+import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.auction.shared.exception.AuctionClosedException;
+import com.auction.shared.exception.InvalidBidException;
+
 public class Auction implements Serializable {
-    private static final long serialVersionUID = 3L;    // Các trạng thái phiên đấu giá đồng bộ khớp chuẩn cơ sở dữ liệu
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    // Các trạng thái phiên đấu giá đồng bộ khớp chuẩn cơ sở dữ liệu
     public enum AuctionStatus {
         OPEN,      // Chờ bắt đầu
         RUNNING,   // Đang diễn ra
@@ -35,14 +42,13 @@ public class Auction implements Serializable {
     private Account account;// Thông tin tài khoản người bán đính kèm từ DB
 
     private String sellerName;
-
     private String winnerName;
-    public String getWinnerName() { return winnerName; }
-    public void setWinnerName(String winnerName) { this.winnerName = winnerName; }
 
     public String getSellerName() { return sellerName; }
     public void setSellerName(String sellerName) { this.sellerName = sellerName; }
 
+    public String getWinnerName() { return winnerName; }
+    public void setWinnerName(String winnerName) { this.winnerName = winnerName; }
     /**
      * 🔥 SỬA KIẾN TRÚC: Thêm từ khóa 'transient'
      * Từ khóa này báo hiệu cho Java biết KHÔNG mã hóa danh sách này khi truyền qua Socket,
@@ -132,4 +138,43 @@ public class Auction implements Serializable {
     public boolean isActive() {
         return this.status == AuctionStatus.RUNNING && LocalDateTime.now().isBefore(this.endTime);
     }
+
+    /**
+     * Đặt giá vào phiên đấu giá.
+     * @throws AuctionClosedException nếu phiên không ở trạng thái RUNNING
+     * @throws InvalidBidException nếu giá đặt không hợp lệ
+     */
+    public void placeBid(int bidderId, double amount)
+            throws AuctionClosedException, InvalidBidException {
+
+        if (this.status != AuctionStatus.RUNNING) {
+            throw new AuctionClosedException(
+                    "Phiên đấu giá không còn hoạt động",
+                    this.id,
+                    this.status
+            );
+        }
+
+        if (LocalDateTime.now().isAfter(this.endTime)) {
+            throw new AuctionClosedException(
+                    "Phiên đấu giá đã hết thời gian",
+                    this.id,
+                    this.status
+            );
+        }
+
+        double minimumRequired = this.currentPrice + this.minIncrement;
+        if (amount < minimumRequired) {
+            throw new InvalidBidException(
+                    "Giá đặt phải cao hơn giá hiện tại ít nhất " + this.minIncrement,
+                    amount,
+                    minimumRequired
+            );
+        }
+
+        this.currentPrice = amount;
+        this.winnerId = bidderId;
+    }
 }
+
+

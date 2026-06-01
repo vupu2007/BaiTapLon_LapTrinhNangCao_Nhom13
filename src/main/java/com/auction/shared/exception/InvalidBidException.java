@@ -1,4 +1,6 @@
-package com.auction.exception;
+package com.auction.shared.exception;
+
+import java.io.Serial;
 
 /**
  * Ném ra khi người dùng đặt giá không hợp lệ:
@@ -8,6 +10,8 @@ package com.auction.exception;
  */
 public class InvalidBidException extends Exception {
 
+    @Serial
+    private static final long serialVersionUID = 1L;
     private final double attemptedAmount;
     private final double minimumRequired;
 
@@ -19,6 +23,13 @@ public class InvalidBidException extends Exception {
 
     public InvalidBidException(String message, double attemptedAmount, double minimumRequired) {
         super(message);
+        this.attemptedAmount = attemptedAmount;
+        this.minimumRequired = minimumRequired;
+    }
+
+    public InvalidBidException(String message, double attemptedAmount,
+                               double minimumRequired, Throwable cause) {
+        super(message, cause);
         this.attemptedAmount = attemptedAmount;
         this.minimumRequired = minimumRequired;
     }
