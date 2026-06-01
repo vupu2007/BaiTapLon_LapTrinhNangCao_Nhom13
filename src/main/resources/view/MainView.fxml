@@ -40,6 +40,7 @@
                                 <Font size="14.0" />
                             </font>
                         </Label>
+                        <Label text="(!) Lưu ý: Mỗi lần đặt giá phải cao hơn giá hiện tại ít nhất 10% giá khởi điểm của sản phẩm." textFill="#dc2626" style="-fx-font-size: 13; -fx-font-style: italic;"/>
                     </children>
                 </VBox>
 
