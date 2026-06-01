@@ -42,10 +42,13 @@ public class Auction implements Serializable {
     private Account account;// Thông tin tài khoản người bán đính kèm từ DB
 
     private String sellerName;
+    private String winnerName;
 
     public String getSellerName() { return sellerName; }
     public void setSellerName(String sellerName) { this.sellerName = sellerName; }
 
+    public String getWinnerName() { return winnerName; }
+    public void setWinnerName(String winnerName) { this.winnerName = winnerName; }
     /**
      * 🔥 SỬA KIẾN TRÚC: Thêm từ khóa 'transient'
      * Từ khóa này báo hiệu cho Java biết KHÔNG mã hóa danh sách này khi truyền qua Socket,
