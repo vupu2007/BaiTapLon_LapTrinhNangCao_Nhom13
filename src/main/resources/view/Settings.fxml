@@ -10,7 +10,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.SettingController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: #F0F9FF; -fx-background: #F0F9FF; -fx-border-color: #F0F9FF; -fx-background-insets: 0; -fx-padding: 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.SettingController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
             <padding>
@@ -20,7 +20,7 @@
 
                 <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label text="Quản lý tài khoản" textFill="#1a73e8">
+                        <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Quản lý tài khoản" textFill="#1a73e8">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
@@ -37,6 +37,7 @@
                     <children>
                         <VBox spacing="25.0" HBox.hgrow="ALWAYS">
                             <children>
+
                                 <VBox spacing="20.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 15, 0, 0, 8);">
                                     <children>
                                         <Label text="Thông tin cá nhân" textFill="#1e293b">
@@ -63,7 +64,7 @@
                                                 <font><Font size="14.0" /></font>
                                             </TextField>
                                         </VBox>
-                                        <Button onAction="#handleSaveInfo" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="💾  Lưu thay đổi">
+                                        <Button onAction="#handleSaveInfo" prefHeight="40.0" style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7); -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-effect: dropshadow(three-pass-box, rgba(26, 115, 232, 0.2), 8, 0, 0, 3);" text="💾  Lưu thay đổi">
                                             <padding>
                                                 <Insets left="20.0" right="20.0" />
                                             </padding>
@@ -109,7 +110,7 @@
                                                 <font><Font size="14.0" /></font>
                                             </PasswordField>
                                         </VBox>
-                                        <Button onAction="#handleChangePassword" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand;" text="🔓  Đổi mật khẩu">
+                                        <Button onAction="#handleChangePassword" prefHeight="40.0" style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7); -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-effect: dropshadow(three-pass-box, rgba(26, 115, 232, 0.2), 8, 0, 0, 3);" text="🔓  Đổi mật khẩu">
                                             <padding>
                                                 <Insets left="20.0" right="20.0" />
                                             </padding>
@@ -125,7 +126,7 @@
 
                         <VBox maxWidth="350.0" prefWidth="350.0">
                             <children>
-                                <VBox spacing="18.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
+                                <VBox spacing="18.0" style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #0ea5e9); -fx-background-radius: 15; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 10, 0, 0, 5);">
                                     <padding>
                                         <Insets bottom="30.0" left="25.0" right="25.0" top="30.0" />
                                     </padding>

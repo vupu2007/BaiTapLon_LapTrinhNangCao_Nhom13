@@ -12,11 +12,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true"
-            style="-fx-background-color: transparent; -fx-background: #F0F9FF;"
-            xmlns="http://javafx.com/javafx/21"
-            xmlns:fx="http://javafx.com/fxml/1"
-            fx:controller="com.auction.client.controller.MainController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: #F0F9FF; -fx-background: #F0F9FF; -fx-border-color: #F0F9FF; -fx-background-insets: 0; -fx-padding: 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.MainController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
             <stylesheets>
@@ -30,7 +26,7 @@
             <children>
                 <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label text="Danh sách phiên đấu giá" textFill="#1a73e8">
+                        <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Danh sách phiên đấu giá" textFill="#1a73e8">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
@@ -40,7 +36,7 @@
                                 <Font size="14.0" />
                             </font>
                         </Label>
-                        <Label text="(!) Lưu ý: Mỗi lần đặt giá phải cao hơn giá hiện tại ít nhất 10% giá khởi điểm của sản phẩm." textFill="#dc2626" style="-fx-font-size: 13; -fx-font-style: italic;"/>
+                        <Label style="-fx-font-size: 13; -fx-font-style: italic; -fx-text-fill: #dc2626;" text="(!) Lưu ý: Mỗi lần đặt giá phải cao hơn giá hiện tại ít nhất 10% giá khởi điểm của sản phẩm." textFill="#dc2626" />
                     </children>
                 </VBox>
 
@@ -58,7 +54,7 @@
                                 </TextField>
                                 <Region HBox.hgrow="ALWAYS" />
 
-                                <Button fx:id="btnFilterAll" mnemonicParsing="false" onAction="#handleFilterAll" prefHeight="40.0" style="-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Tất cả" />
+                                <Button fx:id="btnFilterAll" mnemonicParsing="false" onAction="#handleFilterAll" prefHeight="40.0" style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7); -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20; -fx-effect: dropshadow(three-pass-box, rgba(26, 115, 232, 0.2), 8, 0, 0, 3);" text="Tất cả" />
 
                                 <Button fx:id="btnFilterActive" mnemonicParsing="false" onAction="#handleFilterActive" prefHeight="40.0" style="-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;" text="Đang diễn ra" />
 

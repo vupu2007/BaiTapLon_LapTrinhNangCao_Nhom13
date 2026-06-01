@@ -35,6 +35,7 @@ public class MainLayoutController {
 
     // ================= BUTTON MENU =================
     @FXML private Button btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings;
+    @FXML private Button btnContract; // <--- THÊM MỚI ĐỂ LIÊN KẾT VỚI FXML
 
     private Timeline clockTimeline;
 
@@ -133,7 +134,8 @@ public class MainLayoutController {
      * Quản lý trạng thái Active của các nút Menu thông qua CSS class sạch sẽ
      */
     private void setActive(Button activeButton) {
-        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings};
+        // ĐÃ THÊM btnContract VÀO MẢNG ĐỂ KHÔNG BỊ LỖI PHÍM CHỌN NHẦM
+        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnContract, btnSettings};
         for (Button btn : buttons) {
             if (btn != null) {
                 btn.getStyleClass().remove("nav-button-active");
@@ -197,6 +199,9 @@ public class MainLayoutController {
     @FXML private void openHistory() { setActive(btnHistory); loadPageAsync("/view/HistoryView.fxml"); }
     @FXML private void openSettings() { setActive(btnSettings); loadPageAsync("/view/Settings.fxml"); }
 
+    // THÊM MỚI HÀM MỞ TRANG HỢP ĐỒNG BẤT ĐỒNG BỘ
+    @FXML private void openContract() { setActive(btnContract); loadPageAsync("/view/ContractView.fxml"); }
+
     public void showCreateProductView() { openCreateAuction(); }
 
     // ================= CẤU HÌNH PHÂN QUYỀN VAI TRÒ QUA CSS CLASS =================
@@ -204,13 +209,14 @@ public class MainLayoutController {
     @FXML
     private void switchToBuyer() {
         updateRoleUI("role-buyer", "🛒 Người mua", true, false);
+        openHome();
     }
 
     @FXML
     private void switchToSeller() {
         updateRoleUI("role-seller", "🏪 Người bán", false, true);
+        openHome();
     }
-
     /**
      * Tối ưu hóa UI: Thay đổi theme bằng CSS Class thay vì viết code màu Hex cứng trong Java
      */

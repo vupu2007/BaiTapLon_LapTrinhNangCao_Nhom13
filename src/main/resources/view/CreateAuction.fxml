@@ -12,7 +12,7 @@
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
 
-<ScrollPane fitToWidth="true" style="-fx-background-color: transparent; -fx-background: #F0F9FF;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.CreateProductController">
+<ScrollPane fitToWidth="true" style="-fx-background-color: #F0F9FF; -fx-background: #F0F9FF; -fx-border-color: #F0F9FF; -fx-background-insets: 0; -fx-padding: 0;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.CreateProductController">
     <content>
         <VBox fillWidth="true" maxWidth="1.7976931348623157E308" spacing="25.0" style="-fx-background-color: #F0F9FF;">
 
@@ -23,7 +23,7 @@
             <children>
                 <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label text="Tạo sản phẩm mới" textFill="#1a73e8">
+                        <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Tạo sản phẩm mới" textFill="#1a73e8">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
@@ -108,9 +108,6 @@
                                         </Label>
                                     </children>
                                 </HBox>
-                                <Label text="Hoặc nhập URL ảnh online" textFill="#64748b">
-                                    <font><Font size="13.0" /></font>
-                                </Label>
                             </children>
                         </VBox>
 
@@ -162,7 +159,7 @@
                                         <Font name="System Bold" size="15.0" />
                                     </font>
                                 </Button>
-                                <Button mnemonicParsing="false" onAction="#handleCreateAuction" prefHeight="45.0" prefWidth="400.0" style="-fx-background-color: #0ea5e9; -fx-background-radius: 8; -fx-cursor: hand;" text="Tạo phiên đấu giá" textFill="WHITE" HBox.hgrow="ALWAYS">
+                                <Button mnemonicParsing="false" onAction="#handleCreateAuction" prefHeight="45.0" prefWidth="400.0" style="-fx-background-color: linear-gradient(to right, #1a73e8, #0284c7); -fx-background-radius: 8; -fx-cursor: hand; -fx-effect: dropshadow(three-pass-box, rgba(26, 115, 232, 0.2), 8, 0, 0, 3);" text="Tạo phiên đấu giá" textFill="WHITE" HBox.hgrow="ALWAYS">
                                     <font>
                                         <Font name="System Bold" size="15.0" />
                                     </font>
