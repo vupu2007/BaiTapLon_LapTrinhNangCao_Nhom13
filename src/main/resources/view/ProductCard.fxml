@@ -15,10 +15,9 @@
 
 <VBox prefWidth="300.0" style="-fx-background-color: white; -fx-background-radius: 12; -fx-border-color: #e2e8f0; -fx-border-radius: 12; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.06), 8, 0, 0, 4);" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.ProductCardController">
     <children>
-        <StackPane prefHeight="180.0" style="-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;">
+        <StackPane prefHeight="180.0" minHeight="180.0" style="-fx-background-color: #f8fafc; -fx-background-radius: 11 11 0 0;">
             <children>
                 <ImageView fx:id="productImage" fitHeight="180.0" fitWidth="300.0" pickOnBounds="true" preserveRatio="false" />
-
                 <Label fx:id="statusBadge" style="-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;" text="Đang diễn ra" StackPane.alignment="TOP_RIGHT">
                     <padding>
                         <Insets bottom="5.0" left="12.0" right="12.0" top="5.0" />
@@ -35,15 +34,14 @@
                 <Insets bottom="15.0" left="15.0" right="15.0" top="12.0" />
             </padding>
             <children>
-
-                <VBox spacing="4.0" prefHeight="70.0">
+                <VBox spacing="4.0">
                     <children>
                         <Label fx:id="productName" text="Tên sản phẩm" wrapText="true" textFill="#1e293b">
                             <font>
                                 <Font name="System Bold" size="16.0" />
                             </font>
                         </Label>
-                        <Label fx:id="productDesc" text="Mô tả ngắn về sản phẩm..." textFill="#64748b" wrapText="true" maxHeight="40.0" minHeight="40.0" />
+                        <Label fx:id="productDesc" text="Mô tả ngắn về sản phẩm..." textFill="#64748b" wrapText="true" />
                     </children>
                 </VBox>
 
@@ -81,14 +79,12 @@
                                 <Insets bottom="10.0" top="10.0" />
                             </padding>
                         </Button>
-
-                        <Button fx:id="btnEdit" visible="false" managed="false" maxWidth="1.7976931348623157E308" style="-fx-background-color: #f59e0b; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;" text="Sửa sản phẩm" HBox.hgrow="ALWAYS">
+                        <Button fx:id="btnEdit" managed="false" visible="false" maxWidth="1.7976931348623157E308" style="-fx-background-color: #f59e0b; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;" text="Sửa sản phẩm" HBox.hgrow="ALWAYS">
                             <padding>
                                 <Insets bottom="10.0" top="10.0" />
                             </padding>
                         </Button>
-
-                        <Button fx:id="btnDelete" visible="false" managed="false" maxWidth="1.7976931348623157E308" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;" text="Xóa" HBox.hgrow="ALWAYS">
+                        <Button fx:id="btnDelete" managed="false" visible="false" maxWidth="1.7976931348623157E308" style="-fx-background-color: #ef4444; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 6; -fx-cursor: hand;" text="Xóa" HBox.hgrow="ALWAYS">
                             <padding>
                                 <Insets bottom="10.0" top="10.0" />
                             </padding>
