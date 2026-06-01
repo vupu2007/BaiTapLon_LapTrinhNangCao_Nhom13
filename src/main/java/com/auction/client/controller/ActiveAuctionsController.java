@@ -50,167 +50,6 @@ public class ActiveAuctionsController {
         loadAuctions();
     }
 
-    private void loadAuctions() {
-        if (cardsContainer != null) {
-            cardsContainer.getChildren().clear();
-        }
-
-        Account currentAcc = CurrentAccount.getAccount();
-        if (currentAcc == null) {
-            showEmptyState(true);
-            return;
-        }
-
-        // 🌟 KHỞI TẠO TASK: Luồng này chỉ lấy dữ liệu mạng thuần túy, tuyệt đối không tạo Node UI ở đây
-        Task<List<AuctionCardDto>> loadTask = new Task<>() {
-            @Override
-            protected List<AuctionCardDto> call() throws Exception {
-                List<AuctionCardDto> dataList = new ArrayList<>();
-                int bidderIdInt = Integer.parseInt(currentAcc.getId());
-
-                // 1. Lấy danh sách các phiên đấu giá từ Server
-                Request request = new Request(MessageType.GET_AUCTIONS_BY_BIDDER, bidderIdInt);
-                Response response = ClientSocket.getInstance().sendRequest(request);
-
-                if (response == null || !response.isSuccess()) return dataList;
-
-                // Kiểm tra kiểu dữ liệu an toàn trước khi ép kiểu danh sách phiên đấu giá
-                if (!(response.getData() instanceof List<?> rawList)) return dataList;
-
-                List<Auction> auctions = new ArrayList<>();
-                for (Object obj : rawList) {
-                    if (obj instanceof Auction a) auctions.add(a);
-                }
-
-                if (auctions.isEmpty()) return dataList;
-
-                // 2. Vòng lặp lấy thông tin Item tương ứng (Chạy ngầm tuần tự)
-                for (Auction auction : auctions) {
-                    try {
-                        Request itemRequest = new Request(MessageType.GET_ITEM_BY_ID, auction.getItemId());
-                        Response itemResponse = ClientSocket.getInstance().sendRequest(itemRequest);
-                        Item item = (itemResponse != null && itemResponse.isSuccess())
-                                ? (Item) itemResponse.getData() : null;
-
-                        // Gom tất cả thông tin dạng String/Dữ liệu thô vào đối tượng DTO
-                        AuctionCardDto dto = new AuctionCardDto();
-                        dto.name = (item != null) ? item.getName() : "Sản phẩm #" + auction.getItemId();
-                        dto.image = (item != null) ? item.getImagePath() : null;
-                        dto.description = (item != null) ? item.getDescription() : "Không có mô tả.";
-                        if (item != null) {
-                            try {
-                                Request sellerReq = new Request(MessageType.GET_ACCOUNT_BY_ID, item.getOwnerId());
-                                Response sellerResp = ClientSocket.getInstance().sendRequest(sellerReq);
-                                Account seller = (sellerResp != null && sellerResp.isSuccess()) ? (Account) sellerResp.getData() : null;
-                                dto.sellerName = (seller != null) ? seller.getUsername() : "Người bán #" + item.getOwnerId();
-                            } catch (Exception ex) {
-                                dto.sellerName = "Người bán #" + item.getOwnerId();
-                            }
-                        } else {
-                            dto.sellerName = "Ẩn danh";
-                        }
-                        dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                        dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                        System.out.println("DEBUG endTime=" + auction.getEndTime() + " endTimeStr=" + dto.endTimeStr);
-
-                        long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
-                        dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
-                        dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
-                        dto.auction = auction;
-                        System.out.println("DEBUG dto.auction.getId()=" + auction.getId());
-
-                        dataList.add(dto);
-                    } catch (Exception e) {
-                        System.err.println("❌ Lỗi lấy dữ liệu mạng của auction_id=" + auction.getId() + ": " + e.getMessage());
-                    }
-                }
-                return dataList;
-            }
-        };
-
-        // 🌟 XỬ LÝ KHI LUỒNG NGẦM CHẠY XONG THÀNH CÔNG (Đã về luồng chính JavaFX Application Thread)
-        loadTask.setOnSucceeded(event -> {
-            List<AuctionCardDto> results = loadTask.getValue();
-            if (results == null || results.isEmpty()) {
-                showEmptyState(true);
-                return;
-            }
-
-            showEmptyState(false);
-
-            // Duyệt danh sách data sạch, nạp file FXML dựng giao diện cực kỳ an toàn
-            for (AuctionCardDto dto : results) {
-                try {
-                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
-                    Node card = loader.load();
-                    ProductCardController controller = loader.getController();
-
-                    // Đổ dữ liệu thô lên Controller của Card
-                    if (controller != null) {
-                        String statusText = "Đang diễn ra";
-                        if (dto.auction.getEndTime() != null && LocalDateTime.now().isAfter(dto.auction.getEndTime())) {
-                            statusText = "Đã kết thúc";
-                        }
-                        controller.setData(dto.name, dto.price, statusText, dto.image, dto.description,
-                                dto.sellerName, dto.startTimeStr, dto.endTimeStr);
-                        controller.setOriginProductData(dto.auction);
-                    }
-
-                    // Thêm card thẳng vào container hiển thị
-                    cardsContainer.getChildren().add(card);
-                    card.setOnMouseClicked(e -> {
-                        if (dto.auction == null) return;
-                        new Thread(() -> {
-                            try {
-                                Response res = ClientSocket.getInstance().sendRequest(
-                                        new Request(MessageType.GET_AUCTION_BY_ID, dto.auction.getId()));
-                                if (res != null && res.isSuccess()) {
-                                    Auction full = (Auction) res.getData();
-                                    if (full != null) {
-                                        Platform.runLater(() -> {
-                                            try {
-                                                FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
-                                                Parent detailView = detailLoader.load();
-                                                AuctionDetailController detailController = detailLoader.getController();
-                                                full.setSellerName(dto.sellerName);
-                                                full.setDescription(dto.description);
-                                                if (detailController != null) detailController.loadProductDetail(full);
-
-                                                Parent root = card.getScene().getRoot();
-                                                Node center = root.lookup("#contentArea");
-                                                if (center instanceof StackPane contentArea) {
-                                                    contentArea.getChildren().setAll(detailView);
-                                                }
-                                            } catch (Exception ex) {
-                                                System.err.println("Lỗi: " + ex.getMessage());
-                                            }
-                                        });
-                                    }
-                                }
-                            } catch (Exception ex) {
-                                System.err.println("Lỗi mở chi tiết: " + ex.getMessage());
-                            }
-                        }).start();
-                    });
-                } catch (Exception e) {
-                    System.err.println("❌ Lỗi dựng giao diện Card từ FXML: " + e.getMessage());
-                }
-            }
-        });
-
-        // Xử lý khi luồng ngầm bị lỗi (Mất mạng, nghẽn đường truyền...)
-        loadTask.setOnFailed(event -> {
-            Throwable e = loadTask.getException();
-            System.err.println("❌ Lỗi luồng ngầm ActiveAuctions: " + e.getMessage());
-            showEmptyState(true);
-        });
-
-        // Kích hoạt chạy luồng ngầm độc lập
-        Thread thread = new Thread(loadTask);
-        thread.setDaemon(true);
-        thread.start();
-    }
-
     private void showEmptyState(boolean isEmpty) {
         if (emptyStateBox != null) {
             emptyStateBox.setVisible(isEmpty);
@@ -259,5 +98,133 @@ public class ActiveAuctionsController {
                 e.printStackTrace();
             }
         });
+    }
+    private void loadAuctions() {
+        if (cardsContainer != null) {
+            cardsContainer.getChildren().clear();
+        }
+
+        Account currentAcc = CurrentAccount.getAccount();
+        if (currentAcc == null) {
+            showEmptyState(true);
+            return;
+        }
+
+        Task<List<AuctionCardDto>> loadTask = new Task<>() {
+            @Override
+            protected List<AuctionCardDto> call() throws Exception {
+                List<AuctionCardDto> dataList = new ArrayList<>();
+                int bidderIdInt = Integer.parseInt(currentAcc.getId());
+
+                Request request = new Request(MessageType.GET_AUCTIONS_BY_BIDDER, bidderIdInt);
+                Response response = ClientSocket.getInstance().sendRequest(request);
+
+                if (response == null || !response.isSuccess()) return dataList;
+                if (!(response.getData() instanceof List<?> rawList)) return dataList;
+
+                List<Auction> auctions = new ArrayList<>();
+                for (Object obj : rawList) {
+                    if (obj instanceof Auction a) auctions.add(a);
+                }
+                if (auctions.isEmpty()) return dataList;
+                System.out.println("DEBUG size=" + auctions.size() + " name0=" + auctions.get(0).getProductName());
+
+                for (Auction auction : auctions) {
+                    try {
+                        AuctionCardDto dto = new AuctionCardDto();
+                        dto.name = auction.getProductName() != null ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
+                        dto.image = auction.getImagePath();
+                        dto.description = auction.getDescription() != null ? auction.getDescription() : "Không có mô tả.";
+                        dto.sellerName = auction.getSellerName() != null ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
+                        dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                        dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                        long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
+                        dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
+                        dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
+                        dto.auction = auction;
+                        dataList.add(dto);
+                    } catch (Exception e) {
+                        System.err.println("❌ Lỗi: " + e.getMessage());
+                    }
+                }
+                return dataList;
+            }
+        };
+
+        loadTask.setOnSucceeded(event -> {
+            List<AuctionCardDto> results = loadTask.getValue();
+            if (results == null || results.isEmpty()) {
+                showEmptyState(true);
+                return;
+            }
+            showEmptyState(false);
+
+            for (AuctionCardDto dto : results) {
+                try {
+                    FXMLLoader loader = new FXMLLoader(getClass().getResource("/view/ProductCard.fxml"));
+                    Node card = loader.load();
+                    ProductCardController controller = loader.getController();
+
+                    if (controller != null) {
+                        String statusText = "Đang diễn ra";
+                        if (dto.auction.getEndTime() != null && LocalDateTime.now().isAfter(dto.auction.getEndTime())) {
+                            statusText = "Đã kết thúc";
+                        }
+                        controller.setData(dto.name, dto.price, statusText, dto.image, dto.description,
+                                dto.sellerName, dto.startTimeStr, dto.endTimeStr);
+                        //controller.setOriginProductData(dto.auction);
+                    }
+                    else {
+                        System.out.println("DEBUG controller null");
+                    }
+
+                    cardsContainer.getChildren().add(card);
+                    card.setOnMouseClicked(e -> {
+                        if (dto.auction == null) return;
+                        new Thread(() -> {
+                            try {
+                                Response res = ClientSocket.getInstance().sendRequest(
+                                        new Request(MessageType.GET_AUCTION_BY_ID, dto.auction.getId()));
+                                if (res != null && res.isSuccess()) {
+                                    Auction full = (Auction) res.getData();
+                                    if (full != null) {
+                                        Platform.runLater(() -> {
+                                            try {
+                                                FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
+                                                Parent detailView = detailLoader.load();
+                                                AuctionDetailController detailController = detailLoader.getController();
+                                                full.setSellerName(dto.sellerName);
+                                                full.setDescription(dto.description);
+                                                if (detailController != null) detailController.loadProductDetail(full);
+                                                Parent root = card.getScene().getRoot();
+                                                Node center = root.lookup("#contentArea");
+                                                if (center instanceof StackPane contentArea) {
+                                                    contentArea.getChildren().setAll(detailView);
+                                                }
+                                            } catch (Exception ex) {
+                                                System.err.println("Lỗi: " + ex.getMessage());
+                                            }
+                                        });
+                                    }
+                                }
+                            } catch (Exception ex) {
+                                System.err.println("Lỗi: " + ex.getMessage());
+                            }
+                        }).start();
+                    });
+                } catch (Exception e) {
+                    System.err.println("❌ Lỗi dựng card: " + e.getMessage());
+                }
+            }
+        });
+
+        loadTask.setOnFailed(event -> {
+            System.err.println("❌ Lỗi: " + loadTask.getException().getMessage());
+            showEmptyState(true);
+        });
+
+        Thread thread = new Thread(loadTask);
+        thread.setDaemon(true);
+        thread.start();
     }
 }

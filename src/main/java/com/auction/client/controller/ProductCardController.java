@@ -74,8 +74,7 @@ public class ProductCardController {
         setDataInternal(name, price, statusText, imageFileName, description, endTimeStr);
     }
     private void setDataInternal(String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
-        System.out.println("statusText=" + statusText);
-        if (productName != null) productName.setText(name);
+        System.out.println("INJECT name=" + name + " | productName bị null? " + (productName == null));        if (productName != null) productName.setText(name);
         if (currentPrice != null) currentPrice.setText(price);
         if (productDesc != null) productDesc.setText(description);
 
@@ -102,7 +101,8 @@ public class ProductCardController {
                         : String.format("%02dh %02dm", d.toHours(), d.toMinutesPart()));
             } catch (Exception e) {
                 timeRemaining.setText("--:--");
-            }        }
+            }
+        }
 
         // 🚀 CHUẨN KIẾN TRÚC LỚN: ỦY THÁC TOÀN BỘ VIỆC LOAD ẢNH + CACHE CHO IMAGELOADER
         ImageLoader.tryLoadImageToView(productImage, imageFileName);
@@ -112,6 +112,7 @@ public class ProductCardController {
             actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
             actionButton.setOnAction(e -> handleNavigateToDetail());
         }
+        productName.setStyle("-fx-background-color: yellow; -fx-text-fill: red; -fx-min-height: 30px; -fx-opacity: 1; -fx-managed: true;");
     }
 
     /**

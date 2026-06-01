@@ -206,7 +206,7 @@ public class AuctionDAO {
         List<Auction> list = new ArrayList<>();
         String sql = "SELECT DISTINCT a.auction_id, a.item_id, a.seller_id, a.start_price, " +
                 "a.current_price, a.min_increment, a.start_time, a.end_time, a.status, " +
-                "a.winner_id, a.original_end_time, i.name as product_name " +
+                "a.winner_id, a.original_end_time, i.name as product_name, i.image_path, i.description " +
                 "FROM Auctions a " +
                 "JOIN Bids b ON a.auction_id = b.auction_id " +
                 "JOIN Items i ON a.item_id = i.item_id " +
@@ -216,7 +216,12 @@ public class AuctionDAO {
             pstmt.setInt(1, bidderId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
-                    list.add(mapResultSetToAuction(rs));
+                    Auction a = mapResultSetToAuction(rs);
+                    a.setProductName(rs.getString("product_name"));
+                    System.out.println("DEBUG auction productName=" + a.getProductName());
+                    a.setImagePath(rs.getString("image_path"));
+                    a.setDescription(rs.getString("description"));
+                    list.add(a);
                 }
             }
         } catch (SQLException e) {

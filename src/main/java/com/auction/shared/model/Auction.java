@@ -34,10 +34,12 @@ public class Auction implements Serializable {
     private LocalDateTime originalEndTime; // 🌟 THÊM: Lưu thời gian kết thúc gốc phục vụ Anti-sniping
     private AuctionStatus status;       // Trạng thái phiên đấu giá
 
-    // Thông tin bổ trợ phục vụ hiển thị trực tiếp trên giao diện Client Card
     private String productName;
     private String imagePath;
-    private String description;         // 🔥 THÊM: Sửa lỗi "Cannot resolve method 'setDescription'" cho MainLayoutController
+    private String description;
+
+    // Thông tin bổ trợ phục vụ hiển thị trực tiếp trên giao diện Client Card
+    // 🔥 THÊM: Sửa lỗi "Cannot resolve method 'setDescription'" cho MainLayoutController
 
     private Account account;// Thông tin tài khoản người bán đính kèm từ DB
 
