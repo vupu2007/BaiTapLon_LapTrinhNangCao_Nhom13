@@ -18,13 +18,18 @@ public class ItemDAO {
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(query)) {
+
+             if (item.getStatus() == null || item.getStatus().trim().isEmpty()) {
+                item.setStatus("AVAILABLE");
+            }
+
             stmt.setString(1, item.getItemId());
             stmt.setString(2, item.getName());
             stmt.setString(3, item.getDescription());
             stmt.setDouble(4, item.getStartingPrice());
             stmt.setInt(5, item.getCategoryId());
             stmt.setInt(6, item.getOwnerId());
-            stmt.setString(7, item.getStatus());
+            stmt.setString(7, item.getStatus()); // Lúc này chắc chắn là "AVAILABLE", không bao giờ bị null nữa!
             stmt.setString(8, item.getBrand());
             stmt.setString(9, item.getImagePath());
             return stmt.executeUpdate() > 0;

@@ -129,7 +129,6 @@ public class AuctionService {
 
             applyAntiSniping(auction);
 
-
             ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), account.getUsername(), auction.getEndTime());            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
 
             return true;
@@ -254,7 +253,21 @@ public class AuctionService {
         auction.setStartTime(java.time.LocalDateTime.parse(startTimeStr, fmt));
         auction.setEndTime(java.time.LocalDateTime.parse(endTimeStr, fmt));
         auction.setStatus(Auction.AuctionStatus.OPEN);
-        return createAuction(auction);
+
+        // 🎯 SỬA ĐOẠN CUỐI: Tự xử lý insert và update luôn, bỏ qua hàm check DB bị lag mạng kia!
+        if (auction.getEndTime().isBefore(auction.getStartTime())) {
+            System.err.println("Thời gian kết thúc phải sau thời gian bắt đầu!");
+            return false;
+        }
+
+        // Ghi thẳng phiên đấu giá mới vào DB Clever Cloud
+        boolean created = auctionDAO.insertAuction(auction);
+        if (created) {
+            // Cập nhật trạng thái món hàng sang đang đấu giá luôn
+            itemDAO.updateStatus(auction.getItemId(), "IN_AUCTION");
+            System.out.println("Tạo phiên đấu giá thành công rực rỡ!");
+        }
+        return created;
     }
 
     public List<Auction> getAllAuctions() {
