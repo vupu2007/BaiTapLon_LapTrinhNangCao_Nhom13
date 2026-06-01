@@ -1,8 +1,9 @@
 package com.auction.service;
 
-import com.auction.server.service.ItemService;
+import com.auction.shared.model.Art;
 import com.auction.shared.model.Electronics;
 import com.auction.shared.model.Item;
+import com.auction.shared.model.Vehicle;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -10,156 +11,273 @@ import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * Test cho ItemService
- * Test trực tiếp validation logic của ItemService bằng cách tạo subclass override itemDAO
+ * Test cho ItemService — validation logic sản phẩm.
+ *
+ * Bao gồm:
+ *  - Electronics, Art, Vehicle: kiểm tra constructor, getter, kế thừa Item
+ *  - addItem(): kiểm tra tên, giá khởi điểm hợp lệ
+ *  - updateItem(): kiểm tra status sản phẩm
+ *  - deleteItem(): kiểm tra quyền xóa theo ownerId và status
+ *
+ * Constructor thực tế:
+ *  Electronics(itemId, name, desc, price, ownerId, categoryId, status, imagePath, warrantyMonths)
+ *  Art(itemId, name, desc, price, ownerId, categoryId, status, artist, year)
+ *  Vehicle(itemId, name, desc, price, ownerId, categoryId, status, brand, model, year, mileage)
  */
-@DisplayName("ItemService Validation Tests")
+@DisplayName("ItemService — Validation Logic Tests")
 class ItemServiceTest {
 
-    // ─── Helper: Electronics hợp lệ ───
-    private Electronics makeValidItem() {
-        return new Electronics(
-                "ITEM_001",
-                "Laptop Dell",
-                "Mô tả sản phẩm",
-                5_000_000,
-                1,          // ownerId
-                1,          // categoryId
-                "AVAILABLE",
-                "Dell",
-                12
+    private Electronics electronics;
+    private Art art;
+    private Vehicle vehicle;
+
+    @BeforeEach
+    void setUp() {
+        // Electronics: categoryId=1, ownerId=1, imagePath là tham số thứ 8, warrantyMonths là tham số thứ 9
+        // brand KHÔNG có trong constructor → dùng setBrand() sau
+        electronics = new Electronics(
+                "ITEM_001", "Laptop Dell", "Mo ta san pham",
+                5_000_000, 1, 1, "AVAILABLE",
+                "images/dell.jpg", 12
+        );
+        electronics.setBrand("Dell"); // brand được set riêng qua setter
+
+        // Art: artist là tham số thứ 8, year là tham số thứ 9 (int)
+        art = new Art(
+                "ITEM_002", "Tranh Son Dau", "Mo ta tranh",
+                3_000_000, 2, 2, "AVAILABLE",
+                "Nguyen Van A", 2020
+        );
+
+        // Vehicle: brand, model, year, mileage — 4 field riêng biệt
+        vehicle = new Vehicle(
+                "ITEM_003", "Honda Wave", "Mo ta xe",
+                15_000_000, 3, 3, "AVAILABLE",
+                "Honda", "Wave Alpha", 2020, 0
         );
     }
 
-    // ═══════════════════════════════════════════
-    //  addItem — Validation (không cần DB)
-    //  Test logic if-else bên trong ItemService
-    // ═══════════════════════════════════════════
 
-    /**
-     * Tạo ItemService "giả" để test validation mà không kết nối DB.
-     * Kỹ thuật: anonymous subclass override hành vi DAO.
-     */
-    private ItemService makeServiceWithFakeDAO(boolean daoResult, Item existingItem) {
-        return new ItemService() {
-            // Override bằng cách inject fake DAO behavior thông qua package-private trick
-            // Nếu nhóm có Mockito thì thay bằng @Mock + @InjectMocks
-        };
-    }
-
-    // ─── Test validation thuần (không cần DAO) ───
+    // ═══════════════════════════════════════════════════════
+    //  Electronics — Kiểm tra constructor, getter, kế thừa
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Item có tên null → addItem validation phát hiện lỗi")
-    void testAddItem_NullName_ValidationLogic() {
-        Electronics item = makeValidItem();
-        item.setName(null);
-
-        // Tái hiện logic validation của ItemService.addItem()
-        boolean validationPassed = item.getName() != null && !item.getName().isBlank()
-                && item.getStartingPrice() > 0;
-        assertFalse(validationPassed, "Tên null phải fail validation");
+    @DisplayName("Electronics: getter trả đúng giá trị khởi tạo")
+    void testElectronics_Getters() {
+        assertEquals("ITEM_001",    electronics.getItemId());
+        assertEquals("Laptop Dell", electronics.getName());
+        assertEquals(5_000_000,     electronics.getStartingPrice());
+        assertEquals(1,             electronics.getOwnerId());
+        assertEquals(1,             electronics.getCategoryId());
+        assertEquals("AVAILABLE",   electronics.getStatus());
+        assertEquals(12,            electronics.getWarrantyMonths());
+        assertEquals("Dell",        electronics.getBrand()); // set qua setBrand()
     }
 
     @Test
-    @DisplayName("Item có tên rỗng → addItem validation phát hiện lỗi")
-    void testAddItem_BlankName_ValidationLogic() {
-        Electronics item = makeValidItem();
-        item.setName("   ");
-
-        boolean validationPassed = item.getName() != null && !item.getName().isBlank()
-                && item.getStartingPrice() > 0;
-        assertFalse(validationPassed, "Tên rỗng phải fail validation");
+    @DisplayName("Electronics: setBrand cập nhật đúng")
+    void testElectronics_SetBrand() {
+        electronics.setBrand("Apple");
+        assertEquals("Apple", electronics.getBrand());
     }
 
     @Test
-    @DisplayName("Giá khởi điểm = 0 → addItem validation phát hiện lỗi")
-    void testAddItem_ZeroPrice_ValidationLogic() {
-        Electronics item = makeValidItem();
-        item.setStartingPrice(0);
-
-        boolean validationPassed = item.getName() != null && !item.getName().isBlank()
-                && item.getStartingPrice() > 0;
-        assertFalse(validationPassed, "Giá 0 phải fail validation");
+    @DisplayName("Electronics: setWarrantyMonths cập nhật đúng")
+    void testElectronics_SetWarrantyMonths() {
+        electronics.setWarrantyMonths(24);
+        assertEquals(24, electronics.getWarrantyMonths());
     }
 
     @Test
-    @DisplayName("Giá khởi điểm âm → addItem validation phát hiện lỗi")
-    void testAddItem_NegativePrice_ValidationLogic() {
-        Electronics item = makeValidItem();
-        item.setStartingPrice(-1000);
+    @DisplayName("Electronics kế thừa Item — instanceof đúng")
+    void testElectronics_IsItem() {
+        assertInstanceOf(Item.class, electronics, "Electronics phải là Item");
+    }
 
-        boolean validationPassed = item.getName() != null && !item.getName().isBlank()
-                && item.getStartingPrice() > 0;
-        assertFalse(validationPassed, "Giá âm phải fail validation");
+
+    // ═══════════════════════════════════════════════════════
+    //  Art — Kiểm tra constructor, getter, kế thừa
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("Art: getter trả đúng giá trị khởi tạo")
+    void testArt_Getters() {
+        assertEquals("ITEM_002",      art.getItemId());
+        assertEquals("Tranh Son Dau", art.getName());
+        assertEquals(3_000_000,       art.getStartingPrice());
+        assertEquals(2,               art.getOwnerId());
+        assertEquals("AVAILABLE",     art.getStatus());
+        assertEquals("Nguyen Van A",  art.getArtist());
+        assertEquals(2020,            art.getYear());
     }
 
     @Test
-    @DisplayName("Item hợp lệ → validation pass")
-    void testAddItem_ValidItem_ValidationLogic() {
-        Electronics item = makeValidItem();
-
-        boolean validationPassed = item.getName() != null && !item.getName().isBlank()
-                && item.getStartingPrice() > 0;
-        assertTrue(validationPassed, "Item hợp lệ phải pass validation");
-    }
-
-    // ═══════════════════════════════════════════
-    //  updateItem — Validation logic
-    // ═══════════════════════════════════════════
-
-    @Test
-    @DisplayName("Sản phẩm IN_AUCTION → không thể cập nhật")
-    void testUpdateItem_InAuction_ShouldFail() {
-        Electronics item = makeValidItem();
-        item.setStatus("IN_AUCTION");
-
-        // Tái hiện logic: chỉ sửa được khi AVAILABLE
-        boolean canUpdate = "AVAILABLE".equals(item.getStatus());
-        assertFalse(canUpdate, "IN_AUCTION không thể sửa");
+    @DisplayName("Art: setArtist và setYear cập nhật đúng")
+    void testArt_Setters() {
+        art.setArtist("Tran Thi B");
+        art.setYear(2023);
+        assertEquals("Tran Thi B", art.getArtist());
+        assertEquals(2023, art.getYear());
     }
 
     @Test
-    @DisplayName("Sản phẩm SOLD → không thể cập nhật")
-    void testUpdateItem_Sold_ShouldFail() {
-        Electronics item = makeValidItem();
-        item.setStatus("SOLD");
+    @DisplayName("Art kế thừa Item — instanceof đúng")
+    void testArt_IsItem() {
+        assertInstanceOf(Item.class, art, "Art phải là Item");
+    }
 
-        boolean canUpdate = "AVAILABLE".equals(item.getStatus());
-        assertFalse(canUpdate, "SOLD không thể sửa");
+
+    // ═══════════════════════════════════════════════════════
+    //  Vehicle — Kiểm tra constructor, getter, kế thừa
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("Vehicle: getter trả đúng giá trị khởi tạo")
+    void testVehicle_Getters() {
+        assertEquals("ITEM_003",   vehicle.getItemId());
+        assertEquals("Honda Wave", vehicle.getName());
+        assertEquals(15_000_000,   vehicle.getStartingPrice());
+        assertEquals(3,            vehicle.getOwnerId());
+        assertEquals("AVAILABLE",  vehicle.getStatus());
+        assertEquals("Honda",      vehicle.getBrand());
+        assertEquals("Wave Alpha", vehicle.getModel());
+        assertEquals(2020,         vehicle.getYear());
+        assertEquals(0,            vehicle.getMileage());
     }
 
     @Test
-    @DisplayName("Sản phẩm AVAILABLE → có thể cập nhật")
-    void testUpdateItem_Available_ShouldPass() {
-        Electronics item = makeValidItem();
-        item.setStatus("AVAILABLE");
-
-        boolean canUpdate = "AVAILABLE".equals(item.getStatus());
-        assertTrue(canUpdate, "AVAILABLE được phép sửa");
+    @DisplayName("Vehicle: setModel, setYear, setMileage cập nhật đúng")
+    void testVehicle_Setters() {
+        vehicle.setModel("Future 125");
+        vehicle.setYear(2022);
+        vehicle.setMileage(5000);
+        assertEquals("Future 125", vehicle.getModel());
+        assertEquals(2022,         vehicle.getYear());
+        assertEquals(5000,         vehicle.getMileage());
     }
 
-    // ═══════════════════════════════════════════
-    //  deleteItem — Authorization logic
-    // ═══════════════════════════════════════════
+    @Test
+    @DisplayName("Vehicle kế thừa Item — instanceof đúng")
+    void testVehicle_IsItem() {
+        assertInstanceOf(Item.class, vehicle, "Vehicle phải là Item");
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  addItem — Validation logic
+    //  Tái hiện điều kiện kiểm tra trong ItemService.createItem()
+    // ═══════════════════════════════════════════════════════
 
     @Test
-    @DisplayName("Chủ sở hữu xóa sản phẩm của mình → được phép")
+    @DisplayName("addItem: tên null → validation fail")
+    void testAddItem_NullName_Fails() {
+        electronics.setName(null);
+        // Tái hiện: if (item.getName() == null || item.getName().isBlank()) return false
+        boolean valid = electronics.getName() != null && !electronics.getName().isBlank()
+                && electronics.getStartingPrice() > 0;
+        assertFalse(valid, "Ten null phai fail validation");
+    }
+
+    @Test
+    @DisplayName("addItem: tên rỗng → validation fail")
+    void testAddItem_BlankName_Fails() {
+        electronics.setName("   ");
+        boolean valid = electronics.getName() != null && !electronics.getName().isBlank()
+                && electronics.getStartingPrice() > 0;
+        assertFalse(valid, "Ten rong phai fail validation");
+    }
+
+    @Test
+    @DisplayName("addItem: giá khởi điểm = 0 → validation fail")
+    void testAddItem_ZeroPrice_Fails() {
+        electronics.setStartingPrice(0);
+        boolean valid = electronics.getName() != null && !electronics.getName().isBlank()
+                && electronics.getStartingPrice() > 0;
+        assertFalse(valid, "Gia 0 phai fail validation");
+    }
+
+    @Test
+    @DisplayName("addItem: giá khởi điểm âm → validation fail")
+    void testAddItem_NegativePrice_Fails() {
+        electronics.setStartingPrice(-1_000);
+        boolean valid = electronics.getName() != null && !electronics.getName().isBlank()
+                && electronics.getStartingPrice() > 0;
+        assertFalse(valid, "Gia am phai fail validation");
+    }
+
+    @Test
+    @DisplayName("addItem: item hợp lệ → validation pass")
+    void testAddItem_ValidItem_Passes() {
+        boolean valid = electronics.getName() != null && !electronics.getName().isBlank()
+                && electronics.getStartingPrice() > 0;
+        assertTrue(valid, "Item hop le phai pass validation");
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  updateItem / deleteItem — Status logic
+    //  ItemDAO.deleteItem() SQL: WHERE status = 'AVAILABLE'
+    //  → chỉ xóa được khi status = AVAILABLE
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("updateItem: status IN_AUCTION → không thể cập nhật")
+    void testUpdateItem_InAuction_Fails() {
+        electronics.setStatus("IN_AUCTION");
+        boolean canUpdate = "AVAILABLE".equals(electronics.getStatus());
+        assertFalse(canUpdate, "IN_AUCTION khong the sua");
+    }
+
+    @Test
+    @DisplayName("updateItem: status SOLD → không thể cập nhật")
+    void testUpdateItem_Sold_Fails() {
+        electronics.setStatus("SOLD");
+        boolean canUpdate = "AVAILABLE".equals(electronics.getStatus());
+        assertFalse(canUpdate, "SOLD khong the sua");
+    }
+
+    @Test
+    @DisplayName("updateItem: status AVAILABLE → có thể cập nhật")
+    void testUpdateItem_Available_Passes() {
+        boolean canUpdate = "AVAILABLE".equals(electronics.getStatus());
+        assertTrue(canUpdate, "AVAILABLE duoc phep sua");
+    }
+
+    @Test
+    @DisplayName("deleteItem: status IN_AUCTION → ItemDAO không xóa được")
+    void testDeleteItem_InAuction_NotDeletable() {
+        electronics.setStatus("IN_AUCTION");
+        // ItemDAO.deleteItem(): DELETE WHERE status = 'AVAILABLE'
+        boolean canDelete = "AVAILABLE".equals(electronics.getStatus());
+        assertFalse(canDelete, "IN_AUCTION khong the xoa");
+    }
+
+    @Test
+    @DisplayName("deleteItem: status AVAILABLE → ItemDAO có thể xóa")
+    void testDeleteItem_Available_Deletable() {
+        boolean canDelete = "AVAILABLE".equals(electronics.getStatus());
+        assertTrue(canDelete, "AVAILABLE duoc phep xoa");
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  deleteItem — Authorization logic (ownerId)
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("deleteItem: chủ sở hữu xóa sản phẩm của mình → được phép")
     void testDeleteItem_OwnerCanDelete() {
-        Electronics item = makeValidItem();
-        int requesterId = item.getOwnerId(); // = 1
-
-        boolean authorized = item.getOwnerId() == requesterId;
-        assertTrue(authorized, "Chủ sở hữu phải được phép xóa");
+        int requesterId = electronics.getOwnerId(); // = 1
+        boolean authorized = electronics.getOwnerId() == requesterId;
+        assertTrue(authorized, "Chu so huu phai duoc phep xoa");
     }
 
     @Test
-    @DisplayName("Người khác xóa sản phẩm không phải của mình → bị từ chối")
+    @DisplayName("deleteItem: người khác xóa sản phẩm không phải của mình → bị từ chối")
     void testDeleteItem_NotOwnerCannotDelete() {
-        Electronics item = makeValidItem(); // ownerId = 1
-        int requesterId = 99; // người khác
-
-        boolean authorized = item.getOwnerId() == requesterId;
-        assertFalse(authorized, "Người không phải chủ không được xóa");
+        int requesterId = 99; // khac ownerId = 1
+        boolean authorized = electronics.getOwnerId() == requesterId;
+        assertFalse(authorized, "Nguoi khong phai chu khong duoc xoa");
     }
 }

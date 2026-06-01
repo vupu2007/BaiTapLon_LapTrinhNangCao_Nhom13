@@ -6,6 +6,10 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+import com.auction.shared.exception.InvalidBidException;
+import com.auction.shared.exception.AuctionClosedException;
+import com.auction.shared.exception.AuthenticationException;
+
 /**
  * Test cho 3 customs Exception của hệ thống đấu giá.
  */
