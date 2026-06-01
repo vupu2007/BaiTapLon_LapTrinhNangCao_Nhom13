@@ -8,6 +8,8 @@ import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
+import com.auction.shared.exception.AuthenticationException;
+
 public class AccountService {
 
     private final AccountDAO accountDAO = new AccountDAO();
@@ -15,17 +17,24 @@ public class AccountService {
     // 🌟 KHÓA AN TOÀN NỘI BỘ: Ngăn chặn xung đột luồng khi thay đổi số dư cùng một tài khoản
     private final ConcurrentHashMap<Integer, Object> userLocks = new ConcurrentHashMap<>();
 
-    public Account login(String username, String password) {
+    public Account login(String username, String password) throws AuthenticationException {
         if (username == null || username.isBlank() || password == null || password.isBlank()) {
-            System.err.println("Username hoặc password không được để trống!");
-            return null;
+            throw new AuthenticationException(
+                    "Username hoặc password không được để trống!",
+                    AuthenticationException.Reason.INVALID_CREDENTIALS
+            );
         }
+
         Account account = accountDAO.login(username, password);
+
         if (account == null) {
-            System.err.println("Sai tên đăng nhập hoặc mật khẩu!");
-        } else {
-            System.out.println("✅ Đăng nhập thành công: " + username + " [" + account.getRole() + "]");
+            throw new AuthenticationException(
+                    "Sai tên đăng nhập hoặc mật khẩu!",
+                    AuthenticationException.Reason.INVALID_CREDENTIALS
+            );
         }
+
+        System.out.println("✅ Đăng nhập thành công: " + username + " [" + account.getRole() + "]");
         return account;
     }
 

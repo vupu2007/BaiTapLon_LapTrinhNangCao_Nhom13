@@ -15,6 +15,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.ReentrantLock;
 
+import com.auction.shared.exception.AuctionClosedException;
+import com.auction.shared.exception.InvalidBidException;
+
 public class AuctionService {
 
     private final AuctionDAO auctionDAO = new AuctionDAO();
@@ -66,8 +69,8 @@ public class AuctionService {
     /**
      * 🚀 ĐẶT GIÁ AN TOÀN ĐA LUỒNG
      */
-    public boolean placeBid(int auctionId, double amount, Account account) {
-
+    public boolean placeBid(int auctionId, double amount, Account account)
+            throws AuctionClosedException, InvalidBidException {
         if (!(account instanceof User)) {
             System.err.println("Tài khoản quản trị viên không được phép đấu giá!");
             return false;
@@ -84,8 +87,15 @@ public class AuctionService {
             System.out.println("Check balance: " + ((User)account).getBalance());
 
             if (auction == null || !auction.isActive()) {
-                System.err.println("Phiên đấu giá không tồn tại hoặc chưa kích hoạt!");
                 return false;
+            }
+
+            if (!auction.isActive()) {
+                throw new AuctionClosedException(
+                        "Phiên đấu giá không còn hoạt động",
+                        auctionId,
+                        auction.getStatus()
+                );
             }
 
             if (auction.getSellerId() == Integer.parseInt(account.getId())) {
@@ -95,8 +105,11 @@ public class AuctionService {
 
             double minValidBid = auction.getCurrentPrice() + auction.getMinIncrement();
             if (amount < minValidBid) {
-                System.err.println("Giá đặt tối thiểu phải là: " + minValidBid);
-                return false;
+                throw new InvalidBidException(
+                        "Giá đặt tối thiểu phải là: " + minValidBid,
+                        amount,
+                        minValidBid
+                );
             }
 
             if (user.getBalance() < amount) {
@@ -180,17 +193,17 @@ public class AuctionService {
             bid.setBidderId(botBidderId);
             bid.setBidAmount(targetBidAmount);
 
-            boolean success = auctionDAO.placeBidTransaction(bid, targetBidAmount, botBidderId);
-            if (success) {
-                String botUsername = accountDAO.getUsernameById(String.valueOf(botBidderId));
-                System.out.println("🤖 [Auto-Bid] Hệ thống tự đặt giá hộ User #" + botUsername + ": " + targetBidAmount + " đ");
+            try {
+                boolean success = auctionDAO.placeBidTransaction(bid, targetBidAmount, botBidderId);
+                if (success) {
+                    String botUsername = accountDAO.getUsernameById(String.valueOf(botBidderId));
+                    System.out.println("🤖 [Auto-Bid] Hệ thống tự đặt giá hộ User #" + botUsername + ": " + targetBidAmount + " đ");
+                    ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
+                    processAutoBidsChain(auctionId, botBidderId);
+                }
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi auto-bid transaction: " + e.getMessage());
 
-                System.out.println("pushBidUpdate từ placeBid");
-                new Exception().printStackTrace();
-
-                ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
-
-                processAutoBidsChain(auctionId, botBidderId);
             }
         }
     }
@@ -265,6 +278,13 @@ public class AuctionService {
             return ok
                     ? new Response(true, "Đặt giá thành công!", null)
                     : new Response(false, "Đặt giá thất bại! Kiểm tra lại điều kiện đặt hoặc số dư.", null);
+
+        } catch (AuctionClosedException e) {
+            return new Response(false, "Phiên đấu giá đã đóng: " + e.getMessage(), null);
+
+        } catch (InvalidBidException e) {
+            return new Response(false, "Giá không hợp lệ: " + e.getMessage(), null);
+
         } catch (Exception e) {
             return new Response(false, "Lỗi xử lý hệ thống: " + e.getMessage(), null);
         }

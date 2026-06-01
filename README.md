@@ -64,8 +64,6 @@ BaiTapLon_LapTrinhNangCao_Nhom13/
 │   │   │       │   ├── util/
 │   │   │       │   └── MainApp.java
 │   │   │       │
-│   │   │       ├── exception/
-│   │   │       │
 │   │   │       ├── server/
 │   │   │       │   ├── config/
 │   │   │       │   ├── dao/
@@ -74,6 +72,7 @@ BaiTapLon_LapTrinhNangCao_Nhom13/
 │   │   │       │   └── util/
 │   │   │       │
 │   │   │       ├── shared/
+│   │   │           ├── exception/
 │   │   │       │   ├── model/
 │   │   │       │   ├── network/
 │   │   │       │   └── util/
