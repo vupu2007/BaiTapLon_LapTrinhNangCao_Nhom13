@@ -129,10 +129,8 @@ public class AuctionService {
 
             applyAntiSniping(auction);
 
-            ClientHandler.pushBidUpdate(auctionId, amount, account.getUsername());
 
-            // Chạy chuỗi Auto-bid ngầm
-            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
+            ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), account.getUsername(), auction.getEndTime());            processAutoBidsChain(auctionId, Integer.parseInt(account.getId()));
 
             return true;
 
@@ -152,6 +150,9 @@ public class AuctionService {
             if (endTime.isBefore(originalEndTime.plusSeconds(MAX_TOTAL_EXTEND_SECONDS))) {
                 LocalDateTime newEndTime = endTime.plusSeconds(EXTEND_SECONDS);
                 auctionDAO.updateEndTime(auction.getId(), newEndTime);
+
+                auction.setEndTime(newEndTime);
+
                 System.out.println("🛡️ [Anti-Sniping] Gia hạn phiên #" + auction.getId() + " thêm 60s -> " + newEndTime);
             } else {
                 System.out.println("⚠️ [Anti-Sniping] Đã chạm mốc gia hạn kịch trần 5 phút của phiên này.");
@@ -198,9 +199,7 @@ public class AuctionService {
                 if (success) {
                     String botUsername = accountDAO.getUsernameById(String.valueOf(botBidderId));
                     System.out.println("🤖 [Auto-Bid] Hệ thống tự đặt giá hộ User #" + botUsername + ": " + targetBidAmount + " đ");
-                    ClientHandler.pushBidUpdate(auctionId, targetBidAmount, "Tự động (User: " + botUsername + ")");
-                    processAutoBidsChain(auctionId, botBidderId);
-                }
+                    ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), botUsername, auction.getEndTime());                }
             } catch (Exception e) {
                 System.err.println("❌ Lỗi auto-bid transaction: " + e.getMessage());
 

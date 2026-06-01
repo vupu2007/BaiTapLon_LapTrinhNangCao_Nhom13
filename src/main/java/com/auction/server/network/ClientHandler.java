@@ -421,16 +421,20 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    public static void pushBidUpdate(int auctionId, double newPrice, String username) {
+    // 🎯 SỬA 1: Thêm tham số newEndTime vào cuối hàm
+    public static void pushBidUpdate(int auctionId, double newPrice, String username, java.time.LocalDateTime newEndTime) {
         System.out.println("pushBidUpdate called: " + auctionId + " " + newPrice);
-        new Exception("Stack trace").printStackTrace();
         CopyOnWriteArrayList<ClientHandler> subs = auctionSubscribers.get(auctionId);
-        System.out.println("Subscribers: " + (subs == null ? 0 : subs.size()));
-
         if (subs == null || subs.isEmpty()) return;
 
-        Response push = new Response(true, "BID_UPDATE", new Object[]{auctionId, newPrice, username});
+        // Định dạng thời gian
+        String endTimeStr = (newEndTime != null) ? newEndTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
 
+        // 🎯 CHIÊU ĐỘC: Ghép tên và thời gian phân tách bằng dấu |
+        String combinedUserAndTime = username + "|" + endTimeStr;
+
+        // Giữ nguyên gói Response 3 tham số thô sơ của nhóm bạn, không đổi cấu trúc mạng!
+        Response push = new Response(true, "BID_UPDATE", new Object[]{auctionId, newPrice, combinedUserAndTime});
         push.setType("BID_UPDATE");
 
         for (ClientHandler handler : subs) {
