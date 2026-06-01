@@ -81,3 +81,15 @@
     -fx-text-fill: white;
     -fx-font-weight: bold;
 }
+.filter-button {
+    -fx-background-color: #f1f5f9;
+    -fx-text-fill: #64748b;
+    -fx-background-radius: 20;
+    -fx-cursor: hand;
+}
+
+.filter-button-active {
+    -fx-background-color: #0284c7;
+    -fx-text-fill: white;
+    -fx-background-radius: 20;
+}

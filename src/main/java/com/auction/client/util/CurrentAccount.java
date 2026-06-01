@@ -108,4 +108,8 @@ public class CurrentAccount {
         }
         return false;
     }
+    public static void syncBalance(double newBalance) {
+        sessionBalance = newBalance;
+        if (account != null) account.setBalance(newBalance);
+    }
 }

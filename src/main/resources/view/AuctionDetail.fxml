@@ -55,7 +55,7 @@
                         </VBox>
                         <VBox alignment="CENTER_RIGHT">
                             <children>
-                                <Label text="Thời gian còn lại" textFill="WHITE" />
+                                <Label fx:id="lblTimeRemainingTitle" text="Thời gian còn lại" textFill="WHITE" />
                                 <Label fx:id="lblTimeRemaining" text="00h 00m 00s" textFill="#ff4d4d">
                                     <font>
                                         <Font name="System Bold" size="18.0" />
@@ -125,7 +125,7 @@
                                                     </font>
                                                 </Label>
                                                 <Label text="Người bán sở hữu:" textFill="#757575" GridPane.rowIndex="4" />
-                                                <Label fx:id="lblSellerName" text="Đang tải..." GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+                                                <Label fx:id="lblSellerName" text="Đang tải..." GridPane.columnIndex="1" GridPane.rowIndex="4" />
                                                 <Label text="Thời gian bắt đầu:" textFill="#757575" GridPane.rowIndex="5" />
                                                 <Label fx:id="lblStartTime" text="--/--/---- --:--:--" GridPane.columnIndex="1" GridPane.rowIndex="5" />
                                                 <Label text="Thời gian kết thúc:" textFill="#757575" GridPane.rowIndex="6" />
@@ -160,6 +160,29 @@
 
                         <VBox spacing="20.0" GridPane.columnIndex="1">
                             <children>
+                                <VBox fx:id="vboxWinnerSection" managed="false" spacing="5.0" style="-fx-background-color: #ffc107; -fx-background-radius: 10; -fx-border-color: #ff9800; -fx-border-width: 2; -fx-border-radius: 10;" visible="false">
+                                    <padding>
+                                        <Insets bottom="15.0" left="20.0" right="20.0" top="15.0" />
+                                    </padding>
+                                    <children>
+                                        <Label text="🏆 NGƯỜI CHIẾN THẮNG CHUNG CUỘC" textFill="#856404">
+                                            <font>
+                                                <Font name="System Bold" size="14.0" />
+                                            </font>
+                                        </Label>
+                                        <Label fx:id="lblWinnerName" text="Chưa xác định" textFill="#533f03">
+                                            <font>
+                                                <Font name="System Bold" size="22.0" />
+                                            </font>
+                                        </Label>
+                                        <Label fx:id="lblWinnerPrice" text="Giá chung cuộc: 0 đ" textFill="#533f03">
+                                            <font>
+                                                <Font size="13.0" />
+                                            </font>
+                                        </Label>
+                                    </children>
+                                </VBox>
+
                                 <VBox spacing="5.0" style="-fx-background-color: #28a745; -fx-background-radius: 10;">
                                     <padding>
                                         <Insets bottom="20.0" left="20.0" right="20.0" top="20.0" />

@@ -234,6 +234,10 @@ public class ClientHandler implements Runnable {
 
                     Account seller = accountDAO.getAccountById(a.getSellerId());
                     if (seller != null) a.setSellerName(seller.getUsername());
+                    if (a.getWinnerId() != null && a.getWinnerId() > 0) {
+                        Account winner = accountDAO.getAccountById(a.getWinnerId());
+                        if (winner != null) a.setWinnerName(winner.getUsername());
+                    }
 
                     return new Response(true, "OK", a);
                 }
@@ -324,12 +328,22 @@ public class ClientHandler implements Runnable {
                     return new Response(true, "Lấy số liệu thống kê thành công!", (Serializable) statsMap);
                 }
                 case GET_HOT_AUCTIONS: {
+                    String[] params = (String[]) request.getPayload();
+                    String filter = (params != null && params.length > 1) ? params[1] : "ALL";
+
+                    String statusCondition = switch (filter) {
+                        case "UPCOMING" -> "a.status = 'OPEN'";
+                        case "ACTIVE" -> "a.status = 'RUNNING'";
+                        case "FINISHED" -> "a.status = 'FINISHED'";
+                        default -> "a.status IN ('RUNNING', 'OPEN', 'FINISHED') ORDER BY FIELD(a.status, 'RUNNING', 'OPEN', 'FINISHED')";
+                    };
+
                     List<Item> items = new ArrayList<>();
                     String sql = "SELECT i.*, a.auction_id, a.current_price, a.start_time, a.end_time, " +
-                            "a.seller_id, a.start_price, a.min_increment " +
+                            "a.seller_id, a.start_price, a.min_increment,  a.status AS auction_status  " +
                             "FROM Items i " +
                             "JOIN Auctions a ON i.item_id = a.item_id " +
-                            "WHERE a.status = 'RUNNING'";
+                            "WHERE " + statusCondition;
                     try (Connection conn = DatabaseConnection.getConnection();
                          PreparedStatement ps = conn.prepareStatement(sql);
                          ResultSet rs = ps.executeQuery()) {
@@ -338,8 +352,11 @@ public class ClientHandler implements Runnable {
                             if (item != null) {
                                 item.setAuctionId(rs.getInt("auction_id"));
                                 item.setCurrentPrice(rs.getDouble("current_price"));
-                                Timestamp et = rs.getTimestamp("end_time");
+                                item.setAuctionStatus(rs.getString("auction_status"));                                Timestamp et = rs.getTimestamp("end_time");
                                 if (et != null) item.setEndTimeStr(et.toLocalDateTime()
+                                        .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
+                                Timestamp st = rs.getTimestamp("start_time");
+                                if (st != null) item.setStartTimeStr(st.toLocalDateTime()
                                         .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")));
                                 items.add(item);
                             }

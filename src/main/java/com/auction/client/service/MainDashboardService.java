@@ -61,4 +61,7 @@ public class MainDashboardService {
             }
         }, networkExecutor);
     }
+    public void resetFetching() {
+        isFetching.set(false);
+    }
 }

@@ -111,6 +111,7 @@ public class ActiveAuctionsController {
                         }
                         dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
                         dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                        System.out.println("DEBUG endTime=" + auction.getEndTime() + " endTimeStr=" + dto.endTimeStr);
 
                         long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
                         dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
@@ -171,6 +172,8 @@ public class ActiveAuctionsController {
                                                 FXMLLoader detailLoader = new FXMLLoader(getClass().getResource("/view/AuctionDetailView.fxml"));
                                                 Parent detailView = detailLoader.load();
                                                 AuctionDetailController detailController = detailLoader.getController();
+                                                full.setSellerName(dto.sellerName);
+                                                full.setDescription(dto.description);
                                                 if (detailController != null) detailController.loadProductDetail(full);
 
                                                 Parent root = card.getScene().getRoot();

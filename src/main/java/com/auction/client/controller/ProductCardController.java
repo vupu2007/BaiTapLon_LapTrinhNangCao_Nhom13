@@ -24,6 +24,8 @@ public class ProductCardController {
     // Giữ lại Object gốc của thẻ sản phẩm phục vụ cho việc truyền nhận trang chi tiết động
     private Object originProductData;
 
+    @FXML private Label lblTimeRemainingTitle;
+
     @FXML
     public void initialize() {
         // Khởi tạo khuôn cắt ảnh bo góc khớp chuẩn với ImageView trong FXML
@@ -85,6 +87,10 @@ public class ProductCardController {
             statusBadge.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 20; -fx-font-weight: bold;");
         } else {
             statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
+        }
+
+        if (lblTimeRemainingTitle != null) {
+            lblTimeRemainingTitle.setText("Sắp diễn ra".equals(statusText) ? "Bắt đầu sau:" : "Còn lại:");
         }
 
         if (timeRemaining != null) {

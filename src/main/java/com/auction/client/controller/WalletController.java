@@ -48,8 +48,23 @@ public class WalletController {
     @FXML
     public void initialize() {
         if (transactionContainer != null) transactionContainer.getChildren().clear();
-        updateWalletUI();
-        loadTransactionHistory();
+        walletExecutor.submit(() -> {
+            try {
+                int accountId = Integer.parseInt(CurrentAccount.getAccount().getId());
+                Response resp = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_ACCOUNT_BY_ID, accountId));
+                if (resp != null && resp.isSuccess()) {
+                    com.auction.shared.model.Account acc = (com.auction.shared.model.Account) resp.getData();
+                    if (acc != null && acc.getBalance() != null) {
+                        CurrentAccount.syncBalance(acc.getBalance());
+                    }
+                }
+            } catch (Exception ignored) {}
+            Platform.runLater(() -> {
+                updateWalletUI();
+                loadTransactionHistory();
+            });
+        });
     }
 
     private void updateWalletUI() {
@@ -82,8 +97,8 @@ public class WalletController {
                         List<HBox> compiledRows = new ArrayList<>();
                         for (Map<String, Object> tx : list) {
                             try {
-                                boolean isDeposit = "DEPOSIT".equalsIgnoreCase(String.valueOf(tx.get("type")));
-                                Object timeObj = tx.get("created_at");
+                                String txType = String.valueOf(tx.get("type"));
+                                boolean isDeposit = "DEPOSIT".equalsIgnoreCase(txType) || "AUCTION_PAYMENT_CREDIT".equalsIgnoreCase(txType);                                Object timeObj = tx.get("created_at");
                                 LocalDateTime createdAt = LocalDateTime.now();
                                 if (timeObj instanceof LocalDateTime) {
                                     createdAt = (LocalDateTime) timeObj;

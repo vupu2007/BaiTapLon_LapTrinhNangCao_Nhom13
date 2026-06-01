@@ -32,12 +32,13 @@ import java.util.concurrent.Executors;
 public class MainController {
 
     @FXML private Label balanceLabel, ongoingLabel, wonLabel, welcomeLabel;
-    @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming;
+    // Thêm btnFilterEnded vào danh sách khai báo FXML
+    @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming, btnFilterEnded;
     @FXML private FlowPane flowPane;
-
     private String currentFilter = "ALL";
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
+
 
 
     // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
@@ -74,6 +75,8 @@ public class MainController {
     }
 
     public void refreshDashboard() {
+        dashboardService.resetFetching();
+        final String filterSnapshot = currentFilter;
         Account current = CurrentAccount.getAccount();
         if (current == null) return;
 
@@ -82,8 +85,7 @@ public class MainController {
                     ? String.format("%,.0f VND", ((User) current).getBalance()) : "N/A");
         }
 
-        // Gọi Service lấy dữ liệu bất đồng bộ
-        dashboardService.fetchDashboardDataAsync(current.getId(), currentFilter, (stats, items) -> {
+        dashboardService.fetchDashboardDataAsync(current.getId(), filterSnapshot, (stats, items) -> {
             executorService.submit(() -> {
                 List<VBox> renderedCards = new ArrayList<>();
                 if (items != null && cachedFxmlLocation != null) {
@@ -95,9 +97,13 @@ public class MainController {
                             ProductCardController cardController = loader.getController();
                             if (cardController != null) {
                                 String finalImageUrl = getFinalImageUrl(item.getImagePath());
-                                String statusText = "UPCOMING".equals(currentFilter) ? "Sắp diễn ra" : "Đang diễn ra";
+                                String statusText = "OPEN".equals(item.getAuctionStatus()) ? "Sắp diễn ra"
+                                        : "FINISHED".equals(item.getAuctionStatus()) ? "Đã kết thúc"
+                                        : "Đang diễn ra";
                                 String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
-                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), item.getEndTimeStr());                            }
+                                String timeStr = "Sắp diễn ra".equals(statusText) ? item.getStartTimeStr() : item.getEndTimeStr();
+                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), timeStr);
+                            }
                             cardLayout.setOnMouseClicked(e -> {
                                 executorService.submit(() -> {
                                     try {
@@ -126,6 +132,7 @@ public class MainController {
                         if (ongoingLabel != null) ongoingLabel.setText(String.valueOf(stats.getOrDefault("ongoing", 0)));
                         if (wonLabel != null) wonLabel.setText(String.valueOf(stats.getOrDefault("won", 0)));
                     }
+                    currentFilter = filterSnapshot;
                     updateFilterButtonStyles();
                     flowPane.getChildren().clear();
                     flowPane.getChildren().addAll(renderedCards);
@@ -133,7 +140,6 @@ public class MainController {
             });
         });
     }
-
     public void addAuctionToRealtimeUI(Auction newAuction) {
         if (newAuction == null || cachedFxmlLocation == null) return;
 
@@ -201,27 +207,31 @@ public class MainController {
     }
 
     private void updateFilterButtonStyles() {
-        Button[] filterButtons = {btnFilterAll, btnFilterActive, btnFilterUpcoming};
-        for (Button btn : filterButtons) {
-            if (btn != null) {
-                btn.getStyleClass().remove("filter-button-active");
-                if (!btn.getStyleClass().contains("filter-button")) {
-                    btn.getStyleClass().add("filter-button");
-                }
-            }
-        }
+        String normal = "-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;";
+        String active = "-fx-background-color: #0ea5e9; -fx-text-fill: white; -fx-background-radius: 8; -fx-cursor: hand; -fx-font-weight: bold; -fx-padding: 0 20;";
+
+        if (btnFilterAll != null) btnFilterAll.setStyle(normal);
+        if (btnFilterActive != null) btnFilterActive.setStyle(normal);
+        if (btnFilterUpcoming != null) btnFilterUpcoming.setStyle(normal);
+        // Reset style nút mới về trạng thái bình thường
+        if (btnFilterEnded != null) btnFilterEnded.setStyle(normal);
+
         Button activeBtn = switch (currentFilter) {
             case "ALL" -> btnFilterAll;
             case "ACTIVE" -> btnFilterActive;
             case "UPCOMING" -> btnFilterUpcoming;
+            case "FINISHED" -> btnFilterEnded;
             default -> null;
         };
-        if (activeBtn != null) activeBtn.getStyleClass().add("filter-button-active");
+        if (activeBtn != null) activeBtn.setStyle(active);
     }
 
     @FXML private void handleFilterAll() { currentFilter = "ALL"; refreshDashboard(); }
     @FXML private void handleFilterActive() { currentFilter = "ACTIVE"; refreshDashboard(); }
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
+
+    // Thêm hàm xử lý sự kiện khi ấn nút "Đã kết thúc"
+    @FXML private void handleFilterEnded() { currentFilter = "FINISHED"; refreshDashboard(); }
 
     @FXML
     private void handleLogout(ActionEvent event) {

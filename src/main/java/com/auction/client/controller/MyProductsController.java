@@ -1,8 +1,13 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.service.MyProductsService;
 import com.auction.client.util.CurrentAccount;
+import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
@@ -52,7 +57,7 @@ public class MyProductsController {
         productsService.loadOwnerProductsAsync(ownerId, myItems -> {
 
             // Tạo danh sách tạm để chứa các Card giao diện được dựng thô ngay trên luồng ngầm này
-            List<Node> renderedCards = new ArrayList<>();
+            List<Node> running = new ArrayList<>(), open = new ArrayList<>(), finished = new ArrayList<>();
             double totalValueCalc = 0;
             int activeCountCalc = 0;
             int totalAuctionsCalc = (myItems != null) ? myItems.size() : 0;
@@ -60,40 +65,59 @@ public class MyProductsController {
             if (myItems != null && !myItems.isEmpty() && productCardFxmlLocation != null) {
                 for (Item item : myItems) {
                     if (item == null) continue;
-
-                    totalValueCalc += item.getStartingPrice();
-                    if ("IN_AUCTION".equalsIgnoreCase(item.getStatus())) {
-                        activeCountCalc++;
-                    }
-
                     try {
-                        // 🧠 KIẾN TRÚC DỰ ÁN LỚN: Phân tích và nạp cấu trúc FXML ngay tại luồng nền
                         FXMLLoader loader = new FXMLLoader(productCardFxmlLocation);
-                        Node card = loader.load(); // Tác vụ đọc đĩa nặng nề chạy ngầm tại đây!
+                        Node card = loader.load();
+                        String statusStr = "Đã kết thúc";
 
                         ProductCardController cardController = loader.getController();
                         if (cardController != null) {
                             String priceStr = String.format("%,.0f đ", item.getStartingPrice());
-                            String statusStr = "IN_AUCTION".equalsIgnoreCase(item.getStatus()) ? "Đang diễn ra" : "Đã kết thúc";
                             String description = item.getDescription() != null ? item.getDescription() : "Không có mô tả.";
                             String sellerName = CurrentAccount.getAccount() != null ? CurrentAccount.getAccount().getUsername() : "Tôi";
                             String startTimeStr = "--/--/---- --:--";
                             String endTimeStr = "--/--/---- --:--";
 
-                            cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
-                                    description, sellerName, startTimeStr, endTimeStr);
+                            try {
+                                Response auctionResp = ClientSocket.getInstance().sendRequest(
+                                        new Request(MessageType.GET_AUCTION_BY_ITEM_ID, item.getItemId()));
+                                if (auctionResp != null && auctionResp.isSuccess()) {
+                                    Auction auction = (Auction) auctionResp.getData();
+                                    if (auction != null) {
+                                        priceStr = String.format("%,.0f đ", auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice());
+                                        totalValueCalc += auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
+                                        statusStr = auction.getStatus() == Auction.AuctionStatus.RUNNING ? "Đang diễn ra"
+                                                : auction.getStatus() == Auction.AuctionStatus.OPEN ? "Sắp diễn ra" : "Đã kết thúc";
+                                        if (auction.getStatus() == Auction.AuctionStatus.RUNNING) activeCountCalc++;
+                                        if (auction.getEndTime() != null)
+                                            endTimeStr = auction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                                        if (auction.getStartTime() != null)
+                                            startTimeStr = auction.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+                                    }
+                                }
+                            } catch (Exception ignored) {}
 
+                            String timeStr = "Sắp diễn ra".equals(statusStr) ? startTimeStr : endTimeStr;
+                            cardController.setData(item.getName(), priceStr, statusStr, item.getImagePath(),
+                                    description, sellerName, startTimeStr, timeStr);
                             cardController.setSellerMode(
                                     () -> handleEditProduct(item),
                                     () -> handleDeleteProduct(item)
                             );
                         }
-                        renderedCards.add(card);
+                        if ("Đang diễn ra".equals(statusStr)) running.add(card);
+                        else if ("Sắp diễn ra".equals(statusStr)) open.add(card);
+                        else finished.add(card);
                     } catch (Exception e) {
-                        System.err.println("❌ Lỗi nạp card sản phẩm trên luồng ngầm: " + e.getMessage());
+                        System.err.println("❌ Lỗi nạp card: " + e.getMessage());
                     }
                 }
             }
+
+            List<Node> renderedCards = new ArrayList<>();
+            renderedCards.addAll(running);
+            renderedCards.addAll(open);
+            renderedCards.addAll(finished);
 
             // Bản sao dữ liệu cấu hình để đẩy vào luồng UI
             final double finalTotalValue = totalValueCalc;

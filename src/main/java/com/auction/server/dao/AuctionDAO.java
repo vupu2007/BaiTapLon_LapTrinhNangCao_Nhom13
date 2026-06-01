@@ -220,6 +220,21 @@ public class AuctionDAO {
         }
         return list;
     }
+// Bổ sung
+    public Auction getAuctionByItemId(String itemId) throws SQLException {
+        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status IN ('RUNNING', 'OPEN', 'FINISHED') LIMIT 1";        try (Connection conn = DatabaseConnection.getConnection();
+                                                                                                                                   PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, itemId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    Auction a = mapResultSetToAuction(rs);
+                    System.out.println("DEBUG startTime=" + a.getStartTime() + " endTime=" + a.getEndTime());
+                    return a;
+                }
+            }
+        }
+        return null;
+    }
 
     // 11. Cập nhật giá hiện tại trực tiếp
     public boolean updateCurrentPrice(int auctionId, double newPrice, int winnerId) {
@@ -330,21 +345,6 @@ public class AuctionDAO {
             }
         }
         return stats;
-    }
-    public Auction getAuctionByItemId(String itemId) throws SQLException {
-        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status = 'RUNNING' LIMIT 1";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, itemId);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    Auction a = mapResultSetToAuction(rs);
-                    System.out.println("DEBUG startTime=" + a.getStartTime() + " endTime=" + a.getEndTime());
-                    return a;
-                }
-            }
-        }
-        return null;
     }
 
     public int countFinishedAuctionsByUser(int userId) {
