@@ -61,6 +61,8 @@
 
                 <Button fx:id="btnUserMgmt" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openUserMgmt" prefHeight="45.0" styleClass="nav-button" text="👥 Quản lý thành viên" />
 
+                <Button fx:id="btnAuctionMgmt" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openAuctionMgmt" prefHeight="45.0" styleClass="nav-button" text="🔨 Quản lý đấu giá" />
+
                 <Button alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#backToUserView" prefHeight="45.0" style="-fx-background-color: #0284c7; -fx-text-fill: white; -fx-background-radius: 10; -fx-font-weight: bold;" text="🔄 Về trang người dùng" />
             </VBox>
         </VBox>

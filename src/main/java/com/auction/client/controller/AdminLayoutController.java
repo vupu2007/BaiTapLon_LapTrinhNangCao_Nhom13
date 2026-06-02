@@ -20,6 +20,7 @@ public class AdminLayoutController {
     @FXML private StackPane adminContentArea;
     @FXML private Button btnDashboard;
     @FXML private Button btnUserMgmt;
+    @FXML private Button btnAuctionMgmt; // 🛠 THÊM MỚI: Liên kết với Button "Quản lý đấu giá" trong FXML
 
     @FXML
     public void initialize() {
@@ -79,7 +80,8 @@ public class AdminLayoutController {
      * HOÁN ĐỔI CLASS CSS CHUẨN
      */
     private void setButtonActive(Button activeButton) {
-        Button[] buttons = {btnDashboard, btnUserMgmt};
+        // 🛠 ĐÃ CẬP NHẬT: Thêm btnAuctionMgmt vào mảng để đồng bộ hiệu ứng chuyển màu active/deactive
+        Button[] buttons = {btnDashboard, btnUserMgmt, btnAuctionMgmt};
 
         for (Button btn : buttons) {
             if (btn != null) {
@@ -117,6 +119,23 @@ public class AdminLayoutController {
 
         // Code siêu ngắn gọn nhờ tận dụng cơ chế quét đa đường dẫn mới
         loadAdminPage("/view/admin/AdminUserMgmtView.fxml", "/view/AdminUserMgmtView.fxml");
+    }
+
+    /**
+     * 🔨 THÊM MỚI: Hàm xử lý khi bấm nút "Quản lý đấu giá" ngoài Sidebar
+     */
+    @FXML
+    private void openAuctionMgmt() {
+        setButtonActive(btnAuctionMgmt);
+        System.out.println("-> Mở giao diện Quản lý Đấu giá hệ thống");
+
+        // Quét đa đường dẫn an toàn đề phòng bạn đặt tên file có hoặc không có hậu tố "View"
+        loadAdminPage(
+                "/view/admin/AdminAuctionMgmtView.fxml",
+                "/view/AdminAuctionMgmtView.fxml",
+                "/view/admin/AdminAuctionMgmt.fxml",
+                "/view/AdminAuctionMgmt.fxml"
+        );
     }
 
     @FXML
