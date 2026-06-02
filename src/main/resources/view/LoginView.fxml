@@ -95,7 +95,8 @@
                 <HBox alignment="CENTER_LEFT">
                     <children>
                         <Hyperlink text="Quên mật khẩu?"
-                                   styleClass="forgot-link"/>
+                                   styleClass="forgot-link"
+                                   onAction="#handleForgotPassword"/>
                     </children>
                 </HBox>
                 <!-- LOGIN BUTTON -->

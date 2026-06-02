@@ -37,6 +37,31 @@ public class AccountService {
         System.out.println("✅ Đăng nhập thành công: " + username + " [" + account.getRole() + "]");
         return account;
     }
+    /**
+     * Xử lý logic quên mật khẩu: Kiểm tra -> Tạo OTP -> Gửi mail
+     */
+    public boolean processForgotPassword(String username, String email) {
+        if (!accountDAO.verifyUserEmail(username, email)) {
+            System.err.println("❌ Quên mật khẩu: Không tìm thấy tài khoản với Email này.");
+            return false;
+        }
+
+        String otp = String.format("%06d", new java.util.Random().nextInt(1000000));
+
+        accountDAO.saveOTP(username, otp);
+
+        try {
+            com.auction.server.service.EmailService emailService = new com.auction.server.service.EmailService();
+            emailService.sendEmail(email, "Mã xác thực khôi phục mật khẩu",
+                    "Chào bạn,\n\nMã xác thực để đặt lại mật khẩu của bạn là: " + otp +
+                            "\n\nLưu ý: Mã này chỉ có hiệu lực trong thời gian ngắn.");
+            System.out.println("📧 Đã gửi OTP cho user: " + username);
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ Lỗi gửi email: " + e.getMessage());
+            return false;
+        }
+    }
 
     public boolean register(String username, String password, String email) {
         if (username == null || username.isBlank()) {
@@ -59,7 +84,6 @@ public class AccountService {
         String newRole = currentAccount instanceof Bidder ? "SELLER" : "BIDDER";
         int accountId  = Integer.parseInt(currentAccount.getId());
 
-        // Đồng bộ hóa việc đổi vai trò tránh spam request đổi vai trò liên tục
         Object lock = userLocks.computeIfAbsent(accountId, k -> new Object());
         synchronized (lock) {
             boolean success = accountDAO.switchRole(accountId, newRole);
@@ -71,10 +95,6 @@ public class AccountService {
         }
     }
 
-    /**
-     * 🌟 TỐI ƯU CỐT LÕI: Hàm nạp tiền chuyển hướng gọi trực tiếp walletTransaction
-     * để tái sử dụng một luồng xử lý duy nhất, giảm 50% số lượng truy vấn DB thừa.
-     */
     public boolean deposit(Account account, double amount) {
         if (account == null || amount <= 0) return false;
         if (!(account instanceof Bidder || account instanceof Seller)) {
@@ -85,19 +105,12 @@ public class AccountService {
         return walletTransaction(accountId, amount, "DEPOSIT");
     }
 
-    /**
-     * 🚀 GIẢI PHÁP AN TOÀN TÀI CHÍNH: Tích hợp cơ chế khóa phân đoạn (Striped Locking)
-     * phối hợp với câu lệnh tăng trưởng nguyên tử bảo vệ số dư tuyệt đối.
-     */
     public boolean walletTransaction(int accountId, double amount, String type) {
         if (amount <= 0) return false;
 
-        // Lấy hoặc tạo một Object Lock chuyên biệt cho DUY NHẤT ID người dùng này
-        // Giúp User A giao dịch không bị block bởi User B, nhưng User A không thể tự xung đột chính mình
         Object lock = userLocks.computeIfAbsent(accountId, k -> new Object());
 
         synchronized (lock) {
-            // 1. Kiểm tra trạng thái và số dư an toàn trước khi hành động
             Account acc = accountDAO.getAccountById(accountId);
             if (acc == null) return false;
 
@@ -108,17 +121,10 @@ public class AccountService {
                 currentBalance = ((Seller) acc).getBalance();
             }
 
-            // 2. Chặn rút quá số dư khả dụng
             if ("WITHDRAW".equals(type) && currentBalance < amount) {
                 System.err.println("⚠️ Giao dịch thất bại: Tài khoản #" + accountId + " không đủ số dư!");
                 return false;
             }
-
-            // 3. 🚀 ỦY QUYỀN ĐỒNG BỘ CHO DATABASE (Atomic DB Update)
-            // Bạn cần sửa hàm updateBalance trong AccountDAO của bạn nhận tham số dạng Delta (sai số cộng trừ):
-            // Lệnh SQL chuẩn trong DAO nên là:
-            // "UPDATE account SET balance = balance + ?, total_deposit = total_deposit + ? WHERE id = ?" (Nếu là DEPOSIT)
-            // "UPDATE account SET balance = balance - ?, total_withdraw = total_withdraw + ? WHERE id = ?" (Nếu là WITHDRAW)
 
             boolean ok = accountDAO.executeAtomicWalletUpdate(accountId, amount, type);
 
@@ -169,7 +175,8 @@ public class AccountService {
             Account acc = accountDAO.getAccountById(accId);
             if (acc == null) return false;
             if (!acc.getPassword().equals(currentPassword)) return false;
-            return accountDAO.updatePassword(accId, newPassword);
+            // ĐÃ SỬA: Gọi đúng hàm Raw với tham số int
+            return accountDAO.updatePasswordRaw(accId, newPassword);
         }
     }
 
