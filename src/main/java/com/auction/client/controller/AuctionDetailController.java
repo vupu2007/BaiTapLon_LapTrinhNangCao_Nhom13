@@ -65,6 +65,8 @@ public class AuctionDetailController implements Observer {
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private final AuctionDetailService detailService = new AuctionDetailService();
 
+    private String lastEndTimeStr = ""; // Lính gác nhớ thời gian kết thúc cũ
+
     @FXML
     public void initialize() {
         priceSeries = new XYChart.Series<>();
@@ -135,9 +137,27 @@ public class AuctionDetailController implements Observer {
 
                 // Thông báo chữ cam ngắn gọn mỗi khi gia hạn thành công
                 if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
-                    Label alertLog = new Label(String.format("⚡ [%s] [GIA HẠN] Đặt giá giây cuối, phiên đấu giá tăng thêm 60 giây!", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))));
-                    alertLog.setStyle("-fx-font-size: 14px; -fx-padding: 5px; -fx-text-fill: #d35400; -fx-font-weight: bold;");
-                    vboxBidHistoryContainer.getChildren().add(0, alertLog);
+
+                    // NẾU thời gian kết thúc vừa nhận được KHÁC với thời gian kết thúc cũ (tức là bị gia hạn)
+                    if (!targetEndTimeStr.equals(this.lastEndTimeStr)) {
+
+                        // Nếu là lần đầu mở form (lính gác chưa có dữ liệu) thì chỉ lưu lại, KHÔNG in thông báo
+                        if (this.lastEndTimeStr.isEmpty()) {
+                            this.lastEndTimeStr = targetEndTimeStr;
+                        }
+                        // Nếu đã có dữ liệu cũ rồi mà nay lại bị đổi -> Đích thị là Anti-snipping!
+                        else {
+                            this.lastEndTimeStr = targetEndTimeStr; // Cập nhật lại thời gian mới
+
+                            Label alertLog = new Label(String.format("⚡ [%s] [GIA HẠN] Đặt giá giây cuối, phiên đấu giá tăng thêm 60 giây!",
+                                    LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))));
+                            alertLog.setStyle("-fx-font-size: 14px; -fx-padding: 5px; -fx-text-fill: #d35400; -fx-font-weight: bold;");
+
+                            Platform.runLater(() -> {
+                                vboxBidHistoryContainer.getChildren().add(0, alertLog);
+                            });
+                        }
+                    }
                 }
             }
             bidCount++;

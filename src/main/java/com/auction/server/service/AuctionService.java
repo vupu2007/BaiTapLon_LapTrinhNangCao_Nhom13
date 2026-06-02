@@ -26,6 +26,7 @@ public class AuctionService {
     private final AutoBidDAO autoBidDAO = new AutoBidDAO();
     private final AccountDAO accountDAO = new AccountDAO();
 
+
     // 🌟 TỐI ƯU 1: Hệ thống khóa phân mảnh theo từng ID phiên đấu giá
     private final ConcurrentHashMap<Integer, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();
 
