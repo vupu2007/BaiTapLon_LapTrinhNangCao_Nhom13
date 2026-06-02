@@ -104,6 +104,25 @@ public class AuctionDetailController implements Observer {
         final String targetUser = finalUsername;
         final String targetEndTimeStr = newEndTimeStr;
 
+        // 🌟 1. BẮT QUẢ TANG LỆNH CHỐT SỔ CỦA SERVER Ở NGAY ĐÂY!
+        if ("[HỆ THỐNG] - KẾT THÚC!".equals(targetUser)) {
+            Platform.runLater(() -> {
+                if (countdownTimeline != null) countdownTimeline.stop();
+                if (lblTimeRemaining != null) {
+                    lblTimeRemaining.setText("00h 00m 00s (Đã kết thúc)");
+                    lblTimeRemaining.setStyle("-fx-text-fill: #ff4d4d; -fx-font-weight: bold;");
+                }
+                disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
+
+                // Bật bảng vàng Người chiến thắng lên!
+                showWinnerSection();
+            });
+
+            // 🛑 LỆNH RETURN CỰC QUAN TRỌNG:
+            // Thoát ngay lập tức! Không cho chạy Autobid, không vẽ biểu đồ, không in lịch sử nữa.
+            return;
+        }
+
         // 🤖 LUỒNG AUTOBID: Chạy độc lập hoàn toàn
         Platform.runLater(() -> {
             if (isAutoBidEnabled && CurrentAccount.getAccount() != null && !targetUser.equals(CurrentAccount.getAccount().getUsername())) {
@@ -124,7 +143,8 @@ public class AuctionDetailController implements Observer {
 
             if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
                 try {
-                    java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                    // Sửa ở phần luồng cập nhật giao diện chính:
+                    java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
                     startCountdownClock(java.time.LocalDateTime.parse(targetEndTimeStr, dtf));
                 } catch (Exception e) { System.err.println("❌ Lỗi: " + e.getMessage()); }
             }
@@ -139,23 +159,24 @@ public class AuctionDetailController implements Observer {
                 if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
 
                     // NẾU thời gian kết thúc vừa nhận được KHÁC với thời gian kết thúc cũ (tức là bị gia hạn)
-                    if (!targetEndTimeStr.equals(this.lastEndTimeStr)) {
+                    if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
 
-                        // Nếu là lần đầu mở form (lính gác chưa có dữ liệu) thì chỉ lưu lại, KHÔNG in thông báo
-                        if (this.lastEndTimeStr.isEmpty()) {
-                            this.lastEndTimeStr = targetEndTimeStr;
-                        }
-                        // Nếu đã có dữ liệu cũ rồi mà nay lại bị đổi -> Đích thị là Anti-snipping!
-                        else {
-                            this.lastEndTimeStr = targetEndTimeStr; // Cập nhật lại thời gian mới
+                        // CHỈ CẦN KHÁC NHAU LÀ IN RA, KHÔNG CẦN CHECK RỖNG NỮA
+                        if (!targetEndTimeStr.equals(this.lastEndTimeStr)) {
 
+                            this.lastEndTimeStr = targetEndTimeStr; // Cập nhật mốc mới ngay lập tức
+
+                            // 1. In thông báo chữ cam ra lịch sử
                             Label alertLog = new Label(String.format("⚡ [%s] [GIA HẠN] Đặt giá giây cuối, phiên đấu giá tăng thêm 60 giây!",
                                     LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))));
                             alertLog.setStyle("-fx-font-size: 14px; -fx-padding: 5px; -fx-text-fill: #d35400; -fx-font-weight: bold;");
+                            vboxBidHistoryContainer.getChildren().add(0, alertLog);
 
-                            Platform.runLater(() -> {
-                                vboxBidHistoryContainer.getChildren().add(0, alertLog);
-                            });
+                            // 🌟 2. CẬP NHẬT LABEL BÊN TRÁI
+                            // (Bạn check file FXML xem id của cái label thời gian kết thúc là gì, ví dụ lblEndTime)
+                            if (lblEndTime != null) {
+                                lblEndTime.setText(targetEndTimeStr);
+                            }
                         }
                     }
                 }
@@ -175,17 +196,36 @@ public class AuctionDetailController implements Observer {
             java.time.Duration duration = java.time.Duration.between(LocalDateTime.now(), endTime);
 
             if (duration.isZero() || duration.isNegative()) {
-                if (lblTimeRemaining != null) {
-                    lblTimeRemaining.setText("00h 00m 00s (Đã kết thúc)");
-                    lblTimeRemaining.setStyle("-fx-text-fill: #ff4d4d; -fx-font-weight: bold;");
+                countdownTimeline.stop(); // Dừng đồng hồ trước
+
+                String status = currentItem.getStatus(); // Hoặc biến trạng thái của nhóm
+
+                if ("UPCOMING".equals(status) || "Sắp diễn ra".equalsIgnoreCase(status)) {
+
+                    // ⏳ TRƯỜNG HỢP 1: CHỜ SERVER MỞ CỬA
+                    if (lblTimeRemaining != null) {
+                        lblTimeRemaining.setText("Đang mở phiên...");
+                        lblTimeRemaining.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;"); // Cam
+                    }
+                    // CHỈ ĐỢI SERVER GỬI SOCKET ĐỂ REFRESH LẠI GIAO DIỆN
+
+                } else {
+
+                    // ⏳ TRƯỜNG HỢP 2: CHỜ SERVER ĐÓNG CỬA & TÍNH TIỀN
+                    if (lblTimeRemaining != null) {
+                        lblTimeRemaining.setText("Đang chốt kết quả..."); // KHÔNG HIỆN 00:00:00 NỮA
+                        lblTimeRemaining.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;"); // Cam
+                    }
+                    // 1. Khóa nút bấm ngay lập tức để chặn người dùng "cố đấm ăn xôi" phút chót
+                    disableBiddingFeatures("Đang đợi hệ thống công bố kết quả...");
+
+                    // 2. ❌ TUYỆT ĐỐI KHÔNG GỌI showWinnerSection() Ở ĐÂY NỮA!
+                    // Client lại tiếp tục ngồi im chờ Server xử lý hàm closeAuction() xong,
+                    // bắn Socket báo kết thúc về thì hàm nhận Socket mới chịu trách nhiệm gọi showWinnerSection()
                 }
-                disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
 
-                // GỌI HÀM HIỂN THỊ Ô NGƯỜI THẮNG CUỘC KHI HẾT GIỜ
-                showWinnerSection();
-
-                countdownTimeline.stop();
             } else {
+                // Hiển thị giờ phút giây bình thường
                 long hours = duration.toHours();
                 long minutes = duration.toMinutesPart();
                 long seconds = duration.toSecondsPart();
@@ -197,7 +237,6 @@ public class AuctionDetailController implements Observer {
         countdownTimeline.setCycleCount(Animation.INDEFINITE);
         countdownTimeline.play();
     }
-
     /**
      * HÀM MỚI: Xử lý hiển thị thông tin người thắng cuộc và cấu hình lại trạng thái giao diện
      */
@@ -386,7 +425,7 @@ public class AuctionDetailController implements Observer {
                     priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));                    for (BidTransaction bid : bids) {
                         Label label = new Label(String.format("• [%s] %s đặt %,.0f đ",
                                 bid.getBidTime() != null
-                                        ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                                        ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
                                         : "--:--:--",
                                 bid.getBidderUsername(),
                                 bid.getBidAmount()));
@@ -408,6 +447,7 @@ public class AuctionDetailController implements Observer {
         if (lblSellerName != null) lblSellerName.setText(seller);
         if (lblStartTime != null) lblStartTime.setText(start);
         if (lblEndTime != null) lblEndTime.setText(end);
+        this.lastEndTimeStr = end;
     }
 
     private void handleManualBid() {

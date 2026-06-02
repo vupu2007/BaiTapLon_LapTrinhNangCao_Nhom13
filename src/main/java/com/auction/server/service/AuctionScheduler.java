@@ -42,8 +42,10 @@ public class AuctionScheduler {
     }
 
     public void start() {
-        scheduler.scheduleAtFixedRate(this::tick, 30, 300, TimeUnit.SECONDS);
-        System.out.println("✅ AuctionScheduler da khoi dong thanh cong tren Server!");
+        // TỐI ƯU 1: Rút ngắn thời gian quét từ 300s xuống 2s để đạt chuẩn Real-time
+        // Khởi động sau 3 giây, cứ 2 giây quét 1 lần
+        scheduler.scheduleAtFixedRate(this::tick, 3, 2, TimeUnit.SECONDS);
+        System.out.println("✅ AuctionScheduler da khoi dong thanh cong (Toc do quet: 2 giay/lan)!");
     }
 
     public void stop() {
@@ -62,15 +64,35 @@ public class AuctionScheduler {
             List<Auction> allAuctions = auctionDAO.getAllAuctionsWithConnection(conn);
             if (allAuctions == null) return;
 
+            LocalDateTime now = LocalDateTime.now();
+
+            // 🌟 SỬA ĐOẠN NÀY TRONG HÀM TICK() CỦA SERVER:
             for (Auction auction : allAuctions) {
-                if (auction.getStatus() == Auction.AuctionStatus.OPEN
-                        && auction.getStartTime() != null
-                        && LocalDateTime.now().isAfter(auction.getStartTime())) {
-                    auctionDAO.updateStatusWithConnection(conn, auction.getId(), Auction.AuctionStatus.RUNNING);
-                    System.out.println("Phiên " + auction.getId() + " bắt đầu!");
-                } else if (auction.getStatus() == Auction.AuctionStatus.RUNNING
+
+                if (auction.getStatus() == Auction.AuctionStatus.OPEN && auction.getStartTime() != null) {
+
+                    // Chuyển cả 2 mốc thời gian về dạng Mili giây để so sánh cho chuẩn 100%
+                    long nowMillis = java.sql.Timestamp.valueOf(LocalDateTime.now()).getTime();
+                    long startMillis = java.sql.Timestamp.valueOf(auction.getStartTime()).getTime();
+
+                    // Chỉ cần thời gian hiện tại VƯỢT QUÁ hoặc BẰNG thời gian bắt đầu
+                    if (nowMillis >= startMillis) {
+
+                        auctionDAO.updateStatusWithConnection(conn, auction.getId(), Auction.AuctionStatus.RUNNING);
+                        System.out.println("🟢 [SERVER REALTIME] Phiên " + auction.getId() + " bắt đầu!");
+
+                        try {
+                            ClientHandler.pushBidUpdate(auction.getId(), auction.getCurrentPrice(), "[HỆ THỐNG] - PHIÊN ĐẤU GIÁ BẮT ĐẦU!", auction.getEndTime());
+                        } catch (Exception e) {
+                            System.err.println("Không thể notify client mở cửa: " + e.getMessage());
+                        }
+                    }
+                }
+                // 🌟 LOGIC ĐÓNG CỬA (Giữ nguyên của nhóm sếp)
+                else if (auction.getStatus() == Auction.AuctionStatus.RUNNING
                         && auction.getEndTime() != null
-                        && LocalDateTime.now().isAfter(auction.getEndTime())) {
+                        && !now.isBefore(auction.getEndTime())) {
+
                     closeAuction(auction, conn);
                 }
             }
