@@ -147,12 +147,14 @@ public class AuctionDetailController implements Observer {
                         }
 
                         // Tắt đồng hồ cũ trước để tránh luồng chạy đè lên nhau
-                        if (countdownTimeline != null) {
+                         if (countdownTimeline != null) {
                             countdownTimeline.stop();
+                            countdownTimeline = null; // 🌟 Thêm dòng này để dọn sạch bộ nhớ
                         }
-                        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+
+                         java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
                         startCountdownClock(java.time.LocalDateTime.parse(targetEndTimeStr, dtf));
-                    }
+                        }
                 } catch (Exception e) {
                     System.err.println("❌ Lỗi gia hạn: " + e.getMessage());
                 }
