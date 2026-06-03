@@ -3,13 +3,6 @@ package com.auction.client.controller;
 import com.auction.shared.network.Response;
 import com.auction.shared.model.Account;
 import com.auction.client.util.CurrentAccount;
-import javafx.util.Pair; // Dùng cho Pair
-import javafx.scene.layout.GridPane; // Dùng cho GridPane
-import javafx.scene.control.Label; // Dùng cho Label
-import javafx.scene.control.TextField; // Dùng cho TextField
-import javafx.scene.control.Dialog; // Dùng cho Dialog
-import javafx.scene.control.ButtonType; // Dùng cho ButtonType
-import javafx.scene.control.ButtonBar; // Dùng cho ButtonBar
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -17,11 +10,10 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.*; // Import thêm để dùng Dialog
+import javafx.scene.control.*;
 import javafx.stage.Stage;
 import java.io.IOException;
 import java.net.URL;
-import java.util.Optional; // Import để xử lý kết quả Dialog
 
 public class LoginController {
 
@@ -40,48 +32,12 @@ public class LoginController {
         visiblePasswordField.setManaged(false);
     }
 
-    // --- TÍNH NĂNG MỚI: Xử lý Quên mật khẩu ---
+    // --- 🌟 ĐÃ SỬA: Chuyển sang file FXML Quên mật khẩu tràn màn hình ---
     @FXML
     private void handleForgotPassword(ActionEvent event) {
-        // Tạo dialog để lấy thông tin
-        Dialog<Pair<String, String>> dialog = new Dialog<>();
-        dialog.setTitle("Khôi phục mật khẩu");
-        dialog.setHeaderText("Nhập thông tin tài khoản");
-
-        ButtonType sendButtonType = new ButtonType("Gửi yêu cầu", ButtonBar.ButtonData.OK_DONE);
-        dialog.getDialogPane().getButtonTypes().addAll(sendButtonType, ButtonType.CANCEL);
-
-        GridPane grid = new GridPane();
-        grid.setHgap(10); grid.setVgap(10);
-        TextField username = new TextField(); username.setPromptText("Username");
-        TextField email = new TextField(); email.setPromptText("Email");
-        grid.add(new Label("Username:"), 0, 0); grid.add(username, 1, 0);
-        grid.add(new Label("Email:"), 0, 1); grid.add(email, 1, 1);
-        dialog.getDialogPane().setContent(grid);
-
-        dialog.setResultConverter(dialogButton -> {
-            if (dialogButton == sendButtonType) return new Pair<>(username.getText(), email.getText());
-            return null;
-        });
-
-        Optional<Pair<String, String>> result = dialog.showAndWait();
-        result.ifPresent(pair -> {
-            // Gọi hàm accountController.forgotPassword mới của bạn
-            Thread thread = new Thread(() -> {
-                Response response = accountController.forgotPassword(pair.getKey(), pair.getValue());
-
-                Platform.runLater(() -> {
-                    if (response.isSuccess()) {
-                        showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
-                    } else {
-                        showAlert(Alert.AlertType.ERROR, "Lỗi", response.getMessage());
-                    }
-                });
-            });
-            thread.setDaemon(true);
-            thread.start();
-        });
+        switchScene(event, "/view/ForgotPasswordView.fxml", "Khôi phục mật khẩu - Đấu giá UET", false);
     }
+
     @FXML
     void handleLogin(ActionEvent event) {
         String username = (usernameField.getText() != null) ? usernameField.getText().trim() : "";
@@ -135,7 +91,10 @@ public class LoginController {
     private void switchScene(ActionEvent event, String fxmlPath, String title, boolean isAdmin) {
         try {
             URL fxmlUrl = getClass().getResource(fxmlPath);
-            if (fxmlUrl == null) return;
+            if (fxmlUrl == null) {
+                System.err.println("Không tìm thấy file FXML: " + fxmlPath);
+                return;
+            }
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();
             if (isAdmin && fxmlPath.contains("MainLayout")) {

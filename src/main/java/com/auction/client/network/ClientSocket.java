@@ -1,5 +1,6 @@
 package com.auction.client.network;
 
+import com.auction.client.ClientConnection; // Cầu nối đồng bộ ngược sang code cũ
 import com.auction.client.controller.AuctionDetailController;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
@@ -22,7 +23,6 @@ public class ClientSocket {
     private boolean isRunning = true;
     private boolean isConnected = false;
 
-    // 📦 HỘP THƯ TRUNG CHUYỂN: Khớp nối Request - Response theo ID
     private final ConcurrentHashMap<String, CompletableFuture<Response>> pendingRequests = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<Integer, Object> auctionObservers = new ConcurrentHashMap<>();
 
@@ -37,15 +37,10 @@ public class ClientSocket {
     private Runnable onAuctionUpdate;
     public void setOnAuctionUpdate(Runnable callback) { this.onAuctionUpdate = callback; }
 
-
-
     private ClientSocket() {
         connectToServer();
     }
 
-    /**
-     * 🌐 Thực hiện kết nối vật lý tới hệ thống Server
-     */
     private synchronized void connectToServer() {
         try {
             Properties props = new Properties();
@@ -76,9 +71,7 @@ public class ClientSocket {
             System.err.println("❌ [ClientSocket] Kết nối thất bại: " + e.getMessage());
         }
     }
-    /**
-     * 🔄 Tự động kết nối lại nếu mạch cũ chết
-     */
+
     public static synchronized ClientSocket getInstance() {
         if (instance == null) {
             instance = new ClientSocket();
@@ -89,9 +82,10 @@ public class ClientSocket {
         return instance;
     }
 
-    /**
-     * Hàm gửi Request an toàn đa luồng bất đồng bộ
-     */
+    public ObjectOutputStream getOutputStream() {
+        return this.out;
+    }
+
     public Response sendRequest(Request request) {
         if (!isConnected || out == null) {
             System.err.println("❌ [ClientSocket] Mạng ngoại tuyến.");
@@ -116,60 +110,38 @@ public class ClientSocket {
         }
 
         try {
-            Response response = futureResponse.get(20, TimeUnit.SECONDS);
-
-            // 🎯 TỰ ĐỘNG CHUYỂN MÀN HÌNH NẾU SERVER BÁO OTP_SENT
-            if (response != null && "OTP_SENT".equals(response.getMessage())) {
-                javafx.application.Platform.runLater(() -> {
-                    try {
-                        javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/view/ResetPassword.fxml"));
-                        javafx.scene.Parent root = loader.load();
-
-                        // Truyền username qua controller mới (nếu bạn có lưu biến tempUsername)
-                        // com.auction.client.controller.ResetPasswordController ctrl = loader.getController();
-                        // ctrl.setUsername(this.tempUsername);
-
-                        javafx.stage.Stage stage = (javafx.stage.Stage) javafx.stage.Stage.getWindows()
-                                .stream().filter(javafx.stage.Window::isShowing).findFirst().orElse(null);
-                        if (stage != null) {
-                            stage.setScene(new javafx.scene.Scene(root));
-                            stage.show();
-                        }
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                });
-            }
-            return response;
-
+            // 🎯 Đã loại bỏ khối IF tự ý chuyển giao diện FXML tại đây để chống xung đột UI
+            return futureResponse.get(20, TimeUnit.SECONDS);
         } catch (Exception e) {
             return new Response(false, "Thời gian phản hồi quá hạn!");
         } finally {
             pendingRequests.remove(requestId);
         }
     }
-    /**
-     * 👁️ LUỒNG NGẦM LẮNG NGHE
-     */
+
     private void listenFromServer() {
         while (isRunning) {
             try {
                 if (in == null) break;
 
                 Object obj = in.readObject();
+
+                // Nếu server trả về Request cũ, bắn sang ClientConnection xử lý tiếp
+                if (obj instanceof Request serverReq) {
+                    ClientConnection.bridgeServerMessage(serverReq);
+                    continue;
+                }
+
                 if (obj instanceof Response response) {
                     String requestId = response.getRequestId();
 
-                    // 1. Vẫn báo hiệu cho hàm sendRequest biết là đã xong
+                    // Gửi tín hiệu đồng bộ để kiểm tra thông báo FORGOT_PASSWORD_SUCCESS cũ
+                    ClientConnection.bridgeResponseCheck(response);
+
                     if (requestId != null && pendingRequests.containsKey(requestId)) {
                         pendingRequests.get(requestId).complete(response);
-
-                        // ⚡ CỨU CÁNH: Gọi luôn hàm xử lý notification ở đây
-                        // để nó kiểm tra xem có phải là "OTP_SENT" không
                         handleRealtimeNotification(response);
-                    }
-                    // 2. Nếu là tin nhắn chủ động từ Server (không có requestId)
-                    else {
+                    } else {
                         handleRealtimeNotification(response);
                     }
                 }
@@ -183,6 +155,7 @@ public class ClientSocket {
             }
         }
     }
+
     public void addAuctionObserver(int auctionId, Object observer) {
         if (observer != null) {
             auctionObservers.put(auctionId, observer);
@@ -200,6 +173,7 @@ public class ClientSocket {
             System.out.println("🎯 [Realtime-Observer] Đã đăng ký lắng nghe phiên ID: " + auctionId);
         }
     }
+
     public void removeAuctionObserver(int auctionId) {
         auctionObservers.remove(auctionId);
         System.out.println("🔌 [Realtime-Observer] Đã hủy lắng nghe phiên ID: " + auctionId);
@@ -210,32 +184,11 @@ public class ClientSocket {
     }
 
     private void handleRealtimeNotification(Response response) {
-        String msg = response.getMessage();
         String type = response.getType();
+        String msg = response.getMessage();
 
-        // 🚀 XỬ LÝ CHUYỂN MÀN HÌNH QUÊN MẬT KHẨU
-        if ("OTP_SENT".equals(msg)) {
-            javafx.application.Platform.runLater(() -> {
-                try {
-                    // Dòng này load file FXML của bạn
-                    javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/view/ResetPassword.fxml"));
-                    javafx.scene.Parent root = loader.load();
+        // 🎯 Đã loại bỏ khối IF check "OTP_SENT" gây tranh chấp giật màn hình ở đây
 
-                    // Lấy Stage hiện tại để thay đổi Scene
-                    javafx.stage.Stage stage = (javafx.stage.Stage) javafx.stage.Stage.getWindows().stream().filter(javafx.stage.Window::isShowing).findFirst().orElse(null);
-                    if (stage != null) {
-                        stage.setScene(new javafx.scene.Scene(root));
-                        stage.show();
-                    }
-                } catch (Exception e) {
-                    System.err.println("❌ Lỗi chuyển màn hình: " + e.getMessage());
-                    e.printStackTrace();
-                }
-            });
-            return;
-        }
-
-        // 🚀 XỬ LÝ BID UPDATE CŨ
         if ("BID_UPDATE".equalsIgnoreCase(type)) {
             Object[] data = (Object[]) response.getData();
             if (data == null) return;
@@ -243,7 +196,6 @@ public class ClientSocket {
             double newPrice = (double) data[1];
             String username = (String) data[2];
 
-            // Nếu là thông báo phiên bắt đầu → refresh dashboard
             if (username != null && username.contains("PHIÊN ĐẤU GIÁ BẮT ĐẦU")) {
                 if (onAuctionUpdate != null) Platform.runLater(onAuctionUpdate);
                 return;
@@ -274,6 +226,4 @@ public class ClientSocket {
         this.in = null;
         this.socket = null;
     }
-
-
 }
