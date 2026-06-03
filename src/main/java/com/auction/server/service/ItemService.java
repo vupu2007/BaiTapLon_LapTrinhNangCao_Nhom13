@@ -64,9 +64,12 @@ public class ItemService {
             System.err.println("Sản phẩm không tồn tại!");
             return false;
         }
-        // Chỉ chủ sở hữu mới được xóa
         if (existing.getOwnerId() != requesterId) {
             System.err.println("Bạn không có quyền xóa sản phẩm này!");
+            return false;
+        }
+         if (!"AVAILABLE".equals(existing.getStatus()) && !"OPEN".equals(existing.getAuctionStatus())) {
+            System.err.println("Không thể xóa sản phẩm đang đấu giá!");
             return false;
         }
 

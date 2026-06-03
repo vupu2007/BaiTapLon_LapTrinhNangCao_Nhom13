@@ -205,6 +205,12 @@ public class ClientHandler implements Runnable {
                     boolean ok = itemService.deleteItem(itemId);
                     return new Response(ok, ok ? "Xóa thành công!" : "Xóa thất bại (đang đấu giá?)", null);
                 }
+                case UPDATE_ITEM: {
+                    Item item = (Item) request.getPayload();
+                    boolean ok = itemService.updateItem(item);
+                    if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
+                    return new Response(ok, ok ? "Cập nhật thành công!" : "Không thể sửa sản phẩm đang đấu giá!", null);
+                }
                 case CREATE_AUCTION: {
                     Object[] d = (Object[]) request.getPayload();
                     boolean ok = auctionService.createAuction(

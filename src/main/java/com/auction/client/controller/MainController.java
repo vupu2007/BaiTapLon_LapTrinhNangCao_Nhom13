@@ -28,6 +28,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class MainController {
 
@@ -66,6 +68,9 @@ public class MainController {
             refreshDashboard();
         }
         ClientSocket.getInstance().setOnAuctionUpdate(() -> refreshDashboard());
+
+        ScheduledExecutorService poller = Executors.newSingleThreadScheduledExecutor();
+        poller.scheduleAtFixedRate(() -> Platform.runLater(this::refreshDashboard), 5, 5, TimeUnit.SECONDS);
     }
 
     private void initFxmlCache() {
