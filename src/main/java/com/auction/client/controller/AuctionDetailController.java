@@ -100,87 +100,71 @@ public class AuctionDetailController implements Observer {
             newEndTimeStr = parts[1];
         }
 
-        // 🎯 TẠO CÁC BIẾN FINAL ĐỂ FIX TRIỆT ĐỂ LỖI LAMBDA EXPRESSION
         final String targetUser = finalUsername;
         final String targetEndTimeStr = newEndTimeStr;
 
-        // 🌟 1. BẮT QUẢ TANG LỆNH CHỐT SỔ CỦA SERVER Ở NGAY ĐÂY!
-        if ("[HỆ THỐNG] - KẾT THÚC!".equals(targetUser)) {
-            Platform.runLater(() -> {
+        Platform.runLater(() -> {
+            // LUỒNG XỬ LÝ KẾT THÚC PHIÊN
+            if ("[HỆ THỐNG] - KẾT THÚC!".equals(targetUser)) {
                 if (countdownTimeline != null) countdownTimeline.stop();
                 if (lblTimeRemaining != null) {
-                    lblTimeRemaining.setText("00h 00m 00s (Đã kết thúc)");
-                    lblTimeRemaining.setStyle("-fx-text-fill: #ff4d4d; -fx-font-weight: bold;");
+                    lblTimeRemaining.setText("00h 00m 00s");
+                    lblTimeRemaining.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
                 }
                 disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
-
-                // Bật bảng vàng Người chiến thắng lên!
                 showWinnerSection();
-            });
+                return;
+            }
 
-            // 🛑 LỆNH RETURN CỰC QUAN TRỌNG:
-            // Thoát ngay lập tức! Không cho chạy Autobid, không vẽ biểu đồ, không in lịch sử nữa.
-            return;
-        }
-
-        // 🤖 LUỒNG AUTOBID: Chạy độc lập hoàn toàn
-        Platform.runLater(() -> {
+            // LUỒNG AUTOBID
             if (isAutoBidEnabled && CurrentAccount.getAccount() != null && !targetUser.equals(CurrentAccount.getAccount().getUsername())) {
                 triggerAutoBidSystem(newPrice);
             }
-        });
 
-        // 🛑 LUỒNG CHẶN LẶP LOG GIAO DIỆN
-        if (newPrice == lastProcessedPrice) {
-            return;
-        }
-        lastProcessedPrice = newPrice;
+            // CHẶN TRÙNG LOG (Đưa vào trong luồng UI để không chặn nhầm luồng tính giờ)
+            if (newPrice == lastProcessedPrice) {
+                return;
+            }
+            lastProcessedPrice = newPrice;
 
-        // 💻 LUỒNG CẬP NHẬT GIAO DIỆN CHÍNH
-        Platform.runLater(() -> {
+            // CẬP NHẬT GIÁ VÀ TÊN REAL-TIME
             if (lblCurrentPrice != null) lblCurrentPrice.setText(String.format("%,.0f đ", newPrice));
             if (lblTopBidder != null) lblTopBidder.setText(targetUser);
 
+            // KÍCH HOẠT LẠI ĐỒNG HỒ KHI CÓ ANTI-SNIPPING (GIA HẠN GIỜ)
             if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
                 try {
-                    // Sửa ở phần luồng cập nhật giao diện chính:
-                    java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
-                    startCountdownClock(java.time.LocalDateTime.parse(targetEndTimeStr, dtf));
-                } catch (Exception e) { System.err.println("❌ Lỗi: " + e.getMessage()); }
-            }
+                    if (!targetEndTimeStr.equals(this.lastEndTimeStr)) {
+                        this.lastEndTimeStr = targetEndTimeStr;
 
-            if (vboxBidHistoryContainer != null) {
-                // Nhật ký giá thường
-                Label log = new Label(String.format("• [%s] %s đặt mức giá %,.0f đ", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")), targetUser, newPrice));
-                log.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
-                vboxBidHistoryContainer.getChildren().add(0, log);
+                        if (lblEndTime != null) lblEndTime.setText(targetEndTimeStr);
 
-                // Thông báo chữ cam ngắn gọn mỗi khi gia hạn thành công
-                if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
-
-                    // NẾU thời gian kết thúc vừa nhận được KHÁC với thời gian kết thúc cũ (tức là bị gia hạn)
-                    if (targetEndTimeStr != null && !targetEndTimeStr.isEmpty()) {
-
-                        // CHỈ CẦN KHÁC NHAU LÀ IN RA, KHÔNG CẦN CHECK RỖNG NỮA
-                        if (!targetEndTimeStr.equals(this.lastEndTimeStr)) {
-
-                            this.lastEndTimeStr = targetEndTimeStr; // Cập nhật mốc mới ngay lập tức
-
-                            // 1. In thông báo chữ cam ra lịch sử
+                        if (vboxBidHistoryContainer != null) {
                             Label alertLog = new Label(String.format("⚡ [%s] [GIA HẠN] Đặt giá giây cuối, phiên đấu giá tăng thêm 60 giây!",
                                     LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss"))));
                             alertLog.setStyle("-fx-font-size: 14px; -fx-padding: 5px; -fx-text-fill: #d35400; -fx-font-weight: bold;");
                             vboxBidHistoryContainer.getChildren().add(0, alertLog);
-
-                            // 🌟 2. CẬP NHẬT LABEL BÊN TRÁI
-                            // (Bạn check file FXML xem id của cái label thời gian kết thúc là gì, ví dụ lblEndTime)
-                            if (lblEndTime != null) {
-                                lblEndTime.setText(targetEndTimeStr);
-                            }
                         }
+
+                        // Tắt đồng hồ cũ trước để tránh luồng chạy đè lên nhau
+                        if (countdownTimeline != null) {
+                            countdownTimeline.stop();
+                        }
+                        java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+                        startCountdownClock(java.time.LocalDateTime.parse(targetEndTimeStr, dtf));
                     }
+                } catch (Exception e) {
+                    System.err.println("❌ Lỗi gia hạn: " + e.getMessage());
                 }
             }
+
+            // IN NHẬT KÝ ĐẶT GIÁ THƯỜNG
+            if (vboxBidHistoryContainer != null) {
+                Label log = new Label(String.format("• [%s] %s đặt mức giá %,.0f đ", LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss")), targetUser, newPrice));
+                log.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
+                vboxBidHistoryContainer.getChildren().add(0, log);
+            }
+
             bidCount++;
             priceSeries.getData().add(new XYChart.Data<>(bidCount, newPrice));
         });
@@ -355,80 +339,85 @@ public class AuctionDetailController implements Observer {
     }
     public void loadProductDetail(Auction auction) {
         if (auction == null) return;
-        System.out.println("seller=" + auction.getSellerName() + " desc=" + auction.getDescription());
-        if (auction.getProductName() == null) {
-            auction.setProductName("");
-        }
-        if (auction.getSellerName() == null) {
-            auction.setSellerName("Người bán #" + auction.getSellerId());
-        }
+        if (auction.getProductName() == null) auction.setProductName("");
+        if (auction.getSellerName() == null) auction.setSellerName("Người bán #" + auction.getSellerId());
 
         this.currentAuction = auction;
         this.currentItem = null;
 
         ClientSocket.getInstance().addAuctionObserver(auction.getId(), this);
 
+        // 1. CHẠY TRẠNG THÁI & ĐỒNG HỒ NGAY LẬP TỨC (Fix trễ UI)
+        String status = (auction.getStatus() != null) ? auction.getStatus().name() : "";
+        boolean isEnded = "FINISHED".equalsIgnoreCase(status) || "SOLD".equalsIgnoreCase(status) || "Kết thúc".equalsIgnoreCase(status);
+
+        if (isEnded) {
+            if (lblTimeRemaining != null) {
+                lblTimeRemaining.setText("00h 00m 00s");
+                lblTimeRemaining.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+            }
+            disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
+            if (lblTimeRemainingTitle != null) lblTimeRemainingTitle.setText("Thời gian còn lại");
+        } else {
+            boolean notStarted = auction.getStartTime() != null && LocalDateTime.now().isBefore(auction.getStartTime());
+            if (lblTimeRemainingTitle != null) lblTimeRemainingTitle.setText(notStarted ? "Bắt đầu sau" : "Thời gian còn lại");
+            startCountdownClock(notStarted ? auction.getStartTime() : auction.getEndTime());
+        }
+
+        // 2. NẠP DỮ LIỆU TỪ SERVER
         detailService.fetchItemByIdAsync(auction.getItemId(), finalItem -> {
             String imagePath = (finalItem != null) ? finalItem.getImagePath() : null;
             String pName = (auction.getProductName() != null) ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
             String startPriceStr = String.format("%,.0f đ", auction.getStartPrice());
-
             double currentPriceVal = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
             String currentPriceStr = String.format("%,.0f đ", currentPriceVal);
 
-            String fetchedSeller;
+            String fetchedSeller = "Người bán #" + auction.getSellerId();
             try {
-                Response sellerResp = ClientSocket.getInstance().sendRequest(
-                        new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getSellerId()));
-                com.auction.shared.model.Account seller = (sellerResp != null && sellerResp.isSuccess())
-                        ? (com.auction.shared.model.Account) sellerResp.getData() : null;
-                fetchedSeller = (seller != null) ? seller.getUsername() : "Người bán #" + auction.getSellerId();
-            } catch (Exception e) {
-                fetchedSeller = "Người bán #" + auction.getSellerId();
-            }
-            final String sellerName = fetchedSeller;            String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
+                Response sellerResp = ClientSocket.getInstance().sendRequest(new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getSellerId()));
+                com.auction.shared.model.Account seller = (sellerResp != null && sellerResp.isSuccess()) ? (com.auction.shared.model.Account) sellerResp.getData() : null;
+                if (seller != null) fetchedSeller = seller.getUsername();
+            } catch (Exception ignored) {}
+            final String sellerName = fetchedSeller;
+
+            String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
 
-            String winnerText;
+            String winnerText = "Chưa có";
             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
                 try {
-                    Response winnerResp = ClientSocket.getInstance().sendRequest(
-                            new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getWinnerId()));
-                    com.auction.shared.model.Account winner = (winnerResp != null && winnerResp.isSuccess())
-                            ? (com.auction.shared.model.Account) winnerResp.getData() : null;
-                    winnerText = (winner != null) ? winner.getUsername() : "Thành viên #" + auction.getWinnerId();
-                } catch (Exception e) {
-                    winnerText = "Thành viên #" + auction.getWinnerId();
-                }
-            } else {
-                winnerText = "Chưa có";
+                    Response winnerResp = ClientSocket.getInstance().sendRequest(new Request(MessageType.GET_ACCOUNT_BY_ID, auction.getWinnerId()));
+                    com.auction.shared.model.Account winner = (winnerResp != null && winnerResp.isSuccess()) ? (com.auction.shared.model.Account) winnerResp.getData() : null;
+                    if (winner != null) winnerText = winner.getUsername();
+                } catch (Exception ignored) {}
             }
             final String finalWinnerText = winnerText;
+
             Platform.runLater(() -> {
                 fillTextFields(pName, startPriceStr, (finalItem != null && finalItem.getDescription() != null) ? finalItem.getDescription() : "", sellerName, startTimeStr, endTimeStr);
                 if (lblAuctionId != null) lblAuctionId.setText(String.valueOf(auction.getId()));
                 if (lblCurrentPrice != null) lblCurrentPrice.setText(currentPriceStr);
                 if (lblTopBidder != null) lblTopBidder.setText(finalWinnerText);
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
-                boolean notStarted = auction.getStartTime() != null && LocalDateTime.now().isBefore(auction.getStartTime());
-                startCountdownClock(notStarted ? auction.getStartTime() : auction.getEndTime());
-                if (lblTimeRemainingTitle != null) lblTimeRemainingTitle.setText(notStarted ? "Bắt đầu sau" : "Thời gian còn lại");
                 checkBiddingPermissions(auction.getSellerId());
+
+                // Gọi hàm của nhóm sếp sau khi label đã có text
+                if (isEnded) showWinnerSection();
             });
         });
+
+        // 3. NẠP LỊCH SỬ
         detailService.fetchBidHistoryAsync(auction.getId(), bids -> {
             Platform.runLater(() -> {
                 if (vboxBidHistoryContainer != null && bids != null) {
                     vboxBidHistoryContainer.getChildren().clear();
-                    priceSeries.getData().clear(); // THÊM
+                    priceSeries.getData().clear();
                     bidCount = 0;
-                    priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));                    for (BidTransaction bid : bids) {
+                    priceSeries.getData().add(new XYChart.Data<>(bidCount, auction.getStartPrice()));
+                    for (BidTransaction bid : bids) {
                         Label label = new Label(String.format("• [%s] %s đặt %,.0f đ",
-                                bid.getBidTime() != null
-                                        ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"))
-                                        : "--:--:--",
-                                bid.getBidderUsername(),
-                                bid.getBidAmount()));
+                                bid.getBidTime() != null ? bid.getBidTime().plusHours(7).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss")) : "--:--:--",
+                                bid.getBidderUsername(), bid.getBidAmount()));
                         label.setStyle("-fx-font-size: 14px; -fx-padding: 5px;");
                         vboxBidHistoryContainer.getChildren().add(label);
                         bidCount++;
@@ -448,6 +437,25 @@ public class AuctionDetailController implements Observer {
         if (lblStartTime != null) lblStartTime.setText(start);
         if (lblEndTime != null) lblEndTime.setText(end);
         this.lastEndTimeStr = end;
+
+        this.lastEndTimeStr = end; // Dòng này giữ nguyên của hàm gốc
+
+        // 🌟 ĐOẠN CODE KIỂM TRA TRẠNG THÁI (ĐÃ DỌN SẠCH LỖI LẶP):
+        if (currentItem != null) {
+            String trangThai = currentItem.getStatus();
+
+            if ("FINISHED".equalsIgnoreCase(trangThai) || "SOLD".equalsIgnoreCase(trangThai) || "Kết thúc".equalsIgnoreCase(trangThai)) {
+
+                // 1. Chốt cứng đồng hồ về 0 (Màu cam)
+                if (lblTimeRemaining != null) {
+                    lblTimeRemaining.setText("00h 00m 00s");
+                    lblTimeRemaining.setStyle("-fx-text-fill: #f39c12; -fx-font-weight: bold;");
+                }
+
+                // 2. Khóa chức năng đặt giá
+                disableBiddingFeatures("Phiên đấu giá đã kết thúc!");
+            }
+        }
     }
 
     private void handleManualBid() {
