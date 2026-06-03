@@ -102,6 +102,8 @@
                 <Button fx:id="btnContract" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openContract" prefHeight="45.0" styleClass="nav-button" text="📜 Hợp đồng" />
 
                 <Button fx:id="btnSettings" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openSettings" prefHeight="45.0" styleClass="nav-button" text="⚙ Cài đặt" />
+
+                <Button fx:id="btnAdminPanel" alignment="BASELINE_LEFT" maxWidth="1.7976931348623157E308" onAction="#openAdminPanel" prefHeight="45.0" style="-fx-background-color: #EA580C; -fx-text-fill: white; -fx-font-weight: bold; -fx-background-radius: 10;" text="🛡 Admin Panel" visible="false" managed="false" />
             </VBox>
         </VBox>
     </left>

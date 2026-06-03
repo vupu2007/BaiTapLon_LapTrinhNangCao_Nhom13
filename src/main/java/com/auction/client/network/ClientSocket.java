@@ -85,10 +85,9 @@ public class ClientSocket {
      * Hàm gửi Request an toàn đa luồng bất đồng bộ
      */
     public Response sendRequest(Request request) {
-        // 🎯 ĐÃ SỬA: Dùng Constructor 2 tham số mới tối ưu
         if (!isConnected || out == null) {
-            System.err.println("❌ [ClientSocket] Không thể gửi yêu cầu. Mạng ngoại tuyến.");
-            return new Response(false, "Mất kết nối vật lý tới máy chủ đấu giá! Vui lòng kiểm tra Radmin VPN hoặc Server Backend.");
+            System.err.println("❌ [ClientSocket] Mạng ngoại tuyến.");
+            return new Response(false, "Mất kết nối máy chủ!");
         }
 
         String requestId = UUID.randomUUID().toString();
@@ -105,29 +104,42 @@ public class ClientSocket {
             }
         } catch (IOException e) {
             pendingRequests.remove(requestId);
-            System.err.println("❌ Lỗi gửi dữ liệu dọc đường: " + e.getMessage());
-            this.isConnected = false;
-
-            // 🎯 ĐÃ SỬA: Bỏ tham số null thừa thãi
-            Response failResponse = new Response(false, "Đường truyền mạng bị đứt đoạn khi đang gửi dữ liệu!");
-            failResponse.setRequestId(requestId);
-            return failResponse;
+            return new Response(false, "Lỗi gửi dữ liệu!");
         }
 
         try {
-            return futureResponse.get(20, TimeUnit.SECONDS);
-        } catch (Exception e) {
-            System.err.println("⚠️ Tác vụ chờ phản hồi quá hạn (Timeout) cho ID: " + requestId);
+            Response response = futureResponse.get(20, TimeUnit.SECONDS);
 
-            // 🎯 ĐÃ SỬA: Bỏ tham số null thừa thãi
-            Response timeoutResponse = new Response(false, "Thời gian phản hồi từ máy chủ quá hạn (Timeout)!");
-            timeoutResponse.setRequestId(requestId);
-            return timeoutResponse;
+            // 🎯 TỰ ĐỘNG CHUYỂN MÀN HÌNH NẾU SERVER BÁO OTP_SENT
+            if (response != null && "OTP_SENT".equals(response.getMessage())) {
+                javafx.application.Platform.runLater(() -> {
+                    try {
+                        javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/view/ResetPassword.fxml"));
+                        javafx.scene.Parent root = loader.load();
+
+                        // Truyền username qua controller mới (nếu bạn có lưu biến tempUsername)
+                        // com.auction.client.controller.ResetPasswordController ctrl = loader.getController();
+                        // ctrl.setUsername(this.tempUsername);
+
+                        javafx.stage.Stage stage = (javafx.stage.Stage) javafx.stage.Stage.getWindows()
+                                .stream().filter(javafx.stage.Window::isShowing).findFirst().orElse(null);
+                        if (stage != null) {
+                            stage.setScene(new javafx.scene.Scene(root));
+                            stage.show();
+                        }
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                });
+            }
+            return response;
+
+        } catch (Exception e) {
+            return new Response(false, "Thời gian phản hồi quá hạn!");
         } finally {
             pendingRequests.remove(requestId);
         }
     }
-
     /**
      * 👁️ LUỒNG NGẦM LẮNG NGHE
      */
@@ -140,15 +152,22 @@ public class ClientSocket {
                 if (obj instanceof Response response) {
                     String requestId = response.getRequestId();
 
+                    // 1. Vẫn báo hiệu cho hàm sendRequest biết là đã xong
                     if (requestId != null && pendingRequests.containsKey(requestId)) {
                         pendingRequests.get(requestId).complete(response);
-                    } else {
+
+                        // ⚡ CỨU CÁNH: Gọi luôn hàm xử lý notification ở đây
+                        // để nó kiểm tra xem có phải là "OTP_SENT" không
+                        handleRealtimeNotification(response);
+                    }
+                    // 2. Nếu là tin nhắn chủ động từ Server (không có requestId)
+                    else {
                         handleRealtimeNotification(response);
                     }
                 }
             } catch (Exception e) {
                 if (isRunning) {
-                    System.err.println("❌ Luồng lắng nghe Socket gặp lỗi hoặc Server ngắt kết nối: " + e.getMessage());
+                    System.err.println("❌ Lỗi luồng lắng nghe: " + e.getMessage());
                     this.isConnected = false;
                     closeConnection();
                 }
@@ -156,7 +175,6 @@ public class ClientSocket {
             }
         }
     }
-
     public void addAuctionObserver(int auctionId, Object observer) {
         if (observer != null) {
             auctionObservers.put(auctionId, observer);
@@ -184,8 +202,33 @@ public class ClientSocket {
     }
 
     private void handleRealtimeNotification(Response response) {
-        String typeOrMessage = response.getType() != null ? response.getType() : response.getMessage();
-        if ("BID_UPDATE".equalsIgnoreCase(typeOrMessage)) {
+        String msg = response.getMessage();
+        String type = response.getType();
+
+        // 🚀 XỬ LÝ CHUYỂN MÀN HÌNH QUÊN MẬT KHẨU
+        if ("OTP_SENT".equals(msg)) {
+            javafx.application.Platform.runLater(() -> {
+                try {
+                    // Dòng này load file FXML của bạn
+                    javafx.fxml.FXMLLoader loader = new javafx.fxml.FXMLLoader(getClass().getResource("/view/ResetPassword.fxml"));
+                    javafx.scene.Parent root = loader.load();
+
+                    // Lấy Stage hiện tại để thay đổi Scene
+                    javafx.stage.Stage stage = (javafx.stage.Stage) javafx.stage.Stage.getWindows().stream().filter(javafx.stage.Window::isShowing).findFirst().orElse(null);
+                    if (stage != null) {
+                        stage.setScene(new javafx.scene.Scene(root));
+                        stage.show();
+                    }
+                } catch (Exception e) {
+                    System.err.println("❌ Lỗi chuyển màn hình: " + e.getMessage());
+                    e.printStackTrace();
+                }
+            });
+            return;
+        }
+
+        // 🚀 XỬ LÝ BID UPDATE CŨ
+        if ("BID_UPDATE".equalsIgnoreCase(type)) {
             Object[] data = (Object[]) response.getData();
             if (data == null) return;
             int auctionId = (int) data[0];
@@ -214,5 +257,6 @@ public class ClientSocket {
         this.in = null;
         this.socket = null;
     }
+
 
 }

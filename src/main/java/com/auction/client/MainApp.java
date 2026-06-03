@@ -37,6 +37,7 @@ public class MainApp {
     }
 
     public static void main(String[] args) {
+        ClientConnection.connect();
         Application.launch(AppUI.class, args);
     }
 }

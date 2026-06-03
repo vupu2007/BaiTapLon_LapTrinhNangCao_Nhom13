@@ -3,6 +3,13 @@ package com.auction.client.controller;
 import com.auction.shared.network.Response;
 import com.auction.shared.model.Account;
 import com.auction.client.util.CurrentAccount;
+import javafx.util.Pair; // Dùng cho Pair
+import javafx.scene.layout.GridPane; // Dùng cho GridPane
+import javafx.scene.control.Label; // Dùng cho Label
+import javafx.scene.control.TextField; // Dùng cho TextField
+import javafx.scene.control.Dialog; // Dùng cho Dialog
+import javafx.scene.control.ButtonType; // Dùng cho ButtonType
+import javafx.scene.control.ButtonBar; // Dùng cho ButtonBar
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -10,113 +17,142 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
-import javafx.scene.control.Alert;
-import javafx.scene.control.PasswordField;
-import javafx.scene.control.TextField;
+import javafx.scene.control.*; // Import thêm để dùng Dialog
 import javafx.stage.Stage;
 import java.io.IOException;
+import java.net.URL;
+import java.util.Optional; // Import để xử lý kết quả Dialog
 
 public class LoginController {
 
     @FXML private TextField usernameField;
     @FXML private PasswordField passwordField;
     @FXML private TextField visiblePasswordField;
+    @FXML private ToggleButton togglePasswordBtn;
 
-    // 🌟 KHỞI TẠO TẦNG CONTROLLER: Để xử lý logic mạng thay vì gọi Socket trực tiếp
     private final AccountController accountController = new AccountController();
     private boolean isPasswordVisible = false;
 
     @FXML
     public void initialize() {
-        // Áp dụng liên kết 2 chiều của bạn - Giữ nguyên
         visiblePasswordField.textProperty().bindBidirectional(passwordField.textProperty());
-
         visiblePasswordField.setVisible(false);
         visiblePasswordField.setManaged(false);
     }
 
+    // --- TÍNH NĂNG MỚI: Xử lý Quên mật khẩu ---
+    @FXML
+    private void handleForgotPassword(ActionEvent event) {
+        // Tạo dialog để lấy thông tin
+        Dialog<Pair<String, String>> dialog = new Dialog<>();
+        dialog.setTitle("Khôi phục mật khẩu");
+        dialog.setHeaderText("Nhập thông tin tài khoản");
+
+        ButtonType sendButtonType = new ButtonType("Gửi yêu cầu", ButtonBar.ButtonData.OK_DONE);
+        dialog.getDialogPane().getButtonTypes().addAll(sendButtonType, ButtonType.CANCEL);
+
+        GridPane grid = new GridPane();
+        grid.setHgap(10); grid.setVgap(10);
+        TextField username = new TextField(); username.setPromptText("Username");
+        TextField email = new TextField(); email.setPromptText("Email");
+        grid.add(new Label("Username:"), 0, 0); grid.add(username, 1, 0);
+        grid.add(new Label("Email:"), 0, 1); grid.add(email, 1, 1);
+        dialog.getDialogPane().setContent(grid);
+
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == sendButtonType) return new Pair<>(username.getText(), email.getText());
+            return null;
+        });
+
+        Optional<Pair<String, String>> result = dialog.showAndWait();
+        result.ifPresent(pair -> {
+            // Gọi hàm accountController.forgotPassword mới của bạn
+            Thread thread = new Thread(() -> {
+                Response response = accountController.forgotPassword(pair.getKey(), pair.getValue());
+
+                Platform.runLater(() -> {
+                    if (response.isSuccess()) {
+                        showAlert(Alert.AlertType.INFORMATION, "Thành công", response.getMessage());
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Lỗi", response.getMessage());
+                    }
+                });
+            });
+            thread.setDaemon(true);
+            thread.start();
+        });
+    }
     @FXML
     void handleLogin(ActionEvent event) {
         String username = (usernameField.getText() != null) ? usernameField.getText().trim() : "";
         String password = (passwordField.getText() != null) ? passwordField.getText() : "";
 
-        // 1. Validate cơ bản ở Client - Giữ nguyên
         if (username.isEmpty() || password.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
             return;
         }
 
-        // 🚀 Tách một Thread chạy ngầm để gửi lệnh đăng nhập qua AccountController
         Thread loginWorker = new Thread(() -> {
             try {
-                // 🌟 THAY ĐỔI CỐT LÕI: Giao diện chỉ ra lệnh, việc kết nối cứ để AccountController lo
                 Response response = accountController.loginUser(username, password);
-
-                // Nhận phản hồi xong -> Đẩy logic xử lý giao diện về lại luồng JavaFX UI an toàn
                 Platform.runLater(() -> {
                     if (response != null && response.isSuccess()) {
                         Account loggedIn = (Account) response.getData();
                         CurrentAccount.setAccount(loggedIn);
-
-                        System.out.println("-> Đăng nhập thành công! Username: " + loggedIn.getUsername() + " | Role: " + loggedIn.getRole());
-
-                        // Phân quyền chuyển màn hình
                         if ("ADMIN".equals(loggedIn.getRole())) {
-                            System.out.println("🚀 Đang chuyển hướng sang giao diện AdminLayoutView...");
-                            switchScene(event, "/view/AdminLayoutView.fxml", "Quản trị hệ thống");
+                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá (Quyền: Admin)", true);
                         } else {
-                            System.out.println("🛒 Đang chuyển hướng sang giao diện khách hàng MainLayout...");
-                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá");
+                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá", false);
                         }
                     } else {
-                        // Lấy chuẩn câu báo lỗi từ Server dội về (Ví dụ: "Mật khẩu không đúng!")
                         String errorMsg = (response != null) ? response.getMessage() : "Đăng nhập thất bại!";
                         showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
                     }
                 });
-
             } catch (Exception e) {
-                Platform.runLater(() -> {
-                    showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Đã xảy ra sự cố ngoài ý muốn: " + e.getMessage());
-                });
+                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Sự cố: " + e.getMessage()));
                 e.printStackTrace();
             }
         }, "LoginNetworkWorkerThread");
-
         loginWorker.setDaemon(true);
         loginWorker.start();
     }
 
     @FXML
     public void goToRegister(ActionEvent event) {
-        switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản");
+        switchScene(event, "/view/RegisterView.fxml", "Đăng ký tài khoản", false);
     }
 
     @FXML
     private void togglePasswordVisibility(ActionEvent event) {
         isPasswordVisible = !isPasswordVisible;
-
         visiblePasswordField.setVisible(isPasswordVisible);
         visiblePasswordField.setManaged(isPasswordVisible);
-
         passwordField.setVisible(!isPasswordVisible);
         passwordField.setManaged(!isPasswordVisible);
     }
 
-    private void switchScene(ActionEvent event, String fxmlPath, String title) {
+    private void switchScene(ActionEvent event, String fxmlPath, String title, boolean isAdmin) {
         try {
-            Parent root = FXMLLoader.load(getClass().getResource(fxmlPath));
+            URL fxmlUrl = getClass().getResource(fxmlPath);
+            if (fxmlUrl == null) return;
+            FXMLLoader loader = new FXMLLoader(fxmlUrl);
+            Parent root = loader.load();
+            if (isAdmin && fxmlPath.contains("MainLayout")) {
+                Object controller = loader.getController();
+                if (controller instanceof MainLayoutController) {
+                    ((MainLayoutController) controller).setAdminMode(true);
+                }
+            }
             Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
             stage.getScene().setRoot(root);
             stage.setTitle(title);
             stage.centerOnScreen();
         } catch (IOException e) {
-            System.err.println("Không tìm thấy hoặc lỗi file FXML: " + fxmlPath);
             e.printStackTrace();
         }
     }
 
-    // Tự động điều phối hiển thị popup an toàn dù gọi từ bất kỳ luồng nào
     private void showAlert(Alert.AlertType type, String title, String message) {
         if (Platform.isFxApplicationThread()) {
             Alert alert = new Alert(type);
@@ -125,13 +161,7 @@ public class LoginController {
             alert.setContentText(message);
             alert.showAndWait();
         } else {
-            Platform.runLater(() -> {
-                Alert alert = new Alert(type);
-                alert.setTitle(title);
-                alert.setHeaderText(null);
-                alert.setContentText(message);
-                alert.showAndWait();
-            });
+            Platform.runLater(() -> showAlert(type, title, message));
         }
     }
 }

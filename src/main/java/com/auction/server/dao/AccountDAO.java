@@ -47,6 +47,50 @@ public class AccountDAO {
         }
         return null;
     }
+    // Kiểm tra xem Username và Email có tồn tại và khớp nhau không
+    public boolean verifyUserEmail(String username, String email) {
+        // Đã đổi bảng 'Users' thành 'Accounts'
+        String sql = "SELECT * FROM Accounts WHERE username = ? AND email = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, email);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) return rs.getInt(1) > 0;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    // Lưu mã OTP vào database (tạm thời để đối chiếu)
+    public void saveOTP(String username, String otp) {
+        String sql = "UPDATE Accounts SET reset_code = ? WHERE username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, otp);
+            ps.setString(2, username);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi khi lưu OTP vào Database: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+    public boolean verifyOTP(String username, String otp) {
+        String sql = "SELECT account_id FROM Accounts WHERE username = ? AND reset_code = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, otp);
+            try (ResultSet rs = ps.executeQuery()) {
+                return rs.next(); // Nếu tìm thấy hàng, OTP đúng
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
 
     // 3. Lấy tài khoản theo ID
     public Account getAccountById(int accountId) {
@@ -110,17 +154,28 @@ public class AccountDAO {
         }
     }
 
-    // 7. Cập nhật mật khẩu hệ thống
-    public boolean updatePassword(int accountId, String newPassword) {
-        String sql = "UPDATE Accounts SET password = ? WHERE account_id = ?";
+    // HÀM MỚI: Dùng cho Quên mật khẩu (xác thực bằng username và xóa reset_code)
+    public boolean updatePasswordByUsername(String username, String newPassword) {
+        String sql = "UPDATE Accounts SET password = ?, reset_code = NULL WHERE username = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, newPassword);
-            pstmt.setInt(2, accountId);
+            pstmt.setString(2, username);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
+            System.err.println("❌ Lỗi cập nhật mật khẩu: " + e.getMessage());
             e.printStackTrace();
             return false;
+        }
+    }
+    public void clearOTP(String username) {
+        String sql = "UPDATE Accounts SET reset_code = NULL WHERE username = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -286,8 +341,24 @@ public class AccountDAO {
         return "Bot_" + id;
     }
 
+    // 1. HÀM GỐC: Thực hiện SQL (Dùng int cho chuẩn Database)
+    public boolean updatePasswordRaw(int accountId, String newPassword) {
+        String sql = "UPDATE Accounts SET password = ? WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, newPassword);
+            pstmt.setInt(2, accountId);
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 2. HÀM HỖ TRỢ: Dành cho khi bạn chỉ có String userId (từ request gửi lên)
     public boolean updatePassword(String userId, String newPassword) {
-        return updatePassword(Integer.parseInt(userId), newPassword);
+        // Chuyển đổi String sang int rồi gọi hàm Gốc
+        return updatePasswordRaw(Integer.parseInt(userId), newPassword);
     }
 
     public boolean insertTransaction(int accountId, double amount, String type) {

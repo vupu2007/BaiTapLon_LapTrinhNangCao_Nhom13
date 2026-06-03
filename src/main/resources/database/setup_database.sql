@@ -1,8 +1,8 @@
 CREATE DATABASE IF NOT EXISTS online_auction_db;
 USE online_auction_db;
 
--- 1. Accounts
-CREATE TABLE Accounts (
+ -- 1. Accounts
+ CREATE TABLE Accounts (
                           account_id     INT AUTO_INCREMENT PRIMARY KEY,
                           username       VARCHAR(50)  UNIQUE NOT NULL,
                           password       VARCHAR(255) NOT NULL,
@@ -16,14 +16,14 @@ CREATE TABLE Accounts (
                           reset_code VARCHAR(10) DEFAULT NULL
 );
 
--- 2. Categories
-CREATE TABLE Categories (
+ -- 2. Categories
+ CREATE TABLE Categories (
                             category_id INT AUTO_INCREMENT PRIMARY KEY,
                             name        VARCHAR(100) NOT NULL
 );
 
--- 3. Items
-CREATE TABLE Items (
+ -- 3. Items
+ CREATE TABLE Items (
                        item_id       VARCHAR(20) PRIMARY KEY,
                        name          VARCHAR(100) NOT NULL,
                        description   TEXT,
@@ -38,8 +38,8 @@ CREATE TABLE Items (
                        FOREIGN KEY (owner_id)    REFERENCES Accounts(account_id)
 );
 
--- 4. Auctions
-CREATE TABLE Auctions (
+ -- 4. Auctions
+ CREATE TABLE Auctions (
                           auction_id       INT AUTO_INCREMENT PRIMARY KEY,
                           item_id          VARCHAR(20),
                           seller_id        INT NOT NULL,
@@ -56,8 +56,8 @@ CREATE TABLE Auctions (
                           FOREIGN KEY (winner_id)  REFERENCES Accounts(account_id)
 );
 
--- 5. Bids
-CREATE TABLE Bids (
+ -- 5. Bids
+ CREATE TABLE Bids (
                       bid_id     INT AUTO_INCREMENT PRIMARY KEY,
                       auction_id INT,
                       bidder_id  INT,
@@ -67,8 +67,8 @@ CREATE TABLE Bids (
                       FOREIGN KEY (bidder_id)  REFERENCES Accounts(account_id)
 );
 
--- 6. AutoBids (Đấu giá tự động)
-CREATE TABLE AutoBids (
+ -- 6. AutoBids (Đấu giá tự động)
+ CREATE TABLE AutoBids (
                           auto_bid_id INT AUTO_INCREMENT PRIMARY KEY,
                           auction_id  INT NOT NULL,
                           bidder_id   INT NOT NULL,
@@ -78,8 +78,8 @@ CREATE TABLE AutoBids (
                           FOREIGN KEY (bidder_id)  REFERENCES Accounts(account_id)
 );
 
--- 7. Transactions
-CREATE TABLE Transactions (
+ -- 7. Transactions
+ CREATE TABLE Transactions (
                               transaction_id INT AUTO_INCREMENT PRIMARY KEY,
                               account_id     INT         NOT NULL,
                               type           VARCHAR(50) NOT NULL,       -- DEPOSIT / WITHDRAW / BID_LOCK / BID_REFUND / ...

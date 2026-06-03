@@ -408,6 +408,36 @@ public class ClientHandler implements Runnable {
                     List<BidTransaction> bids = bidDAO.getBidsByAuction(auctionId);
                     return new Response(true, "OK", (Serializable) bids);
                 }
+                case FORGOT_PASSWORD: {
+                    String[] d = (String[]) request.getPayload();
+                    String username = d[0];
+                    String email = d[1];
+
+                    boolean ok = accountService.processForgotPassword(username, email);
+
+                    // Gửi phản hồi kèm thông điệp rõ ràng
+                    Response resp = ok
+                            ? new Response(true, "OTP_SENT", null) // Client sẽ bắt chuỗi "OTP_SENT"
+                            : new Response(false, "EMAIL_NOT_FOUND", null);
+
+                    resp.setRequestId(request.getRequestId());
+                    return resp;
+                }
+
+                case RESET_PASSWORD: {
+                    String[] d = (String[]) request.getPayload(); // [username, otp, newPassword]
+                    boolean ok = accountDAO.verifyOTP(d[0], d[1]); // Kiểm tra OTP
+
+                    if (ok) {
+                        boolean updateOk = accountDAO.updatePasswordByUsername(d[0], d[2]);
+                        if (updateOk) {
+                            accountDAO.clearOTP(d[0]); // Xóa OTP sau khi dùng
+                            return new Response(true, "PASSWORD_CHANGED", null);
+                        }
+                    }
+                    return new Response(false, "OTP_INVALID", null);
+                }
+
 
                 default:
                     return new Response(false, "Lệnh không được hỗ trợ!", null);
@@ -482,5 +512,7 @@ public class ClientHandler implements Runnable {
         try { if (out    != null) out.close();    } catch (IOException ignored) {}
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
+
+
 
 }

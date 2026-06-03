@@ -4,6 +4,7 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Node;
 import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.Region;
 import javafx.scene.layout.StackPane;
@@ -19,6 +20,7 @@ public class AdminLayoutController {
     @FXML private StackPane adminContentArea;
     @FXML private Button btnDashboard;
     @FXML private Button btnUserMgmt;
+    @FXML private Button btnAuctionMgmt; // 🛠 THÊM MỚI: Liên kết với Button "Quản lý đấu giá" trong FXML
 
     @FXML
     public void initialize() {
@@ -78,7 +80,8 @@ public class AdminLayoutController {
      * HOÁN ĐỔI CLASS CSS CHUẨN
      */
     private void setButtonActive(Button activeButton) {
-        Button[] buttons = {btnDashboard, btnUserMgmt};
+        // 🛠 ĐÃ CẬP NHẬT: Thêm btnAuctionMgmt vào mảng để đồng bộ hiệu ứng chuyển màu active/deactive
+        Button[] buttons = {btnDashboard, btnUserMgmt, btnAuctionMgmt};
 
         for (Button btn : buttons) {
             if (btn != null) {
@@ -100,8 +103,13 @@ public class AdminLayoutController {
         setButtonActive(btnDashboard);
         System.out.println("-> Mở giao diện Thống kê Tổng quan");
 
-        // 🌟 ĐÃ SỬA: Nạp giao diện Dashboard lên màn hình (kèm đường dẫn dự phòng)
-        loadAdminPage("/view/admin/AdminDashboardView.fxml", "/view/AdminDashboardView.fxml");
+        // 🛠 ĐÃ SỬA: Thêm các đường dẫn dự phòng dạng "AdminDashboard.fxml" (không có chữ View) để tránh lỗi không tìm thấy file
+        loadAdminPage(
+                "/view/admin/AdminDashboardView.fxml",
+                "/view/AdminDashboardView.fxml",
+                "/view/admin/AdminDashboard.fxml",
+                "/view/AdminDashboard.fxml"
+        );
     }
 
     @FXML
@@ -109,8 +117,25 @@ public class AdminLayoutController {
         setButtonActive(btnUserMgmt);
         System.out.println("-> Mở giao diện Quản lý thành viên");
 
-        // 🌟 ĐÃ SỬA: Code siêu ngắn gọn nhờ tận dụng cơ chế quét đa đường dẫn mới
+        // Code siêu ngắn gọn nhờ tận dụng cơ chế quét đa đường dẫn mới
         loadAdminPage("/view/admin/AdminUserMgmtView.fxml", "/view/AdminUserMgmtView.fxml");
+    }
+
+    /**
+     * 🔨 THÊM MỚI: Hàm xử lý khi bấm nút "Quản lý đấu giá" ngoài Sidebar
+     */
+    @FXML
+    private void openAuctionMgmt() {
+        setButtonActive(btnAuctionMgmt);
+        System.out.println("-> Mở giao diện Quản lý Đấu giá hệ thống");
+
+        // Quét đa đường dẫn an toàn đề phòng bạn đặt tên file có hoặc không có hậu tố "View"
+        loadAdminPage(
+                "/view/admin/AdminAuctionMgmtView.fxml",
+                "/view/AdminAuctionMgmtView.fxml",
+                "/view/admin/AdminAuctionMgmt.fxml",
+                "/view/AdminAuctionMgmt.fxml"
+        );
     }
 
     @FXML
@@ -121,11 +146,69 @@ public class AdminLayoutController {
 
             Parent root = FXMLLoader.load(getClass().getResource("/view/LoginView.fxml"));
             Stage stage = (Stage) adminContentArea.getScene().getWindow();
-            stage.getScene().setRoot(root);
+
+            // 🛠 TỐI ƯU ĐỒNG BỘ: Sử dụng setRoot thay vì tạo Scene mới để giữ kích thước form Login ổn định
+            if (stage.getScene() != null) {
+                stage.getScene().setRoot(root);
+            } else {
+                stage.setScene(new Scene(root));
+            }
             stage.setTitle("Đăng nhập");
             stage.centerOnScreen();
         } catch (IOException e) {
             System.err.println("❌ Không thể điều hướng quay lại màn hình đăng nhập.");
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 🔄 Xử lý quay lại giao diện user nhưng vẫn kích hoạt nút đỏ Admin Panel xuất hiện
+     * Khắc phục triệt để lỗi co nhỏ màn hình bằng cơ chế setRoot.
+     */
+    @FXML
+    private void backToUserView() {
+        String[] paths = {
+                "/com/auction/client/view/MainLayout.fxml",
+                "/view/MainLayout.fxml",
+                "MainLayout.fxml"
+        };
+
+        URL fxmlLocation = null;
+        for (String path : paths) {
+            fxmlLocation = getClass().getResource(path);
+            if (fxmlLocation != null) {
+                break;
+            }
+        }
+
+        if (fxmlLocation == null) {
+            System.err.println("❌ Không tìm thấy file MainLayout.fxml ở bất kỳ đường dẫn dự phòng nào!");
+            return;
+        }
+
+        try {
+            FXMLLoader loader = new FXMLLoader(fxmlLocation);
+            Parent userRoot = loader.load();
+
+            // Lấy controller user để bật lại nút đỏ đặc quyền lên
+            MainLayoutController mainController = loader.getController();
+            mainController.setAdminMode(true);
+
+            // Lấy Stage hiện tại
+            Stage stage = (Stage) adminContentArea.getScene().getWindow();
+
+            // 🛠 SỬA TẠI ĐÂY: Nếu stage đã có Scene, ta chỉ thay thế Root Node bên trong.
+            // Điều này giúp giữ nguyên kích thước to/nhỏ hiện tại của cửa sổ mà không bị reset về mặc định!
+            if (stage.getScene() != null) {
+                stage.getScene().setRoot(userRoot);
+            } else {
+                stage.setScene(new Scene(userRoot));
+            }
+
+            stage.show();
+            System.out.println("-> Đã quay trở về giao diện Người dùng (Quyền: Admin - Giữ nguyên kích thước)");
+        } catch (IOException e) {
+            System.err.println("❌ Lỗi nạp giao diện MainLayout khi quay lại từ Admin.");
             e.printStackTrace();
         }
     }

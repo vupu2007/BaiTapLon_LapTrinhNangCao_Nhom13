@@ -35,7 +35,8 @@ public class MainLayoutController {
 
     // ================= BUTTON MENU =================
     @FXML private Button btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnSettings;
-    @FXML private Button btnContract; // <--- THÊM MỚI ĐỂ LIÊN KẾT VỚI FXML
+    @FXML private Button btnContract;
+    @FXML private Button btnAdminPanel; // 🛡 ĐÃ GOM LÊN ĐÂY: Quản lý tập trung biến FXML nút đỏ
 
     private Timeline clockTimeline;
 
@@ -134,8 +135,8 @@ public class MainLayoutController {
      * Quản lý trạng thái Active của các nút Menu thông qua CSS class sạch sẽ
      */
     private void setActive(Button activeButton) {
-        // ĐÃ THÊM btnContract VÀO MẢNG ĐỂ KHÔNG BỊ LỖI PHÍM CHỌN NHẦM
-        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnContract, btnSettings};
+        // 🛠 ĐÃ CẬP NHẬT: Thêm btnAdminPanel vào mảng dọn dẹp để không bao giờ bị dính đè CSS hoạt động khi chuyển menu
+        Button[] buttons = {btnHome, btnWallet, btnAuction, btnSelling, btnCreateAuction, btnHistory, btnContract, btnSettings, btnAdminPanel};
         for (Button btn : buttons) {
             if (btn != null) {
                 btn.getStyleClass().remove("nav-button-active");
@@ -247,6 +248,54 @@ public class MainLayoutController {
             stage.setTitle("Đăng nhập");
         } catch (IOException e) {
             System.err.println("❌ Lỗi đăng xuất hệ thống: " + e.getMessage());
+        }
+    }
+
+    // ================= ĐẶC QUYỀN HỆ THỐNG ADMIN PANEL =================
+
+    /**
+     * Hàm kích hoạt nút đỏ hiện hình (Gọi từ LoginController khi đăng nhập đúng là Admin)
+     */
+    public void setAdminMode(boolean isAdmin) {
+        if (btnAdminPanel != null) {
+            btnAdminPanel.setVisible(isAdmin);
+            btnAdminPanel.setManaged(isAdmin);
+        }
+    }
+
+    /**
+     * Xử lý sự kiện bấm nút đỏ chuyển sang Admin Layout (Kèm cơ chế quét đường dẫn dự phòng)
+     */
+    @FXML
+    private void openAdminPanel() {
+        setActive(btnAdminPanel); // Đồng bộ trạng thái active màu sắc
+        try {
+            // Thiết lập cơ chế fallback paths phòng hờ lỗi tổ chức package
+            String[] paths = {
+                    "/com/auction/client/view/AdminLayout.fxml",
+                    "/view/AdminLayoutView.fxml",
+                    "/view/AdminLayout.fxml"
+            };
+
+            java.net.URL fxmlLocation = null;
+            for (String path : paths) {
+                fxmlLocation = getClass().getResource(path);
+                if (fxmlLocation != null) break;
+            }
+
+            if (fxmlLocation == null) {
+                System.err.println("❌ Không tìm thấy file FXML của Admin ở bất kỳ thư mục nào!");
+                return;
+            }
+
+            FXMLLoader loader = new FXMLLoader(fxmlLocation);
+            Parent adminRoot = loader.load();
+            Stage stage = (Stage) btnAdminPanel.getScene().getWindow();
+            stage.setScene(new javafx.scene.Scene(adminRoot));
+            stage.show();
+        } catch (IOException e) {
+            System.err.println("❌ Lỗi cấu trúc nạp file giao diện Admin Layout.");
+            e.printStackTrace();
         }
     }
 }

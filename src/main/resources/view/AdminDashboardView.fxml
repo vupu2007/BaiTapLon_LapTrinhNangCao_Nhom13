@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.chart.BarChart?>
+<?import javafx.scene.chart.CategoryAxis?>
+<?import javafx.scene.chart.NumberAxis?>
+<?import javafx.scene.chart.PieChart?>
+<?import javafx.scene.control.Label?>
+<?import javafx.scene.layout.GridPane?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.scene.layout.ColumnConstraints?>
+<?import javafx.scene.text.Font?>
+
+<VBox spacing="24.0" style="-fx-background-color: #f8fafc;" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1" fx:controller="com.auction.client.controller.AdminDashboardController">
+    <padding>
+        <Insets bottom="24.0" left="24.0" right="24.0" top="24.0" />
+    </padding>
+
+    <children>
+        <GridPane hgap="16.0" vgap="16.0">
+            <columnConstraints>
+                <ColumnConstraints percentWidth="25.0" />
+                <ColumnConstraints percentWidth="25.0" />
+                <ColumnConstraints percentWidth="25.0" />
+                <ColumnConstraints percentWidth="25.0" />
+            </columnConstraints>
+            <children>
+                <VBox spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5); -fx-padding: 20;" GridPane.columnIndex="0">
+                    <children>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label alignment="CENTER" prefHeight="38.0" prefWidth="38.0" style="-fx-background-color: #eff6ff; -fx-background-radius: 10; -fx-text-fill: #3b82f6;" text="📦">
+                                    <font><Font size="18.0" /></font>
+                                </Label>
+                                <HBox alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #16a34a; -fx-font-weight: bold;" text="+12%" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </HBox>
+                        <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tổng phiên đấu giá" />
+                        <Label fx:id="lblTotalAuctions" style="-fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-font-size: 26px;" text="0" />
+                    </children>
+                </VBox>
+
+                <VBox spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5); -fx-padding: 20;" GridPane.columnIndex="1">
+                    <children>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label alignment="CENTER" prefHeight="38.0" prefWidth="38.0" style="-fx-background-color: #f0fdf4; -fx-background-radius: 10; -fx-text-fill: #22c55e;" text="📈">
+                                    <font><Font size="18.0" /></font>
+                                </Label>
+                                <HBox alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #22c55e; -fx-font-weight: bold;" text="Trực tuyến" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </HBox>
+                        <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Đang diễn ra" />
+                        <Label fx:id="lblRunningAuctions" style="-fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-font-size: 26px;" text="0" />
+                    </children>
+                </VBox>
+
+                <VBox spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5); -fx-padding: 20;" GridPane.columnIndex="2">
+                    <children>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label alignment="CENTER" prefHeight="38.0" prefWidth="38.0" style="-fx-background-color: #faf5ff; -fx-background-radius: 10; -fx-text-fill: #a855f7;" text="🔨">
+                                    <font><Font size="18.0" /></font>
+                                </Label>
+                                <HBox alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #16a34a; -fx-font-weight: bold;" text="+8%" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </HBox>
+                        <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tổng lượt đấu giá" />
+                        <Label fx:id="lblTotalBids" style="-fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-font-size: 26px;" text="0" />
+                    </children>
+                </VBox>
+
+                <VBox spacing="10.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5); -fx-padding: 20;" GridPane.columnIndex="3">
+                    <children>
+                        <HBox alignment="CENTER_LEFT">
+                            <children>
+                                <Label alignment="CENTER" prefHeight="38.0" prefWidth="38.0" style="-fx-background-color: #fefce8; -fx-background-radius: 10; -fx-text-fill: #eab308;" text="💰">
+                                    <font><Font size="18.0" /></font>
+                                </Label>
+                                <HBox alignment="CENTER_RIGHT" HBox.hgrow="ALWAYS">
+                                    <children>
+                                        <Label style="-fx-text-fill: #16a34a; -fx-font-weight: bold;" text="+15%" />
+                                    </children>
+                                </HBox>
+                            </children>
+                        </HBox>
+                        <Label style="-fx-text-fill: #64748b; -fx-font-size: 13px;" text="Tổng giá trị" />
+                        <Label fx:id="lblTotalRevenue" style="-fx-text-fill: #0f172a; -fx-font-weight: bold; -fx-font-size: 26px;" text="0 đ" />
+                    </children>
+                </VBox>
+            </children>
+        </GridPane>
+
+        <HBox spacing="16.0" VBox.vgrow="ALWAYS">
+            <children>
+                <VBox spacing="12.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5);" HBox.hgrow="ALWAYS">
+                    <children>
+                        <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #0f172a;" text="Doanh thu theo tháng" />
+                        <BarChart fx:id="revenueChart" horizontalGridLinesVisible="false" legendVisible="false" verticalGridLinesVisible="false" VBox.vgrow="ALWAYS">
+                            <xAxis>
+                                <CategoryAxis side="BOTTOM" />
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis side="LEFT" />
+                            </yAxis>
+                        </BarChart>
+                    </children>
+                </VBox>
+
+                <VBox prefWidth="380.0" spacing="12.0" style="-fx-background-color: white; -fx-background-radius: 16; -fx-padding: 20; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.03), 10, 0, 0, 5);">
+                    <children>
+                        <Label style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #0f172a;" text="Phân bổ phiên đấu giá" />
+                        <PieChart fx:id="distributionChart" legendVisible="true" labelsVisible="false" VBox.vgrow="ALWAYS" />
+                    </children>
+                </VBox>
+            </children>
+        </HBox>
+    </children>
+</VBox>

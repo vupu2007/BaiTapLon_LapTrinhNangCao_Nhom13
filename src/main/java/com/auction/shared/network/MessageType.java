@@ -5,11 +5,19 @@ public enum MessageType {
     LOGIN,
     REGISTER,
     LOGOUT,
+    FORGOT_PASSWORD,
+
 
     // ── Account / User ────────────────────────────────
     GET_ALL_USERS,
     UPDATE_PROFILE,
+    RESET_PASSWORD,
     CHANGE_PASSWORD,
+    FORGOT_PASSWORD_SUCCESS, // 👈 Cần thiết để kích hoạt chuyển màn hình
+    FORGOT_PASSWORD_FAIL,    // 👈 Cần thiết để báo lỗi nếu sai email/user
+    RESET_PASSWORD_SUCCESS,  // 👈 Cần thiết để báo đổi mật khẩu xong
+    RESET_PASSWORD_FAIL,     // 👈 Cần thiết để báo lỗi OTP sai
+
     GET_USER_BY_ID,
     UPDATE_USER_STATUS,
     GET_ACCOUNT_BY_ID,
@@ -29,6 +37,7 @@ public enum MessageType {
     GET_AUCTION_BY_ITEM_ID,
     GET_AUCTIONS_BY_BIDDER,
     GET_AUCTIONS_BY_SELLER,
+    UPDATE_AUCTION_STATUS,
     CLOSE_AUCTION,
     GET_DASHBOARD_STATS,
     GET_HOT_AUCTIONS,

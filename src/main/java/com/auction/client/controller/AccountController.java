@@ -52,4 +52,22 @@ public class AccountController {
             return new Response(false, "Mất kết nối: Không thể kết nối tới máy chủ!", null);
         }
     }
+    /**
+     * 🌟 YÊU CẦU QUÊN MẬT KHẨU
+     * Gửi request tới server để xác thực tài khoản và yêu cầu reset.
+     */
+    public Response forgotPassword(String username, String email) {
+        System.out.println("[AccountController] Gửi yêu cầu forgot password cho: " + username);
+        String[] data = {username, email};
+        // Lưu ý: Bạn cần thêm MessageType.FORGOT_PASSWORD vào file MessageType.java của bạn
+        Request request = new Request(MessageType.FORGOT_PASSWORD, data);
+
+        try {
+            Response response = ClientSocket.getInstance().sendRequest(request);
+            return (response != null) ? response : new Response(false, "Không có phản hồi từ Server!", null);
+        } catch (Exception e) {
+            return new Response(false, "Lỗi kết nối mạng: " + e.getMessage(), null);
+        }
+    }
+
 }
