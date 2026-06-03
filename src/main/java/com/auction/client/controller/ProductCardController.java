@@ -61,17 +61,18 @@ public class ProductCardController {
      */
     public void setData(String name, String price, String statusText, String imageFileName,
                         String description, String sellerName, String startTime, String endTime) {
-
-        setDataInternal(name, price, statusText, imageFileName, description, endTime);
+        setDataInternal(name, price, statusText, imageFileName, description,
+                "Sắp diễn ra".equals(statusText) ? startTime : endTime);
     }
 
     /**
      * 🌟 HÀM NÂNG CAO: Nạp dữ liệu đồng thời gán dữ liệu Model Object gốc (Item hoặc Auction)
      * Giúp hệ thống không bao giờ phải chạy vào khối logic dự phòng (Fallback) khi đổi trang
      */
-    public void setProductModelData(Object originModel, String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
+    public void setProductModelData(Object originModel, String name, String price, String statusText, String imageFileName, String description, String startTimeStr, String endTimeStr) {
         this.originProductData = originModel;
-        setDataInternal(name, price, statusText, imageFileName, description, endTimeStr);
+        setDataInternal(name, price, statusText, imageFileName, description,
+                "Sắp diễn ra".equals(statusText) ? startTimeStr : endTimeStr);
     }
     private void setDataInternal(String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
         System.out.println("INJECT name=" + name + " price=" + price);

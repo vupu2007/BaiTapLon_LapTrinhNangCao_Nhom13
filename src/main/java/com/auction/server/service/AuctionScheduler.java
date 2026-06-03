@@ -42,9 +42,13 @@ public class AuctionScheduler {
     }
 
     public void start() {
-        // TỐI ƯU 1: Rút ngắn thời gian quét từ 300s xuống 2s để đạt chuẩn Real-time
-        // Khởi động sau 3 giây, cứ 2 giây quét 1 lần
-        scheduler.scheduleAtFixedRate(this::tick, 3, 2, TimeUnit.SECONDS);
+        scheduler.scheduleAtFixedRate(() -> {
+            try {
+                tick();
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }, 3, 3, TimeUnit.SECONDS);
         System.out.println("✅ AuctionScheduler da khoi dong thanh cong (Toc do quet: 2 giay/lan)!");
     }
 
@@ -61,6 +65,7 @@ public class AuctionScheduler {
     }
     private void tick() {
         try (Connection conn = DatabaseConnection.getConnection()) {
+            conn.setTransactionIsolation(Connection.TRANSACTION_READ_COMMITTED); // ← thêm
             List<Auction> allAuctions = auctionDAO.getAllAuctionsWithConnection(conn);
             if (allAuctions == null) return;
 
@@ -96,8 +101,9 @@ public class AuctionScheduler {
                     closeAuction(auction, conn);
                 }
             }
-        } catch (Exception e) {
-            System.err.println("Lỗi Scheduler: " + e.getMessage());
+         } catch (Exception e) {
+        System.err.println("Lỗi Scheduler: " + e.getMessage());
+        e.printStackTrace();
         }
     }
 

@@ -65,6 +65,7 @@ public class MainController {
             if (welcomeLabel != null) welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
             refreshDashboard();
         }
+        ClientSocket.getInstance().setOnAuctionUpdate(() -> refreshDashboard());
     }
 
     private void initFxmlCache() {
@@ -102,8 +103,8 @@ public class MainController {
                                         : "Đang diễn ra";
                                 String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
                                 String timeStr = "Sắp diễn ra".equals(statusText) ? item.getStartTimeStr() : item.getEndTimeStr();
-                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), timeStr);
-                            }
+                                String startTimeStr = item.getStartTimeStr() != null ? item.getStartTimeStr() : null;
+                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), startTimeStr, timeStr);                            }
                             cardLayout.setOnMouseClicked(e -> {
                                 executorService.submit(() -> {
                                     try {
@@ -155,8 +156,11 @@ public class MainController {
                     String priceStr = String.format("%,.0f đ", newAuction.getStartPrice());
 
                     // 🎯 Đổ trực tiếp Model gốc (newAuction) vào Card
-                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl, newAuction.getDescription() != null ? newAuction.getDescription() : "",
-                            newAuction.getEndTime() != null ? newAuction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);                }
+                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl,
+                            newAuction.getDescription() != null ? newAuction.getDescription() : "",
+                            newAuction.getStartTime() != null ? newAuction.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null,
+                            newAuction.getEndTime() != null ? newAuction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);
+                }
 
                 cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
                 bindCardButtons(cardLayout, newAuction);

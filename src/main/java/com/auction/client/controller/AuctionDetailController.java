@@ -184,7 +184,8 @@ public class AuctionDetailController implements Observer {
             if (duration.isZero() || duration.isNegative()) {
                 countdownTimeline.stop(); // Dừng đồng hồ trước
 
-                String status = currentItem.getStatus(); // Hoặc biến trạng thái của nhóm
+                if (currentItem == null) return;
+                String status = currentItem.getStatus();
 
                 if ("UPCOMING".equals(status) || "Sắp diễn ra".equalsIgnoreCase(status)) {
 

@@ -183,20 +183,6 @@ public class ClientHandler implements Runnable {
                     boolean ok = itemService.createItem(item);
 
                     if (ok) {
-                        // ---------------------------------------------------------------------
-                        // 🌟 DÒNG CODE VÀNG: Ép bộ đếm giờ của Server nạp lại dữ liệu từ Database
-                        try {
-                            // Dừng bộ quét cũ (đang ôm data rác)
-                            AuctionScheduler.getInstance().stop();
-                            // Bật lại bộ quét mới (sẽ tự động chọc xuống DB lấy danh sách mới nhất)
-                            AuctionScheduler.getInstance().start();
-                            System.out.println("🔄 [SERVER] Đã nạp lại Scheduler, cập nhật sản phẩm mới!");
-                        } catch (Exception e) {
-                            System.err.println("❌ Lỗi nạp lại Scheduler: " + e.getMessage());
-                        }
-                        // ---------------------------------------------------------------------
-
-                        // Báo cho các máy Client biết để tự động load lại giao diện
                         broadcastSystemUpdate("AUCTION_UPDATE");
                     }
 

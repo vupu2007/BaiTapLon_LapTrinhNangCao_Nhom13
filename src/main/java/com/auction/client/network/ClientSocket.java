@@ -1,8 +1,11 @@
 package com.auction.client.network;
 
+import com.auction.client.controller.AuctionDetailController;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
+import javafx.application.Platform;
+
 import java.io.*;
 import java.net.Socket;
 import java.util.Properties;
@@ -30,6 +33,11 @@ public class ClientSocket {
     public void setBidUpdateListener(BidUpdateListener listener) {
         this.bidUpdateListener = listener;
     }
+
+    private Runnable onAuctionUpdate;
+    public void setOnAuctionUpdate(Runnable callback) { this.onAuctionUpdate = callback; }
+
+
 
     private ClientSocket() {
         connectToServer();
@@ -235,10 +243,19 @@ public class ClientSocket {
             double newPrice = (double) data[1];
             String username = (String) data[2];
 
-            Object observer = auctionObservers.get(auctionId);
-            if (observer instanceof com.auction.client.controller.AuctionDetailController) {
-                ((com.auction.client.controller.AuctionDetailController) observer).update(newPrice, username);
+            // Nếu là thông báo phiên bắt đầu → refresh dashboard
+            if (username != null && username.contains("PHIÊN ĐẤU GIÁ BẮT ĐẦU")) {
+                if (onAuctionUpdate != null) Platform.runLater(onAuctionUpdate);
+                return;
             }
+
+            Object observer = auctionObservers.get(auctionId);
+            if (observer instanceof AuctionDetailController) {
+                ((AuctionDetailController) observer).update(newPrice, username);
+            }
+        }
+        if ("AUCTION_UPDATE".equalsIgnoreCase(type) || "AUCTION_UPDATE".equalsIgnoreCase(msg)) {
+            if (onAuctionUpdate != null) Platform.runLater(onAuctionUpdate);
         }
     }
 
