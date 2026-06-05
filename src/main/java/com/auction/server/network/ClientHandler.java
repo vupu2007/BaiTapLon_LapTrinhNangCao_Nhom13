@@ -140,7 +140,17 @@ public class ClientHandler implements Runnable {
                         String[] creds = (String[]) request.getPayload();
                         System.out.println("➡️ [DEBUG] Đã nhận payload, Username: " + creds[0]);
 
-                        Account acc = accountService.login(creds[0], creds[1]);
+                        Account acc;
+                        try {
+                            acc = accountService.login(creds[0], creds[1]);
+                        } catch (RuntimeException e) {
+                            if ("ACCOUNT_LOCKED".equals(e.getMessage())) {
+                                Response lockedResponse = new Response(false, "Tài khoản của bạn đã bị khóa!", null);
+                                lockedResponse.setRequestId(request.getRequestId());
+                                return lockedResponse;
+                            }
+                            throw e;
+                        }
                         System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
 
                         Response response = acc != null

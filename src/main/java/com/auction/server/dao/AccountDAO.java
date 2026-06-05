@@ -32,35 +32,34 @@ public class AccountDAO {
 
     // 2. Đăng nhập — trả về đúng loại object theo role
     public Account login(String username, String password) {
-        String sql = "SELECT * FROM Accounts WHERE username = ? AND password = ? AND is_locked = 0";        try (Connection conn = DatabaseConnection.getConnection();
+        // Check is_locked trước
+        String checkSql = "SELECT is_locked FROM Accounts WHERE username = ? AND password = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(checkSql)) {
+            ps.setString(1, username);
+            ps.setString(2, password);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next() && rs.getBoolean("is_locked")) {
+                throw new RuntimeException("ACCOUNT_LOCKED");
+            }
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        String sql = "SELECT * FROM Accounts WHERE username = ? AND password = ? AND is_locked = 0";
+        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);
             try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapResultSetToAccount(rs);
-                }
+                if (rs.next()) return mapResultSetToAccount(rs);
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
         return null;
-    }
-    // Kiểm tra xem Username và Email có tồn tại và khớp nhau không
-    public boolean verifyUserEmail(String username, String email) {
-        // Đã đổi bảng 'Users' thành 'Accounts'
-        String sql = "SELECT * FROM Accounts WHERE username = ? AND email = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement ps = conn.prepareStatement(sql)) {
-            ps.setString(1, username);
-            ps.setString(2, email);
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) return rs.getInt(1) > 0;
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
-        return false;
     }
 
     // Lưu mã OTP vào database (tạm thời để đối chiếu)
