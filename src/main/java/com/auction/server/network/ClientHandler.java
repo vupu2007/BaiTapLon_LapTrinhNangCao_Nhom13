@@ -26,6 +26,8 @@ import com.auction.shared.exception.AuthenticationException;
 
 public class ClientHandler implements Runnable {
 
+    private User currentUser;
+
     // 🚀 QUẢN LÝ CLIENT ONLINE TOÀN CỤC
     public static final CopyOnWriteArrayList<ClientHandler> onlineClients = new CopyOnWriteArrayList<>();
 
@@ -204,10 +206,11 @@ public class ClientHandler implements Runnable {
                 }
                 case DELETE_ITEM: {
                     String itemId = (String) request.getPayload();
-                    boolean ok = itemService.deleteItem(itemId);
 
-                    // THÊM DÒNG NÀY VÀO ĐỂ XÁC NHẬN:
-                    System.out.println("DEBUG: Lệnh xóa ID " + itemId + " kết quả là: " + ok);
+                    // TRUYỀN THÊM this.currentUser VÀO ĐÂY
+                    boolean ok = itemService.deleteItem(itemId, this.currentUser);
+
+                    System.out.println("DEBUG: Lệnh xóa ID " + itemId + " bởi " + this.currentUser.getUsername() + " kết quả: " + ok);
 
                     return new Response(ok, ok ? "Xóa thành công!" : "Xóa thất bại!", null);
                 }
@@ -319,8 +322,10 @@ public class ClientHandler implements Runnable {
                 }
                 case UPDATE_USER_STATUS: {
                     String[] data = (String[]) request.getPayload();
-                    boolean isUpdated = true;
-                    return new Response(true, "Cập nhật trạng thái thành công!", null);
+                    int accountId = Integer.parseInt(data[0]);
+                    String newStatus = data[1];
+                    boolean isUpdated = accountDAO.updateUserStatus(accountId, newStatus);
+                    return new Response(isUpdated, isUpdated ? "Cập nhật thành công!" : "Cập nhật thất bại!", null);
                 }
                 case GET_TRANSACTIONS: {
                     int accountId = (int) request.getPayload();

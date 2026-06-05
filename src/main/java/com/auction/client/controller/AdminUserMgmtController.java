@@ -82,6 +82,10 @@ public class AdminUserMgmtController {
      * 🚀 XỬ LÝ LIÊN KẾT MẠNG: Khóa hoặc Mở khóa tài khoản chạy bất đồng bộ
      */
     private void toggleUserStatus(AdminUserRow userRow) {
+        if ("ADMIN".equalsIgnoreCase(userRow.getRole())) {
+            showAlert(Alert.AlertType.WARNING, "Không được phép", "Không thể khóa tài khoản Admin!");
+            return;
+        }
         String currentStatus = userRow.getStatus();
         // Xác định trạng thái mới sẽ cập nhật lên DB
         String newStatus = ("BANNED".equalsIgnoreCase(currentStatus) || "LOCKED".equalsIgnoreCase(currentStatus)) ? "ACTIVE" : "BANNED";

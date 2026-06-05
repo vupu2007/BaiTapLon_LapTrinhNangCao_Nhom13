@@ -61,4 +61,8 @@ public abstract class Account implements Entity,Serializable {
      * Điều hướng đến Dashboard tương ứng của từng loại tài khoản
      */
     public abstract void navigateDashboard();
+
+    private int isLocked;
+    public int getIsLocked() { return isLocked; }
+    public void setIsLocked(int isLocked) { this.isLocked = isLocked; }
 }

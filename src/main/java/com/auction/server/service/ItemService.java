@@ -6,6 +6,7 @@ import com.auction.server.util.DatabaseConnection;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Electronics; // ✅ THÊM IMPORT LỚP CON
+import com.auction.shared.model.User;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -79,19 +80,24 @@ public class ItemService {
     }
 
     // 3. Seller xóa sản phẩm
-    public boolean deleteItem(String itemId) {
+    // Trong ItemService.java
+    public boolean deleteItem(String itemId, User currentUser) {
+        // ADMIN XÓA TUỐT
+        if ("ADMIN".equals(currentUser.getRole())) {
+            return itemDAO.deleteItem(itemId);
+        }
+
+        // USER THƯỜNG: Check trạng thái OPEN
         Item existing = itemDAO.getItemById(itemId);
         if (existing == null) return false;
 
         try {
             Auction auction = auctionDAO.getAuctionByItemId(itemId);
-            // Có auction nhưng không phải OPEN → không cho xóa
             if (auction != null && auction.getStatus() != Auction.AuctionStatus.OPEN) return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
-
         return itemDAO.deleteItem(itemId);
     }
     // 4. Lấy tất cả sản phẩm (hiển thị danh sách)

@@ -417,7 +417,31 @@ public class AccountDAO {
 
         if (acc != null) {
             acc.setBalance(balance);
+            try { acc.setIsLocked(rs.getInt("is_locked")); } catch (SQLException ignored) {}
+
         }
         return acc;
+    }
+    public boolean updateUserStatus(int accountId, String status) {
+        String sql = "UPDATE Accounts SET is_locked = ? WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, "BANNED".equals(status) ? 1 : 0);
+            ps.setInt(2, accountId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+    public boolean isLocked(int accountId) {
+        String sql = "SELECT is_locked FROM Accounts WHERE account_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setInt(1, accountId);
+            ResultSet rs = ps.executeQuery();
+            if (rs.next()) return rs.getBoolean("is_locked");
+        } catch (SQLException ignored) {}
+        return false;
     }
 }

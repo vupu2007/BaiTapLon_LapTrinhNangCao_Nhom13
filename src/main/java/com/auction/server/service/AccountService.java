@@ -154,7 +154,7 @@ public class AccountService {
             else if (acc instanceof Seller) bal = ((Seller) acc).getBalance();
 
             map.put("balance", String.format("%,.0f đ", bal));
-            map.put("status",  "Đang hoạt động");
+            map.put("status", acc.getIsLocked() == 1 ? "BANNED" : "ACTIVE");
             result.add(map);
         }
         return result;

@@ -38,6 +38,10 @@ public class Auction implements Serializable {
     private String imagePath;
     private String description;
 
+    private int bidCount;
+    public int getBidCount() { return bidCount; }
+    public void setBidCount(int bidCount) { this.bidCount = bidCount; }
+
     // Thông tin bổ trợ phục vụ hiển thị trực tiếp trên giao diện Client Card
     // 🔥 THÊM: Sửa lỗi "Cannot resolve method 'setDescription'" cho MainLayoutController
 

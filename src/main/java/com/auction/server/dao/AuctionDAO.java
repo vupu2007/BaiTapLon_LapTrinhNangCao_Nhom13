@@ -57,12 +57,23 @@ public class AuctionDAO {
     // 3. Lấy tất cả phiên đấu giá
     public List<Auction> getAllAuctions() {
         List<Auction> list = new ArrayList<>();
-        String sql = "SELECT * FROM Auctions";
+        String sql = "SELECT a.*, i.name as product_name, i.image_path, i.description, " +
+                "acc.username as seller_name, " +
+                "(SELECT COUNT(*) FROM Bids b WHERE b.auction_id = a.auction_id) as bid_count " +
+                "FROM Auctions a " +
+                "LEFT JOIN Items i ON a.item_id = i.item_id " +
+                "LEFT JOIN Accounts acc ON a.seller_id = acc.account_id";
         try (Connection conn = DatabaseConnection.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
-                list.add(mapResultSetToAuction(rs));
+                Auction a = mapResultSetToAuction(rs);
+                a.setProductName(rs.getString("product_name"));
+                a.setImagePath(rs.getString("image_path"));
+                a.setDescription(rs.getString("description"));
+                a.setSellerName(rs.getString("seller_name"));
+                a.setBidCount(rs.getInt("bid_count"));
+                list.add(a);
             }
         } catch (SQLException e) {
             e.printStackTrace();

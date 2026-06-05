@@ -25,7 +25,6 @@ import javafx.scene.layout.VBox;
 import java.util.List;
 
 public class AdminAuctionMgmtController {
-
     @FXML private TableView<AdminAuctionRow> auctionTable;
     @FXML private TableColumn<AdminAuctionRow, AdminAuctionRow> colProduct;
     @FXML private TableColumn<AdminAuctionRow, String> colSeller;
@@ -143,10 +142,10 @@ public class AdminAuctionMgmtController {
                 if (empty || item == null) {
                     setGraphic(null);
                 } else {
-                    if ("ĐANG DIỄN RA".equalsIgnoreCase(item) || "ACTIVE".equalsIgnoreCase(item)) {
+                    if ("RUNNING".equalsIgnoreCase(item)) {
                         lblStatusBadge.setText("Đang diễn ra");
                         lblStatusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 6; -fx-padding: 6 12; -fx-font-weight: bold; -fx-alignment: center;");
-                    } else if ("SẮP DIỄN RA".equalsIgnoreCase(item) || "PENDING".equalsIgnoreCase(item)) {
+                    } else if ("OPEN".equalsIgnoreCase(item)) {
                         lblStatusBadge.setText("Sắp diễn ra");
                         lblStatusBadge.setStyle("-fx-background-color: #e0f2fe; -fx-text-fill: #0369a1; -fx-background-radius: 6; -fx-padding: 6 12; -fx-font-weight: bold; -fx-alignment: center;");
                     } else {
@@ -240,7 +239,7 @@ public class AdminAuctionMgmtController {
                             auc.getSellerName() != null ? auc.getSellerName() : (auc.getAccount() != null ? auc.getAccount().getUsername() : "Ẩn danh"),
                             String.format("%,1.0f", auc.getStartPrice()),
                             String.format("%,1.0f", auc.getCurrentPrice()),
-                            "N/A", // Số lượt đấu (bạn có thể thay thế bằng logic đếm lịch sử đấu giá thực tế nếu có)
+                            String.valueOf(auc.getBidCount()), // Số lượt đấu (bạn có thể thay thế bằng logic đếm lịch sử đấu giá thực tế nếu có)
                             auc.getStatus() != null ? auc.getStatus().name() : "OPEN", // Trích xuất tên của Enum AuctionStatus
                             auc.getEndTime() != null ? auc.getEndTime().toString() : "Không xác định"
                     ));
