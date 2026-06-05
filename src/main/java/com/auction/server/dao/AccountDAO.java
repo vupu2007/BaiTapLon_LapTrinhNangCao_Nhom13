@@ -442,4 +442,17 @@ public class AccountDAO {
         } catch (SQLException ignored) {}
         return false;
     }
+    public boolean verifyUserEmail(String username, String email) {
+        String sql = "SELECT account_id FROM Accounts WHERE username = ? AND email = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, username);
+            ps.setString(2, email);
+            ResultSet rs = ps.executeQuery();
+            return rs.next();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }
