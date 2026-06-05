@@ -32,8 +32,7 @@ public class AccountDAO {
 
     // 2. Đăng nhập — trả về đúng loại object theo role
     public Account login(String username, String password) {
-        String sql = "SELECT * FROM Accounts WHERE username = ? AND password = ?";
-        try (Connection conn = DatabaseConnection.getConnection();
+        String sql = "SELECT * FROM Accounts WHERE username = ? AND password = ? AND is_locked = 0";        try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, username);
             pstmt.setString(2, password);
