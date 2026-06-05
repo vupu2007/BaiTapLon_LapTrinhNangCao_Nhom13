@@ -132,17 +132,25 @@ public class ItemDAO {
 
     // 7. Xóa sản phẩm
     public boolean deleteItem(String itemId) {
-        String sql = "DELETE FROM Items WHERE item_id = ? AND status = 'AVAILABLE'";
+        String sql = "DELETE FROM Items WHERE item_id = ?";
+
+        // Thêm log để biết chắc chắn hàm này đã được gọi
+        System.out.println("DEBUG_FINAL: Đang thực thi lệnh xóa cho ID: " + itemId);
+
         try (Connection conn = DatabaseConnection.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, itemId);
-            return pstmt.executeUpdate() > 0;
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+
+            ps.setString(1, itemId);
+            int rows = ps.executeUpdate();
+
+            System.out.println("DEBUG_FINAL: Số dòng đã xóa trong DB: " + rows);
+            return rows > 0;
+
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
         }
     }
-
     // 8. Lấy danh sách sản phẩm đang Hot Auctions
     public List<Item> getHotAuctions() {
         List<Item> list = new ArrayList<>();

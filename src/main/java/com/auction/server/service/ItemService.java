@@ -1,14 +1,21 @@
 package com.auction.server.service;
 
+import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.ItemDAO;
+import com.auction.server.util.DatabaseConnection;
+import com.auction.shared.model.Auction;
 import com.auction.shared.model.Item;
 import com.auction.shared.model.Electronics; // ✅ THÊM IMPORT LỚP CON
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.List;
 
 public class ItemService {
 
     private final ItemDAO itemDAO = new ItemDAO();
+    private final AuctionDAO auctionDAO = new AuctionDAO();
 
     // 1. Seller thêm sản phẩm mới
     public boolean addItem(Item item) {
@@ -42,40 +49,51 @@ public class ItemService {
     }
 
     // 2. Seller cập nhật thông tin sản phẩm
-    public boolean updateItem(Item item) {
-        Item existing = itemDAO.getItemById(item.getItemId());
-        if (existing == null) {
-            System.err.println("Sản phẩm không tồn tại!");
-            return false;
-        }
-        // Chỉ sửa được khi sản phẩm chưa vào đấu giá
-        if (!"AVAILABLE".equals(existing.getStatus())) {
-            System.err.println("Không thể sửa sản phẩm đang đấu giá hoặc đã bán!");
-            return false;
-        }
+    public boolean updateItem(Item item) { // (Nếu code bạn đang là Electronics item thì giữ nguyên nhé)
+        // 1. Cập nhật Items
+        boolean itemOk = itemDAO.updateItem(item);
 
-        return itemDAO.updateItem(item);
+        // 👉 Kiểm tra xem Client có gửi cái StartTimeStr lên không
+        if (itemOk && item.getStartTimeStr() != null) {
+
+            // 2. Chọc xuống bảng Auctions để cập nhật nốt Giá và Thời gian
+            String sql = "UPDATE Auctions SET start_price = ?, current_price = ?, start_time = ?, end_time = ? WHERE item_id = ?";
+            try (Connection conn = DatabaseConnection.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+                pstmt.setDouble(1, item.getStartingPrice());
+                pstmt.setDouble(2, item.getStartingPrice()); // Cho giá hiện tại = giá khởi điểm mới luôn
+
+                // 👉 Lấy data từ 2 hàm có sẵn của bạn:
+                pstmt.setString(3, item.getStartTimeStr());
+                pstmt.setString(4, item.getEndTimeStr());
+
+                pstmt.setString(5, item.getItemId());
+
+                pstmt.executeUpdate();
+            } catch (SQLException e) {
+                System.err.println("❌ Lỗi đồng bộ Auctions: " + e.getMessage());
+            }
+        }
+        return itemOk;
     }
 
-    // 3. Seller xóa sản phẩm (chỉ xóa được khi AVAILABLE)
-    public boolean deleteItem(String itemId, int requesterId) {
+    // 3. Seller xóa sản phẩm
+    public boolean deleteItem(String itemId) {
         Item existing = itemDAO.getItemById(itemId);
-        if (existing == null) {
-            System.err.println("Sản phẩm không tồn tại!");
-            return false;
-        }
-        if (existing.getOwnerId() != requesterId) {
-            System.err.println("Bạn không có quyền xóa sản phẩm này!");
-            return false;
-        }
-         if (!"AVAILABLE".equals(existing.getStatus()) && !"OPEN".equals(existing.getAuctionStatus())) {
-            System.err.println("Không thể xóa sản phẩm đang đấu giá!");
+        if (existing == null) return false;
+
+        try {
+            Auction auction = auctionDAO.getAuctionByItemId(itemId);
+            // Có auction nhưng không phải OPEN → không cho xóa
+            if (auction != null && auction.getStatus() != Auction.AuctionStatus.OPEN) return false;
+        } catch (SQLException e) {
+            e.printStackTrace();
             return false;
         }
 
         return itemDAO.deleteItem(itemId);
     }
-
     // 4. Lấy tất cả sản phẩm (hiển thị danh sách)
     public List<Item> getAllItems() {
         return itemDAO.getAllItems();
@@ -98,9 +116,4 @@ public class ItemService {
         return addItem(item);
     }
 
-    // deleteItem(int): ClientHandler truyen int id, nhung DAO dung String
-    // requesterId mac dinh la owner (da kiem tra o ClientHandler)
-    public boolean deleteItem(int itemId) {
-        return itemDAO.deleteItem(String.valueOf(itemId));
-    }
 }

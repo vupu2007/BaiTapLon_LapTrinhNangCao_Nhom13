@@ -1,5 +1,6 @@
 package com.auction.server.network;
 
+import com.auction.client.util.CurrentAccount;
 import com.auction.server.dao.AccountDAO;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidDAO;
@@ -128,6 +129,7 @@ public class ClientHandler implements Runnable {
     }
 
     private Response handleRequest(Request request) {
+        System.out.println("DEBUG_HANDLE: Đang xử lý lệnh " + request.getType());
         try {
             switch (request.getType()) {
                 case LOGIN: {
@@ -201,16 +203,19 @@ public class ClientHandler implements Runnable {
                     return new Response(true, "OK", (Serializable) items);
                 }
                 case DELETE_ITEM: {
-                    int itemId = (int) request.getPayload();
+                    String itemId = (String) request.getPayload();
                     boolean ok = itemService.deleteItem(itemId);
-                    return new Response(ok, ok ? "Xóa thành công!" : "Xóa thất bại (đang đấu giá?)", null);
+
+                    // THÊM DÒNG NÀY VÀO ĐỂ XÁC NHẬN:
+                    System.out.println("DEBUG: Lệnh xóa ID " + itemId + " kết quả là: " + ok);
+
+                    return new Response(ok, ok ? "Xóa thành công!" : "Xóa thất bại!", null);
                 }
                 case UPDATE_ITEM: {
                     Item item = (Item) request.getPayload();
                     boolean ok = itemService.updateItem(item);
                     if (ok) broadcastSystemUpdate("AUCTION_UPDATE");
-                    return new Response(ok, ok ? "Cập nhật thành công!" : "Không thể sửa sản phẩm đang đấu giá!", null);
-                }
+                    return new Response(ok, ok ? "Cập nhật thành công!" : "Cập nhật thất bại (Lỗi Database hoặc dữ liệu gửi lên)!", null);                }
                 case CREATE_AUCTION: {
                     Object[] d = (Object[]) request.getPayload();
                     boolean ok = auctionService.createAuction(

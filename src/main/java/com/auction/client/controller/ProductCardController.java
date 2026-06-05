@@ -75,8 +75,6 @@ public class ProductCardController {
                 "Sắp diễn ra".equals(statusText) ? startTimeStr : endTimeStr);
     }
     private void setDataInternal(String name, String price, String statusText, String imageFileName, String description, String endTimeStr) {
-        System.out.println("INJECT name=" + name + " price=" + price);
-
         // 1. Chỉ set dữ liệu (Màu sắc đã được file FXML gán cứng bảo vệ)
         if (productName != null) productName.setText(name);
         if (currentPrice != null) currentPrice.setText(price);
@@ -111,7 +109,19 @@ public class ProductCardController {
         }
 
         // 5. Load ảnh sản phẩm và nút bấm hành động
-        ImageLoader.tryLoadImageToView(productImage, imageFileName);
+        if (imageFileName != null && imageFileName.startsWith("base64:")) {
+            try {
+                // Bóc chữ "base64:" ra và giải mã
+                String base64Data = imageFileName.substring(7);
+                byte[] imgBytes = java.util.Base64.getDecoder().decode(base64Data);
+                productImage.setImage(new javafx.scene.image.Image(new java.io.ByteArrayInputStream(imgBytes)));
+            } catch (Exception ex) {
+                System.err.println("❌ Lỗi giải mã ảnh Base64 trên Card: " + ex.getMessage());
+            }
+        } else {
+            // Nếu là tên file bình thường (hàng cũ) thì vẫn dùng Loader của bạn
+            ImageLoader.tryLoadImageToView(productImage, imageFileName);
+        }
         if (actionButton != null) {
             actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
 

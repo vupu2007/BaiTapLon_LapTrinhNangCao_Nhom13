@@ -3,6 +3,8 @@ package com.auction.client.controller;
 import com.auction.client.service.CreateProductService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
+import com.auction.shared.model.Electronics;
+import com.auction.shared.model.Item;
 import javafx.application.Platform;
 import javafx.animation.PauseTransition;
 import javafx.collections.FXCollections;
@@ -47,6 +49,7 @@ public class CreateProductController {
 
     @FXML
     public void initialize() {
+        System.out.println("DEBUG CreateProductController initialized");
         ObservableList<String> hours = FXCollections.observableArrayList();
         for (int i = 0; i < 24; i++) hours.add(String.format("%02d", i));
 
@@ -89,8 +92,12 @@ public class CreateProductController {
     private boolean isCreating = false;
     @FXML
     private void handleCreateAuction() {
+        System.out.println("DEBUG editingItem=" + (editingItem == null ? "null" : editingItem.getItemId()));
         if (isCreating) return;
-        isCreating = true;
+        if (editingItem != null) {
+            handleUpdateItem();
+            return;
+        }
         if (CurrentAccount.getAccount() == null) {
             isCreating = false;
             showAlert(Alert.AlertType.ERROR, "Lỗi phân quyền", "Vui lòng đăng nhập để tạo phiên đấu giá!");
@@ -243,5 +250,100 @@ public class CreateProductController {
                 alert.showAndWait();
             });
         }
+    }
+    private Item editingItem = null;
+
+    public void loadAuctionForEdit(Auction auction) {
+        this.isCreating = false; // reset
+
+        // Vẫn tạo lại 1 cái Item để gán vào editingItem dùng cho hàm Update sau này
+        Item item = new Electronics();
+        item.setItemId(auction.getItemId());
+        item.setName(auction.getProductName());
+        item.setDescription(auction.getDescription());
+        item.setStartingPrice(auction.getStartPrice());
+        item.setImagePath(auction.getImagePath());
+        this.editingItem = item;
+
+        // 1. Đổ text cơ bản
+        productNameField.setText(auction.getProductName() != null ? auction.getProductName() : "");
+        descriptionArea.setText(auction.getDescription() != null ? auction.getDescription() : "");
+        startPriceField.setText(String.valueOf((int) auction.getStartPrice()));
+        if (auction.getImagePath() != null && !auction.getImagePath().isEmpty()) {
+            if (auction.getImagePath().startsWith("base64:")) {
+                lblImagePath.setText("[Đã lưu ảnh trên hệ thống]");
+            } else {
+                lblImagePath.setText(auction.getImagePath());
+            }
+        } else {
+            lblImagePath.setText("Chưa có ảnh");
+        }
+
+        // 2. 👉 ĐỔ THỜI GIAN VÀO CÁC Ô DATEPICKER VÀ COMBOBOX
+        if (auction.getStartTime() != null) {
+            startDatePicker.setValue(auction.getStartTime().toLocalDate());
+            startHourCombo.setValue(String.format("%02d", auction.getStartTime().getHour()));
+            startMinuteCombo.setValue(String.format("%02d", auction.getStartTime().getMinute()));
+        }
+        if (auction.getEndTime() != null) {
+            endDatePicker.setValue(auction.getEndTime().toLocalDate());
+            endHourCombo.setValue(String.format("%02d", auction.getEndTime().getHour()));
+            endMinuteCombo.setValue(String.format("%02d", auction.getEndTime().getMinute()));
+        }
+    }
+    @FXML
+    private void handleUpdateItem() {
+        // 1. Xử lý ảnh: Đọc thô (Raw bytes) để đảm bảo không bị lỗi mất dữ liệu
+        if (productImgFile != null && productImgFile.exists()) {
+            try {
+                byte[] fileContent = java.nio.file.Files.readAllBytes(productImgFile.toPath());
+                String encoded = java.util.Base64.getEncoder().encodeToString(fileContent);
+                editingItem.setImagePath("base64:" + encoded);
+
+                // Dòng này để kiểm tra: Nếu hiện số to (ví dụ > 5000) là thành công
+                System.out.println("DEBUG: Ảnh băm xong, độ dài: " + encoded.length());
+            } catch (Exception e) {
+                System.err.println("❌ Lỗi đọc file ảnh: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+        // 2. Lấy ngày giờ từ giao diện
+        try {
+            String startStr = startDatePicker.getValue() + " " + startHourCombo.getValue() + ":" + startMinuteCombo.getValue() + ":00";
+            String endStr = endDatePicker.getValue() + " " + endHourCombo.getValue() + ":" + endMinuteCombo.getValue() + ":00";
+
+            editingItem.setStartTimeStr(startStr);
+            editingItem.setEndTimeStr(endStr);
+        } catch (Exception e) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi", "Vui lòng chọn đầy đủ ngày giờ!");
+            return;
+        }
+
+        // 3. Gán nốt text
+        editingItem.setName(productNameField.getText().trim());
+        editingItem.setDescription(descriptionArea.getText().trim());
+
+        try {
+            editingItem.setStartingPrice(Double.parseDouble(startPriceField.getText().trim()));
+        } catch (NumberFormatException e) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi", "Giá khởi điểm phải là số!");
+            return;
+        }
+
+        // 👉 LÁ BÙA CHỐNG LỖI DATABASE
+        editingItem.setCategoryId(1);
+
+        // 4. Bấm nút gửi đi!
+        productService.updateItemAsync(editingItem, response -> {
+            javafx.application.Platform.runLater(() -> {
+                if (response != null && response.isSuccess()) {
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công", "Cập nhật sản phẩm thành công!");
+                    handleCancel();
+                } else {
+                    showAlert(Alert.AlertType.ERROR, "Lỗi", response != null ? response.getMessage() : "Lỗi server!");
+                }
+            });
+        });
     }
 }

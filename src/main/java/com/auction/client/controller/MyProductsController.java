@@ -53,6 +53,9 @@ public class MyProductsController {
         if (CurrentAccount.getAccount() == null) return;
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
+        // 👉 ĐẶT MÁY NGHE LÉN SỐ 1
+        System.out.println("🔄 DEBUG: Bắt đầu chạy loadMyProductsData() để refresh UI...");
+
         new Thread(() -> {
             try {
                 Response resp = ClientSocket.getInstance().sendRequest(
@@ -60,6 +63,12 @@ public class MyProductsController {
 
                 List<Auction> auctions = (resp != null && resp.isSuccess())
                         ? (List<Auction>) resp.getData() : null;
+
+                // 👉 ĐẶT MÁY NGHE LÉN SỐ 2
+                if (auctions != null && !auctions.isEmpty()) {
+                    System.out.println("🔄 DEBUG: Nhận được " + auctions.size() + " món từ Server.");
+                    System.out.println("🔄 DEBUG: Check thử tên món đầu tiên: " + auctions.get(0).getProductName());
+                }
 
                 List<Node> running = new ArrayList<>(), open = new ArrayList<>(), finished = new ArrayList<>();
                 double totalValueCalc = 0;
@@ -72,6 +81,7 @@ public class MyProductsController {
                         try {
                             FXMLLoader loader = new FXMLLoader(productCardFxmlLocation);
                             Node card = loader.load();
+                            card.setUserData(auction.getItemId());
                             ProductCardController cc = loader.getController();
 
                             double price = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
@@ -89,7 +99,7 @@ public class MyProductsController {
                                 cc.setData(auction.getProductName(), priceStr, statusStr, auction.getImagePath(),
                                         auction.getDescription() != null ? auction.getDescription() : "",
                                         CurrentAccount.getAccount().getUsername(), startTimeStr, timeStr);
-                                cc.setSellerMode(() -> handleEditProduct(getItemFromAuction(auction)),
+                                cc.setSellerMode(() -> handleEditProduct(auction),
                                         () -> handleDeleteProduct(getItemFromAuction(auction)));
                             }
 
@@ -131,33 +141,41 @@ public class MyProductsController {
     private Item getItemFromAuction(Auction auction) {
         Electronics item = new Electronics();
         item.setItemId(auction.getItemId());
-        item.setName(auction.getProductName());
+        item.setName(auction.getProductName() != null ? auction.getProductName() : "");
+        item.setDescription(auction.getDescription() != null ? auction.getDescription() : "");
+        item.setStartingPrice(auction.getStartPrice());
+        item.setImagePath(auction.getImagePath());
+        item.setOwnerId(auction.getSellerId());
         return item;
     }
 
-    private void handleEditProduct(Item item) {
-        System.out.println("👉 Yêu cầu chỉnh sửa sản phẩm: " + item.getName());
+    // Đổi tham số từ Item thành Auction để mang theo được ngày giờ
+    private void handleEditProduct(Auction auction) {
+        System.out.println("👉 Yêu cầu chỉnh sửa sản phẩm: " + auction.getProductName());
 
-        // Việc nạp form popup chỉnh sửa FXML cũng được đẩy vào luồng ngầm để tránh đơ nút bấm
         Thread openFormWorker = new Thread(() -> {
             try {
-                java.net.URL fxmlLoc = getClass().getResource("/view/CreateProduct.fxml");
+                java.net.URL fxmlLoc = getClass().getResource("/view/CreateAuction.fxml");
                 if (fxmlLoc == null) fxmlLoc = getClass().getResource("/com/auction/client/view/CreateProduct.fxml");
 
                 FXMLLoader loader = new FXMLLoader(fxmlLoc);
                 Parent root = loader.load();
+                CreateProductController ctrl = loader.getController();
+
+                // 👉 THAY ĐỔI: Chuyền thẳng Auction vào form!
+                if (ctrl != null) ctrl.loadAuctionForEdit(auction);
 
                 Platform.runLater(() -> {
                     try {
                         if (productsGrid.getScene() != null) {
                             javafx.stage.Stage popupStage = new javafx.stage.Stage();
-                            popupStage.setTitle("Chỉnh sửa sản phẩm: " + item.getName());
+                            popupStage.setTitle("Chỉnh sửa sản phẩm: " + auction.getProductName());
                             popupStage.initModality(javafx.stage.Modality.APPLICATION_MODAL);
                             popupStage.initOwner(productsGrid.getScene().getWindow());
                             popupStage.setScene(new javafx.scene.Scene(root));
 
                             popupStage.showAndWait();
-                            loadMyProductsData(); // Refresh lại dữ liệu sau khi tắt popup công việc
+                            loadMyProductsData(); // Refresh lại dữ liệu sau khi tắt popup
                         }
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -172,8 +190,6 @@ public class MyProductsController {
     }
 
     private void handleDeleteProduct(Item item) {
-        System.out.println("👉 Yêu cầu xóa sản phẩm: " + item.getName());
-
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmAlert.setTitle("Xác nhận xóa");
         confirmAlert.setHeaderText("Bạn có chắc chắn muốn xóa sản phẩm này không?");
@@ -181,18 +197,15 @@ public class MyProductsController {
 
         Optional<ButtonType> result = confirmAlert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
+            // Xóa UI ngay lập tức
+            productsGrid.getChildren().removeIf(node -> item.getItemId().equals(node.getUserData()));
 
-            productsService.deleteProductAsync(item.getId(), isDeleted -> {
+            // Gửi request server ngầm
+            productsService.deleteProductAsync(item.getItemId(), isDeleted -> {
                 Platform.runLater(() -> {
-                    if (isDeleted) {
-                        System.out.println("✅ Đã xóa sản phẩm thành công khỏi DB!");
+                    if (!isDeleted) {
                         loadMyProductsData();
-                    } else {
-                        Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                        errorAlert.setTitle("Lỗi xóa sản phẩm");
-                        errorAlert.setHeaderText(null);
-                        errorAlert.setContentText("Xóa thất bại! Sản phẩm này có thể đã được đưa vào phiên đấu giá.");
-                        errorAlert.showAndWait();
+                        new Alert(Alert.AlertType.ERROR, "Không thể xóa sản phẩm này!").showAndWait();
                     }
                 });
             });

@@ -102,6 +102,9 @@ public class AuctionDAO {
                     Auction a = mapResultSetToAuction(rs);
                     a.setProductName(rs.getString("product_name"));
                     a.setImagePath(rs.getString("image_path"));
+
+                    a.setDescription(rs.getString("description"));
+
                     list.add(a);
                 }
             }
@@ -370,5 +373,20 @@ public class AuctionDAO {
         } catch (SQLException e) { e.printStackTrace(); }
         return 0;
     }
+    public boolean updateAuctionPriceForEdit(String itemId, double newPrice) {
+        // Sửa câu SQL: Cập nhật CẢ 2 cột start_price và current_price
+        String sql = "UPDATE Auctions SET start_price = ?, current_price = ? WHERE item_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+            pstmt.setDouble(1, newPrice);
+            pstmt.setDouble(2, newPrice); // Gán giá mới cho current_price
+            pstmt.setString(3, itemId);
+
+            return pstmt.executeUpdate() > 0;
+        } catch (SQLException e) {
+            System.err.println("❌ Lỗi update bảng Auctions: " + e.getMessage());
+            return false;
+        }
+    }
 }

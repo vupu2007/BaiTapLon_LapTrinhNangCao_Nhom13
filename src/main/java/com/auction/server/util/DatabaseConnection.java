@@ -29,9 +29,6 @@ public class DatabaseConnection {
     }
 
     public static Connection getConnection() throws SQLException {
-        System.out.println("DEBUG Pool: active=" + dataSource.getHikariPoolMXBean().getActiveConnections()
-                + " idle=" + dataSource.getHikariPoolMXBean().getIdleConnections()
-                + " total=" + dataSource.getHikariPoolMXBean().getTotalConnections());
         return dataSource.getConnection();
     }
 }

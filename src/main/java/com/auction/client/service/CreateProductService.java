@@ -2,6 +2,7 @@ package com.auction.client.service;
 
 import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Electronics;
+import com.auction.shared.model.Item;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
@@ -92,6 +93,21 @@ public class CreateProductService {
             }
         }, "AuctionCreationPipelineWorker");
 
+        worker.setDaemon(true);
+        worker.start();
+    }
+    public void updateItemAsync(Item item, Consumer<Response> callback) {
+        Thread worker = new Thread(() -> {
+            try {
+                System.out.println("DEBUG sending UPDATE_ITEM for " + item.getItemId());
+                Request req = new Request(MessageType.UPDATE_ITEM, item);
+                Response resp = ClientSocket.getInstance().sendRequest(req);
+                Platform.runLater(() -> callback.accept(resp));
+            } catch (Exception e) {
+                System.out.println("DEBUG UPDATE_ITEM error: " + e.getMessage());
+                Platform.runLater(() -> callback.accept(new Response(false, "Lỗi: " + e.getMessage(), null)));
+            }
+        }, "UpdateItemWorker");
         worker.setDaemon(true);
         worker.start();
     }
