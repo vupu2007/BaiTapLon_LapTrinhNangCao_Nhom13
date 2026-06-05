@@ -99,8 +99,12 @@ public class MyProductsController {
                                 cc.setData(auction.getProductName(), priceStr, statusStr, auction.getImagePath(),
                                         auction.getDescription() != null ? auction.getDescription() : "",
                                         CurrentAccount.getAccount().getUsername(), startTimeStr, timeStr);
-                                cc.setSellerMode(() -> handleEditProduct(auction),
-                                        () -> handleDeleteProduct(getItemFromAuction(auction)));
+                                cc.setSellerMode(
+                                        auction.getStatus() == Auction.AuctionStatus.OPEN
+                                                ? () -> handleEditProduct(auction)
+                                                : () -> new Alert(Alert.AlertType.WARNING, "Chỉ có thể sửa sản phẩm ở trạng thái Sắp diễn ra!").showAndWait(),
+                                        () -> handleDeleteProduct(getItemFromAuction(auction))
+                                );
                             }
 
                             if ("Đang diễn ra".equals(statusStr)) running.add(card);
@@ -197,14 +201,12 @@ public class MyProductsController {
 
         Optional<ButtonType> result = confirmAlert.showAndWait();
         if (result.isPresent() && result.get() == ButtonType.OK) {
-            // Xóa UI ngay lập tức
-            productsGrid.getChildren().removeIf(node -> item.getItemId().equals(node.getUserData()));
-
-            // Gửi request server ngầm
             productsService.deleteProductAsync(item.getItemId(), isDeleted -> {
                 Platform.runLater(() -> {
-                    if (!isDeleted) {
-                        loadMyProductsData();
+                    if (isDeleted) {
+                        productsGrid.getChildren().removeIf(node -> item.getItemId().equals(node.getUserData()));
+                        new Alert(Alert.AlertType.INFORMATION, "Đã xóa sản phẩm thành công!").showAndWait();
+                    } else {
                         new Alert(Alert.AlertType.ERROR, "Không thể xóa sản phẩm này!").showAndWait();
                     }
                 });
