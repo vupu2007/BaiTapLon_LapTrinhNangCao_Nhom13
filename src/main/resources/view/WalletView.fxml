@@ -20,8 +20,7 @@
 
         <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
             <children>
-                <!-- Đã sửa thành màu #1a73e8 -->
-                <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Quản lý ví tiền" textFill="#1a73e8">
+                <Label text="Quản lý ví tiền" style="-fx-text-fill: #1a73e8;">
                     <font>
                         <Font name="System Bold" size="28.0" />
                     </font>
@@ -33,6 +32,7 @@
                 </Label>
             </children>
         </VBox>
+
 
         <VBox spacing="25" style="-fx-background-color: linear-gradient(to bottom right, #1a73e8, #0d47a1); -fx-background-radius: 20; -fx-padding: 30; -fx-effect: dropshadow(three-pass-box, rgba(26,115,232,0.3), 20, 0, 0, 10);">
             <children>

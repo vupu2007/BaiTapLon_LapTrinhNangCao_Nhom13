@@ -26,7 +26,7 @@
             <children>
                 <VBox spacing="8.0" style="-fx-background-color: white; -fx-background-radius: 15; -fx-padding: 25; -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 15, 0, 0, 5);">
                     <children>
-                        <Label style="-fx-text-fill: #1a73e8; -fx-font-weight: bold;" text="Danh sách phiên đấu giá" textFill="#1a73e8">
+                        <Label text="Danh sách phiên đấu giá" style="-fx-text-fill: #1a73e8;">
                             <font>
                                 <Font name="System Bold" size="28.0" />
                             </font>
