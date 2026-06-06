@@ -8,7 +8,7 @@ import com.auction.shared.network.Response;
 public class AccountController {
 
     /**
-     * Trả về đối tượng Response đầy đủ.
+     * Trả về đối tượng Response đầy đủ
      * Giúp UI lấy được thông báo lỗi chi tiết từ Server hoặc lỗi mất kết nối mạng.
      */
     public Response loginUser(String username, String password) {

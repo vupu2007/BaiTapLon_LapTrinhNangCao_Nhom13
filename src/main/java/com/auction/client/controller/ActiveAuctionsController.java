@@ -31,7 +31,7 @@ public class ActiveAuctionsController {
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
 
-    // LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
+    // LỚP TRUNG GIAN : Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
     private static class AuctionCardDto {
         String name;
         String price;
