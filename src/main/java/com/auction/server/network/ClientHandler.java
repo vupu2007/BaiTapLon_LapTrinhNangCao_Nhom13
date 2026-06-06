@@ -1,6 +1,5 @@
 package com.auction.server.network;
 
-import com.auction.client.util.CurrentAccount;
 import com.auction.server.dao.AccountDAO;
 import com.auction.server.dao.AuctionDAO;
 import com.auction.server.dao.BidDAO;
