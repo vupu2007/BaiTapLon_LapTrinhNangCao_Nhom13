@@ -299,8 +299,7 @@ public class AdminAuctionMgmtController {
 
                         Platform.runLater(() -> {
                             if (response != null && response.isSuccess()) {
-                                auction.setStatus("Đã kết thúc");
-                                auctionTable.refresh();
+                                auction.setStatus("CANCELED");                                auctionTable.refresh();
                                 showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã dừng cuộc đấu giá vi phạm thành công!");
                             } else {
                                 String msg = response != null ? response.getMessage() : "Server từ chối thực thi.";
