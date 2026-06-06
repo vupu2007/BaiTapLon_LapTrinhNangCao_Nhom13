@@ -404,7 +404,7 @@ public class AuctionDetailController implements Observer {
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
                 checkBiddingPermissions(auction.getSellerId());
 
-                // Gọi hàm của nhóm sếp sau khi label đã có text
+                // Gọi hàm sau khi label đã có text
                 if (isEnded) showWinnerSection();
             });
         });

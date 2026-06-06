@@ -16,10 +16,6 @@ import java.util.function.Consumer;
 
 public class AuctionDetailService {
 
-    // ==========================================
-    // CÁC HÀM CŨ CỦA NHÓM BẠN (GIỮ NGUYÊN)
-    // ==========================================
-
     /**
      * 🚀 Tải thông tin Item ngầm từ Server dựa vào ID vật phẩm
      */

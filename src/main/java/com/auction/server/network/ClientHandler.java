@@ -86,7 +86,6 @@ public class ClientHandler implements Runnable {
                 if (request == null) break;
 
                 long startTime = System.currentTimeMillis();
-                printLog("📥", "REQ_RECEIVED", "Nhận request: " + request.getType());
 
                 serverWorkerPool.submit(() -> {
                     try {
@@ -106,7 +105,6 @@ public class ClientHandler implements Runnable {
 
                             long endTime = System.currentTimeMillis();
                             long duration = endTime - startTime;
-                            printLog("⚡", "RESP_FINISHED", "Xử lý xong lệnh [" + request.getType() + "] | ⏱️ Tiêu tốn: " + duration + "ms (" + String.format("%.3f", duration / 1000.0) + "s)");
                         }
                     } catch (Exception e) {
                         String timestamp = LocalDateTime.now().format(timeFormatter);
@@ -474,7 +472,7 @@ public class ClientHandler implements Runnable {
 
 
     }
-    // 📢 PHÁT SÓNG SỰ KIỆN TOÀN HỆ THỐNG
+    //  PHÁT SÓNG SỰ KIỆN TOÀN HỆ THỐNG
     public static void broadcastSystemUpdate(String updateType) {
         Response broadcastNotification = new Response(true, "Dữ liệu hệ thống có thay đổi mới!");
         broadcastNotification.setType(updateType);
@@ -494,7 +492,7 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // 🎯 SỬA 1: Thêm tham số newEndTime vào cuối hàm
+    // Thêm tham số newEndTime vào cuối hàm
     public static void pushBidUpdate(int auctionId, double newPrice, String username, java.time.LocalDateTime newEndTime) {
         System.out.println("pushBidUpdate called: " + auctionId + " " + newPrice);
         CopyOnWriteArrayList<ClientHandler> subs = auctionSubscribers.get(auctionId);
@@ -503,10 +501,10 @@ public class ClientHandler implements Runnable {
         // Định dạng thời gian
         String endTimeStr = (newEndTime != null) ? newEndTime.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : "";
 
-        // 🎯 CHIÊU ĐỘC: Ghép tên và thời gian phân tách bằng dấu |
+        // Ghép tên và thời gian phân tách bằng dấu |
         String combinedUserAndTime = username + "|" + endTimeStr;
 
-        // Giữ nguyên gói Response 3 tham số thô sơ của nhóm bạn, không đổi cấu trúc mạng!
+        // Giữ nguyên gói Response 3 tham số  không đổi cấu trúc mạng!
         Response push = new Response(true, "BID_UPDATE", new Object[]{auctionId, newPrice, combinedUserAndTime});
         push.setType("BID_UPDATE");
 
@@ -537,7 +535,4 @@ public class ClientHandler implements Runnable {
         try { if (out    != null) out.close();    } catch (IOException ignored) {}
         try { if (socket != null) socket.close(); } catch (IOException ignored) {}
     }
-
-
-
 }

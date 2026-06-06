@@ -127,7 +127,7 @@ public class AdminLayoutController {
         setButtonActive(btnAuctionMgmt);
         System.out.println("-> Mở giao diện Quản lý Đấu giá hệ thống");
 
-        // Quét đa đường dẫn an toàn đề phòng bạn đặt tên file có hoặc không có hậu tố "View"
+        // Quét đa đường dẫn an toàn đề phòng đặt tên file có hoặc không có hậu tố "View"
         loadAdminPage(
                 "/view/admin/AdminAuctionMgmtView.fxml",
                 "/view/AdminAuctionMgmtView.fxml",

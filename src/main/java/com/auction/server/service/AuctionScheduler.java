@@ -49,7 +49,7 @@ public class AuctionScheduler {
                 t.printStackTrace();
             }
         }, 3, 3, TimeUnit.SECONDS);
-        System.out.println("✅ AuctionScheduler da khoi dong thanh cong (Toc do quet: 2 giay/lan)!");
+        System.out.println("✅ AuctionScheduler da khoi dong thanh cong !");
     }
 
     public void stop() {

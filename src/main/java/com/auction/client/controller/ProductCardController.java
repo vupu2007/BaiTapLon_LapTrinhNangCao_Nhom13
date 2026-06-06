@@ -122,7 +122,6 @@ public class ProductCardController {
                 System.err.println("❌ Lỗi giải mã ảnh Base64 trên Card: " + ex.getMessage());
             }
         } else {
-            // Nếu là tên file bình thường (hàng cũ) thì vẫn dùng Loader của bạn
             ImageLoader.tryLoadImageToView(productImage, imageFileName);
         }
         if (actionButton != null) {

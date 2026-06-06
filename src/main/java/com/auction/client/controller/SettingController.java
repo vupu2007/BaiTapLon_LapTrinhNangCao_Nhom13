@@ -99,7 +99,7 @@ public class SettingController {
                         if (txtFullName.getScene() != null) {
                             Parent root = txtFullName.getScene().getRoot();
 
-                            // Tìm kiếm thẻ Label hiển thị Username trên Main Layout (Hãy đảm bảo ID fx:id="lblHeaderUsername" khớp với FXML của bạn)
+                            // Tìm kiếm thẻ Label hiển thị Username trên Main Layout (Hãy đảm bảo ID fx:id="lblHeaderUsername" khớp với FXML)
                             Node headerUserLabel = root.lookup("#lblHeaderUsername");
                             if (headerUserLabel == null) {
                                 headerUserLabel = root.lookup("#lblUsername"); // Dự phòng ID thay thế khác
