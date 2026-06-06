@@ -130,8 +130,7 @@ public class ClientHandler implements Runnable {
     }
 
     private Response handleRequest(Request request) {
-        System.out.println("DEBUG_HANDLE: Đang xử lý lệnh " + request.getType());
-        try {
+         try {
             switch (request.getType()) {
                 case LOGIN: {
                     try {
@@ -142,6 +141,7 @@ public class ClientHandler implements Runnable {
                         Account acc;
                         try {
                             acc = accountService.login(creds[0], creds[1]);
+                            if (acc instanceof User) this.currentUser = (User) acc;
                         } catch (RuntimeException e) {
                             if ("ACCOUNT_LOCKED".equals(e.getMessage())) {
                                 Response lockedResponse = new Response(false, "Tài khoản của bạn đã bị khóa!", null);
@@ -153,6 +153,8 @@ public class ClientHandler implements Runnable {
                         System.out.println("➡️ [DEBUG] Đã query DB xong, Kết quả Account: " + (acc != null ? "Có dữ liệu" : "NULL"));
 
                         Response response = acc != null
+
+
                                 ? new Response(true, "Đăng nhập thành công!", acc)
                                 : new Response(false, "Sai tài khoản hoặc mật khẩu!", null);
 
@@ -335,6 +337,13 @@ public class ClientHandler implements Runnable {
                     String newStatus = data[1];
                     boolean isUpdated = accountDAO.updateUserStatus(accountId, newStatus);
                     return new Response(isUpdated, isUpdated ? "Cập nhật thành công!" : "Cập nhật thất bại!", null);
+                }
+                case UPDATE_AUCTION_STATUS: {
+                    String[] data = (String[]) request.getPayload();
+                    int auctionId = Integer.parseInt(data[0]);
+                    String newStatus = data[1];
+                    boolean ok = auctionDAO.updateAuctionStatus(auctionId, newStatus);
+                    return new Response(ok, ok ? "Cập nhật thành công!" : "Cập nhật thất bại!", null);
                 }
                 case GET_TRANSACTIONS: {
                     int accountId = (int) request.getPayload();
