@@ -4,7 +4,6 @@ import com.auction.client.util.CurrentAccount;
 import com.auction.client.network.ClientSocket;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.Auction;
-import com.auction.shared.model.Item;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
@@ -32,7 +31,7 @@ public class ActiveAuctionsController {
     private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
 
 
-    // 🌟 LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
+    // LỚP TRUNG GIAN (DTO): Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
     private static class AuctionCardDto {
         String name;
         String price;
@@ -62,8 +61,7 @@ public class ActiveAuctionsController {
     }
 
     /**
-     * 🚀 SỬA LỖI BIÊN DỊCH TRIỆT ĐỂ: Điều hướng quay lại trang chủ bằng kỹ thuật Scene Graph Lookup
-     * Loại bỏ hoàn toàn sự phụ thuộc vào Singleton static cũ để tránh lỗi compile và rò rỉ RAM.
+     * Điều hướng quay lại trang chủ bằng kỹ thuật Scene Graph Lookup
      */
     @FXML
     private void openHome() {

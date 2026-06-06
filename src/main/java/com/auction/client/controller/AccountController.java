@@ -8,7 +8,7 @@ import com.auction.shared.network.Response;
 public class AccountController {
 
     /**
-     * 🌟 CHUẨN HÓA ĐĂNG NHẬP: Trả về đối tượng Response đầy đủ.
+     * Trả về đối tượng Response đầy đủ.
      * Giúp UI lấy được thông báo lỗi chi tiết từ Server hoặc lỗi mất kết nối mạng.
      */
     public Response loginUser(String username, String password) {
@@ -32,7 +32,7 @@ public class AccountController {
     }
 
     /**
-     * 🌟 CHUẨN HÓA ĐĂNG KÝ: Trả về đối tượng Response đầy đủ.
+     * Trả về đối tượng Response đầy đủ.
      * Giúp UI phân biệt được lỗi trùng Username, trùng Email hay lỗi hệ thống.
      */
     public Response registerUser(String username, String password, String email) {
@@ -53,7 +53,7 @@ public class AccountController {
         }
     }
     /**
-     * 🌟 YÊU CẦU QUÊN MẬT KHẨU
+     * YÊU CẦU QUÊN MẬT KHẨU
      * Gửi request tới server để xác thực tài khoản và yêu cầu reset.
      */
     public Response forgotPassword(String username, String email) {
