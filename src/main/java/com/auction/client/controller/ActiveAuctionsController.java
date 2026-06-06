@@ -22,14 +22,17 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ActiveAuctionsController {
 
+    // Sử dụng Logger chuẩn thay cho System.err.println / printStackTrace
+    private static final Logger LOGGER = Logger.getLogger(ActiveAuctionsController.class.getName());
+    private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
     @FXML private VBox emptyStateBox;
     @FXML private FlowPane cardsContainer;
-
-    private final DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
-
 
     // LỚP TRUNG GIAN : Dùng để bọc dữ liệu thô từ luồng ngầm gửi về cho luồng UI dựng Card
     private static class AuctionCardDto {
@@ -72,7 +75,7 @@ public class ActiveAuctionsController {
                 String homeFxmlPath = "/view/MainView.fxml";
                 java.net.URL fxmlLocation = getClass().getResource(homeFxmlPath);
                 if (fxmlLocation == null) {
-                    System.err.println("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
+                    LOGGER.warning("❌ LỖI: Không tìm thấy tệp FXML trang chủ tại: " + homeFxmlPath);
                     return;
                 }
 
@@ -86,17 +89,17 @@ public class ActiveAuctionsController {
                 if (layoutCenter instanceof StackPane contentArea) {
                     // Chèn màn hình tổng quan trang chủ quay lại trung tâm màn hình Layout chính
                     contentArea.getChildren().setAll(homeView);
-                    System.out.println("🎯 [Navigation] Đã chuyển đổi màn hình sang Trang chủ từ ActiveAuctions thông qua Scene Graph Lookup.");
+                    LOGGER.info("🎯 [Navigation] Đã chuyển đổi màn hình sang Trang chủ từ ActiveAuctions.");
                 } else {
-                    System.err.println("❌ Không định vị được vùng hiển thị #contentArea trên giao diện.");
+                    LOGGER.warning("❌ Không định vị được vùng hiển thị #contentArea trên giao diện.");
                 }
 
             } catch (Exception e) {
-                System.err.println("❌ Lỗi nghiêm trọng khi quay lại giao diện trang chủ: " + e.getMessage());
-                e.printStackTrace();
+                LOGGER.log(Level.SEVERE, "❌ Lỗi nghiêm trọng khi quay lại giao diện trang chủ", e);
             }
         });
     }
+
     private void loadAuctions() {
         if (cardsContainer != null) {
             cardsContainer.getChildren().clear();
@@ -125,25 +128,25 @@ public class ActiveAuctionsController {
                     if (obj instanceof Auction a) auctions.add(a);
                 }
                 if (auctions.isEmpty()) return dataList;
-                System.out.println("DEBUG size=" + auctions.size() + " name0=" + auctions.get(0).getProductName());
 
+                // FIX WARNING 3: Thay .get(0) bằng .getFirst() (Java 21+)
+                LOGGER.info(() -> "DEBUG size=" + auctions.size() + " name0=" + auctions.getFirst().getProductName());
+
+                // Gỡ bỏ try-catch con ở đây để tránh WARNING 2 (Hãy để Task tự xử lý nếu crash)
                 for (Auction auction : auctions) {
-                    try {
-                        AuctionCardDto dto = new AuctionCardDto();
-                        dto.name = auction.getProductName() != null ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
-                        dto.image = auction.getImagePath();
-                        dto.description = auction.getDescription() != null ? auction.getDescription() : "Không có mô tả.";
-                        dto.sellerName = auction.getSellerName() != null ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
-                        dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                        dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(dateTimeFormatter) : "--/--/---- --:--";
-                        long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
-                        dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
-                        dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
-                        dto.auction = auction;
-                        dataList.add(dto);
-                    } catch (Exception e) {
-                        System.err.println("❌ Lỗi: " + e.getMessage());
-                    }
+                    AuctionCardDto dto = new AuctionCardDto();
+                    dto.name = auction.getProductName() != null ? auction.getProductName() : "Sản phẩm #" + auction.getItemId();
+                    dto.image = auction.getImagePath();
+                    dto.description = auction.getDescription() != null ? auction.getDescription() : "Không có mô tả.";
+                    dto.sellerName = auction.getSellerName() != null ? auction.getSellerName() : "Người bán #" + auction.getSellerId();
+                    dto.startTimeStr = (auction.getStartTime() != null) ? auction.getStartTime().format(DATE_TIME_FORMATTER) : "--/--/---- --:--";
+                    dto.endTimeStr = (auction.getEndTime() != null) ? auction.getEndTime().format(DATE_TIME_FORMATTER) : "--/--/---- --:--";
+
+                    long minutes = Duration.between(LocalDateTime.now(), auction.getEndTime()).toMinutes();
+                    dto.time = (minutes > 0) ? minutes + " phút" : "Sắp kết thúc";
+                    dto.price = String.format("%,.0f VNĐ", auction.getCurrentPrice());
+                    dto.auction = auction;
+                    dataList.add(dto);
                 }
                 return dataList;
             }
@@ -170,13 +173,12 @@ public class ActiveAuctionsController {
                         }
                         controller.setData(dto.name, dto.price, statusText, dto.image, dto.description,
                                 dto.sellerName, dto.startTimeStr, dto.endTimeStr);
-                        //controller.setOriginProductData(dto.auction);
-                    }
-                    else {
-                        System.out.println("DEBUG controller null");
+                    } else {
+                        LOGGER.warning("DEBUG controller null");
                     }
 
                     cardsContainer.getChildren().add(card);
+
                     card.setOnMouseClicked(e -> {
                         if (dto.auction == null) return;
                         try {
@@ -184,42 +186,48 @@ public class ActiveAuctionsController {
                             Parent detailView = detailLoader.load();
                             AuctionDetailController detailController = detailLoader.getController();
 
-                            // 🎯 BƠM ĐẦY ĐỦ NGUYÊN LIỆU XỊN VÀO ĐÂY
-                            dto.auction.setProductName(dto.name);       // Ép tên SP (Tránh lỗi Sản phẩm #0)
-                            dto.auction.setSellerName(dto.sellerName);   // Ép tên người bán
-                            dto.auction.setDescription(dto.description); // Ép mô tả
+                            dto.auction.setProductName(dto.name);
+                            dto.auction.setSellerName(dto.sellerName);
+                            dto.auction.setDescription(dto.description);
 
-                            // Parse thời gian từ Chuỗi hiển thị ngoài Card thành Object LocalDateTime chuẩn
-                            java.time.format.DateTimeFormatter dtf = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+                            // FIX WARNING 4 & 5: Điền log vào block catch trống để dễ debug
                             if (dto.startTimeStr != null) {
-                                try { dto.auction.setStartTime(java.time.LocalDateTime.parse(dto.startTimeStr, dtf)); } catch (Exception ex) {}
+                                try {
+                                    dto.auction.setStartTime(LocalDateTime.parse(dto.startTimeStr, DATE_TIME_FORMATTER));
+                                } catch (Exception ex) {
+                                    LOGGER.log(Level.FINE, "Không thể parse StartTime", ex);
+                                }
                             }
                             if (dto.endTimeStr != null) {
-                                try { dto.auction.setEndTime(java.time.LocalDateTime.parse(dto.endTimeStr, dtf)); } catch (Exception ex) {}
+                                try {
+                                    dto.auction.setEndTime(LocalDateTime.parse(dto.endTimeStr, DATE_TIME_FORMATTER));
+                                } catch (Exception ex) {
+                                    LOGGER.log(Level.FINE, "Không thể parse EndTime", ex);
+                                }
                             }
 
                             if (detailController != null) {
                                 detailController.loadProductDetail(dto.auction);
                             }
 
-                            // Chuyển màn hình
                             Parent root = card.getScene().getRoot();
                             Node center = root.lookup("#contentArea");
                             if (center instanceof StackPane contentArea) {
                                 contentArea.getChildren().setAll(detailView);
                             }
                         } catch (Exception ex) {
-                            System.err.println("❌ Lỗi chuyển màn hình chi tiết: " + ex.getMessage());
+                            LOGGER.log(Level.SEVERE, "❌ Lỗi chuyển màn hình chi tiết", ex);
                         }
                     });
                 } catch (Exception e) {
-                    System.err.println("❌ Lỗi dựng card: " + e.getMessage());
+                    LOGGER.log(Level.SEVERE, "❌ Lỗi dựng card", e);
                 }
             }
         });
 
+        // Hỗ trợ bắt toàn bộ lỗi phát sinh từ hàm call() luồng ngầm
         loadTask.setOnFailed(event -> {
-            System.err.println("❌ Lỗi: " + loadTask.getException().getMessage());
+            LOGGER.log(Level.SEVERE, "❌ Lỗi Task chạy ngầm thất bại", loadTask.getException());
             showEmptyState(true);
         });
 
