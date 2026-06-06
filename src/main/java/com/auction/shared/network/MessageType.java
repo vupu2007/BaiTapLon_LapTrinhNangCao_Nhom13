@@ -17,6 +17,7 @@ public enum MessageType {
     FORGOT_PASSWORD_FAIL,    // 👈 Cần thiết để báo lỗi nếu sai email/user
     RESET_PASSWORD_SUCCESS,  // 👈 Cần thiết để báo đổi mật khẩu xong
     RESET_PASSWORD_FAIL,     // 👈 Cần thiết để báo lỗi OTP sai
+    SWITCH_ROLE,  // Đổi vai trò
 
     GET_USER_BY_ID,
     UPDATE_USER_STATUS,

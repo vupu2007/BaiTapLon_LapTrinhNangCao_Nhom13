@@ -1,8 +1,11 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
 import com.auction.client.service.SettingService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Account;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.fxml.FXML;
@@ -30,17 +33,35 @@ public class SettingController {
     @FXML
     public void initialize() {
         Account currentAcc = CurrentAccount.getAccount();
-        if (currentAcc != null) {
-            // 🌟 PHÒNG VỆ: Bọc an toàn chống lỗi Null-Pointer khi nạp form
-            if (txtFullName != null) txtFullName.setText(currentAcc.getUsername());
-            if (txtEmail != null) txtEmail.setText(currentAcc.getEmail() != null ? currentAcc.getEmail() : "");
-            if (txtPhone != null) txtPhone.setText(""); // Điểm mở rộng cho số điện thoại nếu cần
+        System.out.println("DEBUG class=" + currentAcc.getClass().getSimpleName());
+        System.out.println("DEBUG role text=" + (currentAcc instanceof com.auction.shared.model.Seller ? "Người bán" : "Người mua"));
+        if (currentAcc == null) return;
 
-            if (lblDisplayUsername != null) lblDisplayUsername.setText(currentAcc.getUsername());
-            if (lblDisplayEmail != null) lblDisplayEmail.setText(currentAcc.getEmail());
-            if (lblDisplayRole != null) lblDisplayRole.setText(currentAcc.displayRole());
-            if (lblDisplayBalance != null) lblDisplayBalance.setText("0 đ");
+        if (txtFullName != null) txtFullName.setText(currentAcc.getUsername());
+        if (txtEmail != null) txtEmail.setText(currentAcc.getEmail() != null ? currentAcc.getEmail() : "");
+        if (lblDisplayUsername != null) lblDisplayUsername.setText(currentAcc.getUsername());
+        if (lblDisplayEmail != null) lblDisplayEmail.setText(currentAcc.getEmail() != null ? currentAcc.getEmail() : "");
+        if (lblDisplayRole != null) {
+            String roleText = currentAcc instanceof com.auction.shared.model.Bidder ? "Người mua"
+                    : currentAcc instanceof com.auction.shared.model.Seller ? "Người bán"
+                    : "Quản trị viên";
+            lblDisplayRole.setText(roleText);
         }
+        if (lblDisplayBalance != null) lblDisplayBalance.setText("Đang tải...");
+
+        new Thread(() -> {
+            try {
+                Response resp = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_ACCOUNT_BY_ID, Integer.parseInt(currentAcc.getId())));
+                if (resp != null && resp.isSuccess() && resp.getData() instanceof Account fresh) {
+                    double balance = fresh instanceof com.auction.shared.model.User u ? u.getBalance() : 0;
+                    Platform.runLater(() -> {
+                        if (lblDisplayBalance != null)
+                            lblDisplayBalance.setText(String.format("%,.0f đ", balance));
+                    });
+                }
+            } catch (Exception ignored) {}
+        }).start();
     }
 
     /**

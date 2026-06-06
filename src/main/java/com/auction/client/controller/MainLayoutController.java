@@ -1,5 +1,12 @@
 package com.auction.client.controller;
 
+import com.auction.client.network.ClientSocket;
+import com.auction.shared.model.Account;
+import com.auction.shared.model.Bidder;
+import com.auction.shared.model.Seller;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
+import com.auction.shared.network.Response;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -209,14 +216,46 @@ public class MainLayoutController {
 
     @FXML
     private void switchToBuyer() {
-        updateRoleUI("role-buyer", "🛒 Người mua", true, false);
-        openHome();
+        Account current = CurrentAccount.getAccount();
+        if (current == null) return;
+
+        new Thread(() -> {
+            Request req = new Request(MessageType.SWITCH_ROLE,
+                    new Object[]{Integer.parseInt(current.getId()), "BIDDER"});
+            Response resp = ClientSocket.getInstance().sendRequest(req);
+
+            Platform.runLater(() -> {
+                if (resp != null && resp.isSuccess()) {
+                    Bidder bidder = new Bidder(current.getId(), current.getUsername(),
+                            current.getPassword(), current.getEmail(), current.getBalance() != null ? current.getBalance() : 0.0);
+                    CurrentAccount.setAccount(bidder);
+                    updateRoleUI("role-buyer", "🛒 Người mua", true, false);
+                    openHome();
+                }
+            });
+        }).start();
     }
 
     @FXML
     private void switchToSeller() {
-        updateRoleUI("role-seller", "🏪 Người bán", false, true);
-        openHome();
+        Account current = CurrentAccount.getAccount();
+        if (current == null) return;
+
+        new Thread(() -> {
+            Request req = new Request(MessageType.SWITCH_ROLE,
+                    new Object[]{Integer.parseInt(current.getId()), "SELLER"});
+            Response resp = ClientSocket.getInstance().sendRequest(req);
+
+            Platform.runLater(() -> {
+                if (resp != null && resp.isSuccess()) {
+                    Seller seller = new Seller(current.getId(), current.getUsername(),
+                            current.getPassword(), current.getEmail(), current.getBalance() != null ? current.getBalance() : 0.0);
+                    CurrentAccount.setAccount(seller);
+                    updateRoleUI("role-seller", "🏪 Người bán", false, true);
+                    openHome();
+                }
+            });
+        }).start();
     }
     /**
      * Tối ưu hóa UI: Thay đổi theme bằng CSS Class thay vì viết code màu Hex cứng trong Java
