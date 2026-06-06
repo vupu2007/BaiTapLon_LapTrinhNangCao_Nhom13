@@ -148,7 +148,10 @@ public class AdminAuctionMgmtController {
                     } else if ("OPEN".equalsIgnoreCase(item)) {
                         lblStatusBadge.setText("Sắp diễn ra");
                         lblStatusBadge.setStyle("-fx-background-color: #e0f2fe; -fx-text-fill: #0369a1; -fx-background-radius: 6; -fx-padding: 6 12; -fx-font-weight: bold; -fx-alignment: center;");
-                    } else {
+                    } else if ("CANCELED".equalsIgnoreCase(item)) {
+                    lblStatusBadge.setText("Bị hủy");
+                    lblStatusBadge.setStyle("-fx-background-color: #fef9c3; -fx-text-fill: #ca8a04; -fx-background-radius: 6; -fx-padding: 6 12; -fx-font-weight: bold; -fx-alignment: center;");
+                }else {
                         lblStatusBadge.setText("Đã kết thúc");
                         lblStatusBadge.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #475569; -fx-background-radius: 6; -fx-padding: 6 12; -fx-font-weight: bold; -fx-alignment: center;");
                     }
@@ -188,8 +191,7 @@ public class AdminAuctionMgmtController {
                     setGraphic(null);
                 } else {
                     AdminAuctionRow currentRow = getTableView().getItems().get(getIndex());
-                    if ("ĐÃ KẾT THÚC".equalsIgnoreCase(currentRow.getStatus()) || "FINISHED".equalsIgnoreCase(currentRow.getStatus())) {
-                        btnCancel.setDisable(true);
+                    if ("ĐÃ KẾT THÚC".equalsIgnoreCase(currentRow.getStatus()) || "FINISHED".equalsIgnoreCase(currentRow.getStatus()) || "CANCELED".equalsIgnoreCase(currentRow.getStatus())) {                        btnCancel.setDisable(true);
                         btnCancel.setStyle("-fx-background-color: #f1f5f9; -fx-text-fill: #cbd5e1; -fx-background-radius: 6;");
                     } else {
                         btnCancel.setDisable(false);
@@ -292,14 +294,12 @@ public class AdminAuctionMgmtController {
             if (responseType == ButtonType.YES) {
                 Thread cancelWorker = new Thread(() -> {
                     try {
-                        String[] cancelParams = { auction.getId(), "FINISHED" };
-                        Request request = new Request(MessageType.UPDATE_AUCTION_STATUS, cancelParams);
+                        String[] cancelParams = { auction.getId(), "CANCELED" };                        Request request = new Request(MessageType.UPDATE_AUCTION_STATUS, cancelParams);
                         Response response = ClientSocket.getInstance().sendRequest(request);
 
                         Platform.runLater(() -> {
                             if (response != null && response.isSuccess()) {
-                                auction.setStatus("Đã kết thúc");
-                                auctionTable.refresh();
+                                auction.setStatus("CANCELED");                                auctionTable.refresh();
                                 showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã dừng cuộc đấu giá vi phạm thành công!");
                             } else {
                                 String msg = response != null ? response.getMessage() : "Server từ chối thực thi.";

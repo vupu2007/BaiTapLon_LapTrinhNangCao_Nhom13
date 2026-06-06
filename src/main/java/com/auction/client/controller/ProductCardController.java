@@ -87,7 +87,10 @@ public class ProductCardController {
                 statusBadge.setStyle("-fx-background-color: #dbeafe; -fx-text-fill: #1e40af; -fx-background-radius: 20; -fx-font-weight: bold;");
             } else if ("Đã kết thúc".equals(statusText) || "Sắp kết thúc".equals(statusText)) {
                 statusBadge.setStyle("-fx-background-color: #fee2e2; -fx-text-fill: #dc2626; -fx-background-radius: 20; -fx-font-weight: bold;");
-            } else {
+            } else if ("Bị hủy".equals(statusText)) {
+            statusBadge.setStyle("-fx-background-color: #fef9c3; -fx-text-fill: #ca8a04; -fx-background-radius: 20; -fx-font-weight: bold;");
+        }
+        else {
                 statusBadge.setStyle("-fx-background-color: #dcfce7; -fx-text-fill: #15803d; -fx-background-radius: 20; -fx-font-weight: bold;");
             }
         }
@@ -123,8 +126,7 @@ public class ProductCardController {
             ImageLoader.tryLoadImageToView(productImage, imageFileName);
         }
         if (actionButton != null) {
-            actionButton.setText("Sắp diễn ra".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
-
+            actionButton.setText("Sắp diễn ra".equals(statusText) || "Đã kết thúc".equals(statusText) ? "Xem chi tiết" : "Đấu giá ngay");
             actionButton.setOnAction(e -> {
                 // Kiểm tra xem nút bấm có nằm trong Card không
                 if (actionButton.getParent() != null) {

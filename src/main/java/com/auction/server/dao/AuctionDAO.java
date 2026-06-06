@@ -400,4 +400,16 @@ public class AuctionDAO {
             return false;
         }
     }
+    public boolean updateAuctionStatus(int auctionId, String status) {
+        String sql = "UPDATE Auctions SET status = ? WHERE auction_id = ?";
+        try (Connection conn = DatabaseConnection.getConnection();
+             PreparedStatement ps = conn.prepareStatement(sql)) {
+            ps.setString(1, status);
+            ps.setInt(2, auctionId);
+            return ps.executeUpdate() > 0;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
 }

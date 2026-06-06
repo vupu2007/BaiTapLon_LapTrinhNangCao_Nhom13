@@ -10,9 +10,9 @@ public class DatabaseConnection {
 
     static {
         HikariConfig config = new HikariConfig();
-        config.setJdbcUrl("jdbc:mysql://bvfa8t3qtuhyhyzm2cns-mysql.services.clever-cloud.com:3306/bvfa8t3qtuhyhyzm2cns?autoReconnect=true&tcpKeepAlive=true&useSSL=false&rewriteBatchedStatements=true&serverTimezone=Asia/Ho_Chi_Minh");        config.setUsername("uvx5jzbzu6h6egtv"); // Điền user Clever Cloud của ông
-        config.setPassword("gxvNiCizwruEPSZnfwud"); // Điền pass Clever Cloud của ông
-
+        config.setJdbcUrl("jdbc:mysql://localhost:3306/online_auction_db?autoReconnect=true&useSSL=false&serverTimezone=Asia/Ho_Chi_Minh");
+        config.setUsername("root");
+        config.setPassword("");
         // ⚡ BỘ THÔNG SỐ SIÊU TỐI ƯU CHO HIKARI:
         config.setMaximumPoolSize(5);
         config.setMinimumIdle(1);

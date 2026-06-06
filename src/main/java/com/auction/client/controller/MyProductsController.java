@@ -87,12 +87,15 @@ public class MyProductsController {
                             double price = auction.getCurrentPrice() > 0 ? auction.getCurrentPrice() : auction.getStartPrice();
                             String priceStr = String.format("%,.0f đ", price);
                             String statusStr = auction.getStatus() == Auction.AuctionStatus.RUNNING ? "Đang diễn ra"
-                                    : auction.getStatus() == Auction.AuctionStatus.OPEN ? "Sắp diễn ra" : "Đã kết thúc";
+                                    : auction.getStatus() == Auction.AuctionStatus.OPEN ? "Sắp diễn ra"
+                                    : auction.getStatus() == Auction.AuctionStatus.CANCELED ? "Bị hủy" : "Đã kết thúc";
                             String endTimeStr = auction.getEndTime() != null ? auction.getEndTime().format(fmt) : "--/--/---- --:--";
                             String startTimeStr = auction.getStartTime() != null ? auction.getStartTime().format(fmt) : "--/--/---- --:--";
                             String timeStr = "Sắp diễn ra".equals(statusStr) ? startTimeStr : endTimeStr;
 
-                            totalValueCalc += price;
+                            if (auction.getStatus() != Auction.AuctionStatus.CANCELED) {
+                                totalValueCalc += price;
+                            }
                             if (auction.getStatus() == Auction.AuctionStatus.RUNNING) activeCountCalc++;
 
                             if (cc != null) {
