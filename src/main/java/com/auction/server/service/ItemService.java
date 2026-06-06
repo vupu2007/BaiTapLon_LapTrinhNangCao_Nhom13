@@ -93,7 +93,8 @@ public class ItemService {
 
         try {
             Auction auction = auctionDAO.getAuctionByItemId(itemId);
-            if (auction != null && auction.getStatus() != Auction.AuctionStatus.OPEN) return false;
+            if (auction != null && auction.getStatus() != Auction.AuctionStatus.OPEN
+                    && auction.getStatus() != Auction.AuctionStatus.CANCELED) return false;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
