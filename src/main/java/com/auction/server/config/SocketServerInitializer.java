@@ -2,8 +2,6 @@ package com.auction.server.config;
 
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.stereotype.Component;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 
