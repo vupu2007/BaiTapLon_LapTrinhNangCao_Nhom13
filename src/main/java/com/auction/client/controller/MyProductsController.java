@@ -209,6 +209,7 @@ public class MyProductsController {
                     if (isDeleted) {
                         productsGrid.getChildren().removeIf(node -> item.getItemId().equals(node.getUserData()));
                         new Alert(Alert.AlertType.INFORMATION, "Đã xóa sản phẩm thành công!").showAndWait();
+                        loadMyProductsData();
                     } else {
                         new Alert(Alert.AlertType.ERROR, "Không thể xóa sản phẩm này!").showAndWait();
                     }
