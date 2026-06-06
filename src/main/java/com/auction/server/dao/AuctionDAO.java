@@ -246,7 +246,8 @@ public class AuctionDAO {
     }
 // Bổ sung
     public Auction getAuctionByItemId(String itemId) throws SQLException {
-        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status IN ('RUNNING', 'OPEN', 'FINISHED') LIMIT 1";        try (Connection conn = DatabaseConnection.getConnection();
+        String sql = "SELECT * FROM Auctions WHERE item_id = ? AND status IN ('RUNNING', 'OPEN', 'FINISHED', 'CANCELED') LIMIT 1";
+        try (Connection conn = DatabaseConnection.getConnection();
                                                                                                                                    PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setString(1, itemId);
             try (ResultSet rs = ps.executeQuery()) {
