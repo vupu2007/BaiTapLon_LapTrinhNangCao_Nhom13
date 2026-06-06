@@ -274,7 +274,13 @@ public class MainLayoutController {
 
     @FXML
     private void handleLogout(ActionEvent event) {
-        // Giải phóng luồng và dập tắt đồng hồ chạy ngầm hoàn toàn chống tràn RAM hệ thống
+        Account current = CurrentAccount.getAccount();
+        if (current instanceof com.auction.shared.model.Seller) {
+            new Thread(() -> ClientSocket.getInstance().sendRequest(
+                    new Request(MessageType.SWITCH_ROLE, new Object[]{Integer.parseInt(current.getId()), "BIDDER"})
+            )).start();
+        }
+
         if (clockTimeline != null) {
             clockTimeline.stop();
         }

@@ -1,5 +1,10 @@
 package com.auction.client;
 
+import com.auction.client.network.ClientSocket;
+import com.auction.client.util.CurrentAccount;
+import com.auction.shared.model.Account;
+import com.auction.shared.network.MessageType;
+import com.auction.shared.network.Request;
 import javafx.application.Application;
 import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
@@ -34,7 +39,13 @@ public class MainApp {
 
         @Override
         public void stop() {
-            System.out.println("Ứng dụng Client đã đóng an toàn.");
+            Account current = CurrentAccount.getAccount();
+            if (current instanceof com.auction.shared.model.Seller) {
+                ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.SWITCH_ROLE, new Object[]{Integer.parseInt(current.getId()), "BIDDER"})
+                );
+            }
+            ClientSocket.getInstance().closeConnection();
         }
     }
 
