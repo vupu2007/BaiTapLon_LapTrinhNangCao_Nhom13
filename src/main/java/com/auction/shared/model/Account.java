@@ -2,7 +2,7 @@ package com.auction.shared.model;
 import java.io.Serializable;
 
 /**
- * Lớp trừu tượng Account đại diện cho tài khoản người dùng trong hệ thống đấu giá.
+ * Lớp trừu tượng Account đại diện cho tài khoản người dùng trong hệ thống đấu giá
  */
 public abstract class Account implements Entity,Serializable {
     private static final long serialVersionUID = 1L;

@@ -39,13 +39,10 @@ public class MyProductsController {
 
     @FXML
     public void initialize() {
+        productCardFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
         if (productCardFxmlLocation == null) {
-            productCardFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
-            if (productCardFxmlLocation == null) productCardFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
-            if (productCardFxmlLocation == null) productCardFxmlLocation = getClass().getResource("ProductCard.fxml");
-            if (productCardFxmlLocation == null) productCardFxmlLocation = getClass().getResource("/ProductCard.fxml");
+            throw new RuntimeException("Lỗi cấu trúc: Không tìm thấy file FXML tại /view/ProductCard.fxml");
         }
-
         loadMyProductsData();
     }
 

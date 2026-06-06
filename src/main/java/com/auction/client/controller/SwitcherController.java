@@ -17,48 +17,27 @@ public class SwitcherController {
      * Hàm xử lý logic chuyển đổi giao diện Sidebar
      */
     public void updateRoleUI(boolean isBuyer) {
-        if (isBuyer) {
-            // Chế độ NGƯỜI MUA (Màu hồng) - Tích hợp kiểm tra an toàn chống null
-            if (roleBox != null) {
-                roleBox.setStyle("-fx-background-color: #fae8ff; -fx-background-radius: 15; -fx-padding: 20;");
-            }
-            if (lblRoleSidebar != null) {
-                lblRoleSidebar.setText("🛒 Người mua");
-                lblRoleSidebar.setStyle("-fx-text-fill: #86198f; -fx-font-weight: bold; -fx-font-size: 18;");
-            }
-            if (lblRoleTitle != null) {
-                lblRoleTitle.setStyle("-fx-text-fill: #86198f; -fx-font-size: 11;");
-            }
+        String color = isBuyer ? "#fae8ff" : "#e0f2fe";
+        String textColor = isBuyer ? "#86198f" : "#0369a1";
+        String roleText = isBuyer ? "🛒 Người mua" : "🏪 Người bán";
 
-            if (buyerMenu != null) {
-                buyerMenu.setVisible(true);
-                buyerMenu.setManaged(true);
-            }
-            if (sellerMenu != null) {
-                sellerMenu.setVisible(false);
-                sellerMenu.setManaged(false);
-            }
-        } else {
-            // Chế độ NGƯỜI BÁN (Màu xanh) - Tích hợp kiểm tra an toàn chống null
-            if (roleBox != null) {
-                roleBox.setStyle("-fx-background-color: #e0f2fe; -fx-background-radius: 15; -fx-padding: 20;");
-            }
-            if (lblRoleSidebar != null) {
-                lblRoleSidebar.setText("🏪 Người bán");
-                lblRoleSidebar.setStyle("-fx-text-fill: #0369a1; -fx-font-weight: bold; -fx-font-size: 18;");
-            }
-            if (lblRoleTitle != null) {
-                lblRoleTitle.setStyle("-fx-text-fill: #0369a1; -fx-font-size: 11;");
-            }
+        // Cập nhật phong cách chung
+        if (roleBox != null) roleBox.setStyle("-fx-background-color: " + color + "; -fx-background-radius: 15; -fx-padding: 20;");
+        if (lblRoleSidebar != null) {
+            lblRoleSidebar.setText(roleText);
+            lblRoleSidebar.setStyle("-fx-text-fill: " + textColor + "; -fx-font-weight: bold; -fx-font-size: 18;");
+        }
+        if (lblRoleTitle != null) lblRoleTitle.setStyle("-fx-text-fill: " + textColor + "; -fx-font-size: 11;");
 
-            if (buyerMenu != null) {
-                buyerMenu.setVisible(false);
-                buyerMenu.setManaged(false);
-            }
-            if (sellerMenu != null) {
-                sellerMenu.setVisible(true);
-                sellerMenu.setManaged(true);
-            }
+        // Toggle menu (Sử dụng kỹ thuật ẩn hiện thông minh)
+        updateMenuVisibility(buyerMenu, isBuyer);
+        updateMenuVisibility(sellerMenu, !isBuyer);
+    }
+
+    private void updateMenuVisibility(VBox menu, boolean visible) {
+        if (menu != null) {
+            menu.setVisible(visible);
+            menu.setManaged(visible);
         }
     }
 }

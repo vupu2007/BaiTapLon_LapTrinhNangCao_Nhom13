@@ -48,38 +48,53 @@ public class AuctionController implements Observer {
 
     @FXML
     public void handlePlaceBid() {
+        // 1. Lấy dữ liệu
         Account currentUser = CurrentAccount.getAccount();
-        if (currentUser == null) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi", "Bạn cần đăng nhập để đấu giá!");
-            return;
-        }
-        if ("ADMIN".equalsIgnoreCase(currentUser.getRole())) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi", "Tài khoản Admin không được phép tham gia!");
-            return;
-        }
-
         String bidText = txtBidAmount.getText().trim();
-        if (bidText.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập số tiền muốn đấu giá!");
+
+        // 2. Validate (Tách logic ra ngoài)
+        if (!validateBidInput(currentUser, bidText)) {
             return;
         }
 
+        // 3. Thực thi
         try {
             double amount = Double.parseDouble(bidText);
 
-            // Sử dụng chính hàm `sendBidRequestAsync` CÓ SẴN từ trước của nhóm bạn!
-            detailService.sendBidRequestAsync(currentAuctionId, Integer.parseInt(currentUser.getId()), amount, response -> {
-                if (response != null && response.isSuccess()) {
-                    txtBidAmount.clear();
-                } else {
-                    String msg = (response != null) ? response.getMessage() : "Đặt giá thất bại!";
-                    showAlert(Alert.AlertType.ERROR, "Thất bại", msg);
-                }
-            });
+            // Disable nút để tránh người dùng click liên tục (Double submission)
+            // btnPlaceBid.setDisable(true);
 
+            detailService.sendBidRequestAsync(currentAuctionId, Integer.parseInt(currentUser.getId()), amount, response -> {
+                // Đảm bảo cập nhật UI trên FX Thread
+                Platform.runLater(() -> {
+                    // btnPlaceBid.setDisable(false);
+                    if (response != null && response.isSuccess()) {
+                        txtBidAmount.clear();
+                    } else {
+                        showAlert(Alert.AlertType.ERROR, "Thất bại",
+                                (response != null) ? response.getMessage() : "Kết nối đến máy chủ thất bại!");
+                    }
+                });
+            });
         } catch (NumberFormatException e) {
-            showAlert(Alert.AlertType.ERROR, "Lỗi", "Vui lòng nhập số tiền hợp lệ!");
+            showAlert(Alert.AlertType.ERROR, "Lỗi", "Số tiền phải là một con số hợp lệ!");
         }
+    }
+
+    private boolean validateBidInput(Account user, String bidText) {
+        if (user == null) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi", "Bạn cần đăng nhập để đấu giá!");
+            return false;
+        }
+        if ("ADMIN".equalsIgnoreCase(user.getRole())) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi", "Tài khoản Admin không được phép đấu giá!");
+            return false;
+        }
+        if (bidText.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập số tiền!");
+            return false;
+        }
+        return true;
     }
 
     @FXML

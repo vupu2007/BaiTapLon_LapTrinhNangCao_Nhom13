@@ -20,7 +20,6 @@ public class HistoryController {
     @FXML private Label totalSessionsLabel;
     @FXML private Label wonSessionsLabel;
     @FXML private Label lostSessionsLabel;
-    @FXML private Button btnHistory;
 
     @FXML private TableView<Auction> historyTable;
     @FXML private TableColumn<Auction, Integer> colId;
