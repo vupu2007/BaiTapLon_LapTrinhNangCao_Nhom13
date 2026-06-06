@@ -241,7 +241,7 @@ public class AdminAuctionMgmtController {
                             auc.getSellerName() != null ? auc.getSellerName() : (auc.getAccount() != null ? auc.getAccount().getUsername() : "Ẩn danh"),
                             String.format("%,1.0f", auc.getStartPrice()),
                             String.format("%,1.0f", auc.getCurrentPrice()),
-                            String.valueOf(auc.getBidCount()), // Số lượt đấu (bạn có thể thay thế bằng logic đếm lịch sử đấu giá thực tế nếu có)
+                            String.valueOf(auc.getBidCount()), // Số lượt đấu
                             auc.getStatus() != null ? auc.getStatus().name() : "OPEN", // Trích xuất tên của Enum AuctionStatus
                             auc.getEndTime() != null ? auc.getEndTime().toString() : "Không xác định"
                     ));

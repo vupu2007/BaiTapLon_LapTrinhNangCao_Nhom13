@@ -39,7 +39,7 @@ public class AdminDashboardController {
     }
 
     /**
-     * Khởi tạo dữ liệu mẫu giống hệt ảnh thiết kế ban đầu của bạn
+     * Khởi tạo dữ liệu mẫu giống hệt ảnh thiết kế ban đầu
      */
     private void setupMockData() {
         // Vẽ biểu đồ cột Doanh thu (T1 -> T5)

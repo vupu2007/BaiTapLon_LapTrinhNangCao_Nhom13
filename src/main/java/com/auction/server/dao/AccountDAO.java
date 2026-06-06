@@ -299,9 +299,7 @@ public class AccountDAO {
         return resultList;
     }
 
-    // =========================================================================
-    // 🔀 CÁC HÀM OVERLOAD TƯƠNG THÍCH ĐỂ KHÔNG LÀM LỖI CODE CŨ CỦA DỰ ÁN
-    // =========================================================================
+     // CÁC HÀM OVERLOAD TƯƠNG THÍCH ĐỂ KHÔNG LÀM LỖI CODE CŨ CỦA DỰ ÁN
 
     public boolean executeAtomicWalletUpdate(int accountId, double amount, String type) {
         String sql = "DEPOSIT".equals(type)

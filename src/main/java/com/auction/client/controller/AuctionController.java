@@ -28,7 +28,7 @@ public class AuctionController implements Observer {
         this.currentAuctionId = auctionId;
         this.currentAccount = account;
 
-        // Gọi hàm async theo đúng phong cách nhóm bạn
+        // Gọi hàm async
         detailService.subscribeAuctionAsync(auctionId, this, isSuccess -> {
             if (isSuccess) {
                 System.out.println("-> Đã đăng ký lắng nghe Real-time cho phòng #" + auctionId);

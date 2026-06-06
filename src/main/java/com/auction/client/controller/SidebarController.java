@@ -17,7 +17,7 @@ public class SidebarController {
 
     @FXML private VBox sidebar;
 
-    // Danh sách các phần tử chứa chữ cần ẩn khi thu nhỏ sidebar (bổ sung tùy FXML của bạn)
+    // Danh sách các phần tử chứa chữ cần ẩn khi thu nhỏ sidebar
     @FXML private Label lblRoleSidebar;
     @FXML private Button btnHome, btnWallet, btnAuction, btnSelling, btnHistory, btnSettings;
 
