@@ -1,15 +1,29 @@
 package com.auction.service;
 
+import com.auction.server.dao.AccountDAO;
+import com.auction.server.dao.AuctionDAO;
+import com.auction.server.dao.AutoBidDAO;
+import com.auction.server.dao.BidDAO;
+import com.auction.server.dao.ItemDAO;
+import com.auction.server.service.AuctionService;
 import com.auction.shared.exception.AuctionClosedException;
 import com.auction.shared.exception.InvalidBidException;
 import com.auction.shared.model.*;
+import com.auction.shared.network.Response;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import java.util.List;
 
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.*;
 
 /**
  * Test cho AuctionService — logic đấu giá.
@@ -22,13 +36,27 @@ import static org.junit.jupiter.api.Assertions.*;
  *  - Kiểm tra kết thúc phiên (closeAuction)
  *  - Kiểm tra validation thời gian tạo phiên
  *  - Kiểm tra placeBid() throw exception trực tiếp qua Auction model
+ *  - Kiểm tra AuctionService.placeBid() thật qua Mockito (không cần DB)
  *
- * Lưu ý: AuctionService cần DB để chạy đầy đủ, nên các test
- * kiểm tra validation thuần túy được tái hiện qua Auction model
- * và logic if-check trực tiếp, không cần mock database.
+ * Lưu ý về sự khác biệt logic bước giá:
+ *  - Auction.placeBid() (model):    minValidBid = currentPrice + minIncrement (field)
+ *  - AuctionService.placeBid():     minValidBid = currentPrice + startingPrice * 10%
+ *  Các test model dùng minIncrement=50k; các test service dùng startingPrice=500k → bước=50k.
+ *  Kết quả ngẫu nhiên giống nhau (đều 50k), nhưng nguồn tính khác nhau.
  */
+@ExtendWith(MockitoExtension.class)
 @DisplayName("AuctionService — Logic Đấu Giá Tests")
 class AuctionServiceTest {
+
+    // ── Mockito: mock các DAO, inject vào AuctionService ──────────────────────
+    @Mock AuctionDAO  auctionDAO;
+    @Mock BidDAO      bidDAO;
+    @Mock ItemDAO     itemDAO;
+    @Mock AutoBidDAO  autoBidDAO;
+    @Mock AccountDAO  accountDAO;
+
+    @InjectMocks AuctionService auctionService;
+    // ──────────────────────────────────────────────────────────────────────────
 
     private Auction runningAuction;
     private Bidder  bidder;
@@ -141,6 +169,7 @@ class AuctionServiceTest {
     // ═══════════════════════════════════════════════════════
     //  Kiểm tra giá đặt hợp lệ / không hợp lệ
     //  Gọi trực tiếp auction.placeBid() để test throw exception
+    //  Logic: minValidBid = currentPrice + minIncrement (field của Auction model)
     // ═══════════════════════════════════════════════════════
 
     @Test
@@ -244,6 +273,7 @@ class AuctionServiceTest {
         assertEquals(7, runningAuction.getWinnerId(), "Winner phải đổi sang bidder 7");
     }
 
+
     // ═══════════════════════════════════════════════════════
     //  Kiểm tra số dư
     //  Tái hiện điều kiện: if (user.getBalance() < amount) return false
@@ -340,7 +370,10 @@ class AuctionServiceTest {
         assertNotEquals("SELLER", admin.getRole(),   "Admin không được tạo phiên");
     }
 
-    // ─── registerAutoBid() ───
+
+    // ═══════════════════════════════════════════════════════
+    //  registerAutoBid()
+    // ═══════════════════════════════════════════════════════
 
     @Test
     @DisplayName("registerAutoBid: maxBid thấp hơn giá hiện tại → trả false")
@@ -365,5 +398,124 @@ class AuctionServiceTest {
         double maxBid = 1_000_000; // > 500k
         boolean valid = maxBid > runningAuction.getCurrentPrice();
         assertTrue(valid, "maxBid lon hon currentPrice phai pass");
+    }
+
+
+    // ═══════════════════════════════════════════════════════
+    //  AuctionService.placeBid() thật — dùng Mockito
+    //
+    //  Lưu ý: AuctionService tính bước giá = startingPrice * 10%
+    //  (khác với Auction model dùng minIncrement field).
+    //  startingPrice=500k → bước giá=50k → minValidBid=550k (giống nhau trong test này).
+    // ═══════════════════════════════════════════════════════
+
+    @Test
+    @DisplayName("AuctionService.placeBid: tài khoản không tồn tại → trả false + message đúng")
+    void testAuctionService_AccountNotFound() {
+        when(accountDAO.getAccountById(anyInt())).thenReturn(null);
+
+        Response result = auctionService.placeBid(1, 600_000, "999");
+
+        assertFalse(result.isSuccess());
+        assertEquals("Tài khoản không tồn tại trên hệ thống!", result.getMessage());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: Admin đặt giá → trả false")
+    void testAuctionService_AdminCannotBid() {
+        when(accountDAO.getAccountById(99)).thenReturn(admin);
+
+        Response result = auctionService.placeBid(1, 600_000, "99");
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: phiên không tồn tại → trả false")
+    void testAuctionService_AuctionNotFound() {
+        when(accountDAO.getAccountById(5)).thenReturn(bidder);
+        when(auctionDAO.getAuctionById(1)).thenReturn(null);
+
+        Response result = auctionService.placeBid(1, 600_000, "5");
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: phiên FINISHED → trả false + message chứa 'đã đóng'")
+    void testAuctionService_AuctionClosed() {
+        runningAuction.setStatus(Auction.AuctionStatus.FINISHED);
+        when(accountDAO.getAccountById(5)).thenReturn(bidder);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction);
+
+        Response result = auctionService.placeBid(1, 600_000, "5");
+
+        assertFalse(result.isSuccess());
+        assertTrue(
+                result.getMessage().contains("đã đóng")        // ← "Phiên đấu giá đã đóng"
+                        || result.getMessage().contains("không còn hoạt động")
+                        || result.getMessage().contains("thất bại")
+        );
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: Seller tự bid phiên của mình → trả false")
+    void testAuctionService_SelfBidNotAllowed() {
+        when(accountDAO.getAccountById(10)).thenReturn(seller);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction); // sellerId=10
+
+        Response result = auctionService.placeBid(1, 600_000, "10");
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: giá hợp lệ, DB thành công → trả true")
+    void testAuctionService_ValidBid_Success() {
+        Item mockItem = new Electronics();
+        mockItem.setStartingPrice(500_000); // bước giá = 10% * 500k = 50k → minValidBid = 550k
+
+        when(accountDAO.getAccountById(5)).thenReturn(bidder);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction);
+        when(itemDAO.getItemById("ITEM_001")).thenReturn(mockItem);
+        when(auctionDAO.placeBidTransaction(any(), anyDouble(), anyInt())).thenReturn(true);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction); // processAutoBidsChain
+        when(autoBidDAO.getAutoBidsByAuction(1)).thenReturn(List.of()); // không có auto-bid
+
+        Response result = auctionService.placeBid(1, 600_000, "5");
+
+        assertTrue(result.isSuccess());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: giá dưới ngưỡng tối thiểu (service logic) → trả false")
+    void testAuctionService_BidBelowMinimum() {
+        // startingPrice=500k → bước=50k → minValidBid=550k; đặt 520k → fail
+        Item mockItem = new Electronics();
+        mockItem.setStartingPrice(500_000);
+
+        when(accountDAO.getAccountById(5)).thenReturn(bidder);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction);
+        when(itemDAO.getItemById("ITEM_001")).thenReturn(mockItem);
+
+        Response result = auctionService.placeBid(1, 520_000, "5");
+
+        assertFalse(result.isSuccess());
+    }
+
+    @Test
+    @DisplayName("AuctionService.placeBid: DB transaction thất bại → trả false")
+    void testAuctionService_DbTransactionFails() {
+        Item mockItem = new Electronics();
+        mockItem.setStartingPrice(500_000);
+
+        when(accountDAO.getAccountById(5)).thenReturn(bidder);
+        when(auctionDAO.getAuctionById(1)).thenReturn(runningAuction);
+        when(itemDAO.getItemById("ITEM_001")).thenReturn(mockItem);
+        when(auctionDAO.placeBidTransaction(any(), anyDouble(), anyInt())).thenReturn(false);
+
+        Response result = auctionService.placeBid(1, 600_000, "5");
+
+        assertFalse(result.isSuccess());
     }
 }
