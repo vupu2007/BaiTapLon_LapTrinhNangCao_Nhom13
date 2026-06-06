@@ -25,9 +25,7 @@ public class AdminLayoutController {
     @FXML
     public void initialize() {
         instance = this;
-        // Mặc định tự động mở tab quản lý thành viên khi vừa đăng nhập vào admin
-        openUserMgmt();
-    }
+         openDashboard();   }
 
     public static AdminLayoutController getInstance() {
         return instance;

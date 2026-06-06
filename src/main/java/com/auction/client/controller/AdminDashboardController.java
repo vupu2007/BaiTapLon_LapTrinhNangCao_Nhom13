@@ -13,6 +13,9 @@ import javafx.scene.chart.XYChart;
 import javafx.scene.chart.PieChart;
 import javafx.scene.control.Label;
 
+import com.auction.shared.model.Auction;
+import java.util.List;
+
 import java.util.Map;
 
 public class AdminDashboardController {
@@ -60,51 +63,55 @@ public class AdminDashboardController {
      * Gửi yêu cầu qua luồng mạng Socket để cập nhật số liệu thời gian thực
      */
     private void loadRealtimeStatistics() {
-        Task<Map<String, Object>> fetchTask = new Task<> () {
-            @Override
-            @SuppressWarnings("unchecked")
-            protected Map<String, Object> call() throws Exception {
-                // Gửi request xin dữ liệu Dashboard thống kê
-                // Gợi ý: Nếu hệ thống chưa thiết lập MessageType này, bạn có thể tạm dùng chuỗi text bọc tạm qua valueOf
-                Request request = new Request(MessageType.valueOf("GET_DASHBOARD_STATS"), null);
-                Response response = ClientSocket.getInstance().sendRequest(request);
+        new Thread(() -> {
+            try {
+                Response resp = ClientSocket.getInstance().sendRequest(
+                        new Request(MessageType.GET_ALL_AUCTIONS, null));
+                if (resp == null || !resp.isSuccess()) return;
 
-                if (response != null && response.isSuccess()) {
-                    return (Map<String, Object>) response.getData();
-                }
-                return null;
-            }
-        };
+                List<Auction> auctions = (List<Auction>) resp.getData();
+                if (auctions == null) return;
 
-        // Khi Server phản hồi thành công -> Đổ mượt mà vào giao diện
-        fetchTask.setOnSucceeded(event -> {
-            Map<String, Object> serverStats = fetchTask.getValue();
-            if (serverStats != null) {
+                long total = auctions.size();
+                long running = auctions.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.RUNNING).count();
+                long finished = auctions.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.FINISHED).count();
+                long open = auctions.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.OPEN).count();
+                long canceled = auctions.stream().filter(a -> a.getStatus() == Auction.AuctionStatus.CANCELED).count();
+                double revenue = auctions.stream()
+                        .filter(a -> a.getStatus() != Auction.AuctionStatus.CANCELED)
+                        .mapToDouble(Auction::getCurrentPrice).sum();
+                long totalBids = auctions.stream().mapToLong(Auction::getBidCount).sum();
+
                 Platform.runLater(() -> {
-                    if (serverStats.containsKey("totalAuctions")) {
-                        lblTotalAuctions.setText(String.valueOf(serverStats.get("totalAuctions")));
-                    }
-                    if (serverStats.containsKey("runningAuctions")) {
-                        lblRunningAuctions.setText(String.valueOf(serverStats.get("runningAuctions")));
-                    }
-                    if (serverStats.containsKey("totalBids")) {
-                        lblTotalBids.setText(String.valueOf(serverStats.get("totalBids")));
-                    }
-                    if (serverStats.containsKey("totalRevenue")) {
-                        double revenue = Double.parseDouble(serverStats.get("totalRevenue").toString());
-                        lblTotalRevenue.setText(String.format("%,1.0f đ", revenue));
-                    }
+                    if (lblTotalAuctions != null) lblTotalAuctions.setText(String.valueOf(total));
+                    if (lblRunningAuctions != null) lblRunningAuctions.setText(String.valueOf(running));
+                    if (lblTotalBids != null) lblTotalBids.setText(String.valueOf(totalBids));
+                    if (lblTotalRevenue != null) lblTotalRevenue.setText(String.format("%,.0f đ", revenue));
+
+                    distributionChart.getData().clear();
+                    distributionChart.getData().addAll(
+                            new PieChart.Data("Đang diễn ra: " + running, running),
+                            new PieChart.Data("Sắp diễn ra: " + open, open),
+                            new PieChart.Data("Đã kết thúc: " + finished, finished),
+                            new PieChart.Data("Bị hủy: " + canceled, canceled)
+                    );
+                    revenueChart.getData().clear();
+                    XYChart.Series<String, Number> series = new XYChart.Series<>();
+                    series.setName("Doanh thu");
+                    auctions.stream()
+                            .filter(a -> a.getStatus() != Auction.AuctionStatus.CANCELED && a.getEndTime() != null)
+                            .collect(java.util.stream.Collectors.groupingBy(
+                                    a -> "T" + a.getEndTime().getMonthValue(),
+                                    java.util.TreeMap::new,
+                                    java.util.stream.Collectors.summingDouble(Auction::getCurrentPrice)))
+                            .forEach((month, rev) -> series.getData().add(new XYChart.Data<>(month, rev)));
+                    revenueChart.getData().add(series);
                 });
+            } catch (Exception e) {
+                System.err.println("Lỗi load dashboard: " + e.getMessage());
             }
-        });
+        }).start();
 
-        // Nếu Server chưa viết API này, giữ nguyên giao diện dữ liệu tĩnh cực đẹp để chấm điểm đồ án
-        fetchTask.setOnFailed(event -> {
-            System.out.println("ℹ️ Hệ thống đang hiển thị dữ liệu Dashboard tĩnh (Mô phỏng UI).");
-        });
-
-        Thread thread = new Thread(fetchTask);
-        thread.setDaemon(true);
-        thread.start();
     }
+
 }
