@@ -20,12 +20,31 @@ import com.auction.shared.exception.InvalidBidException;
 
 public class AuctionService {
 
-    private final AuctionDAO auctionDAO = new AuctionDAO();
-    private final BidDAO bidDAO = new BidDAO();
-    private final ItemDAO itemDAO = new ItemDAO();
-    private final AutoBidDAO autoBidDAO = new AutoBidDAO();
-    private final AccountDAO accountDAO = new AccountDAO();
+    private final AuctionDAO auctionDAO;
+    private final BidDAO bidDAO;
+    private final ItemDAO itemDAO;
+    private final AutoBidDAO autoBidDAO;
+    private final AccountDAO accountDAO;
 
+    // Constructor mặc định — code thật dùng cái này
+    public AuctionService() {
+        this.auctionDAO  = new AuctionDAO();
+        this.bidDAO      = new BidDAO();
+        this.itemDAO     = new ItemDAO();
+        this.autoBidDAO  = new AutoBidDAO();
+        this.accountDAO  = new AccountDAO();
+    }
+
+    // Constructor để test — Mockito inject mock vào đây
+    public AuctionService(AuctionDAO auctionDAO, BidDAO bidDAO,
+                          ItemDAO itemDAO, AutoBidDAO autoBidDAO,
+                          AccountDAO accountDAO) {
+        this.auctionDAO  = auctionDAO;
+        this.bidDAO      = bidDAO;
+        this.itemDAO     = itemDAO;
+        this.autoBidDAO  = autoBidDAO;
+        this.accountDAO  = accountDAO;
+    }
 
     // 🌟 TỐI ƯU 1: Hệ thống khóa phân mảnh theo từng ID phiên đấu giá
     private final ConcurrentHashMap<Integer, ReentrantLock> auctionLocks = new ConcurrentHashMap<>();

@@ -12,8 +12,17 @@ import com.auction.shared.exception.AuthenticationException;
 
 public class AccountService {
 
-    private final AccountDAO accountDAO = new AccountDAO();
+    private final AccountDAO accountDAO;
 
+    // Constructor mặc định — code thật dùng cái này
+    public AccountService() {
+        this.accountDAO = new AccountDAO();
+    }
+
+    // Constructor để test — Mockito inject mock vào đây
+    public AccountService(AccountDAO accountDAO) {
+        this.accountDAO = accountDAO;
+    }
     // 🌟 KHÓA AN TOÀN NỘI BỘ: Ngăn chặn xung đột luồng khi thay đổi số dư cùng một tài khoản
     private final ConcurrentHashMap<Integer, Object> userLocks = new ConcurrentHashMap<>();
 

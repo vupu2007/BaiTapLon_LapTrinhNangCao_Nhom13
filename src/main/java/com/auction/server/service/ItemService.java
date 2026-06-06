@@ -14,10 +14,20 @@ import java.sql.SQLException;
 import java.util.List;
 
 public class ItemService {
+    private final ItemDAO itemDAO;
+    private final AuctionDAO auctionDAO;
 
-    private final ItemDAO itemDAO = new ItemDAO();
-    private final AuctionDAO auctionDAO = new AuctionDAO();
+    // Constructor mặc định — code thật dùng
+    public ItemService() {
+        this.itemDAO = new ItemDAO();
+        this.auctionDAO = new AuctionDAO();
+    }
 
+    // Constructor để test — Mockito inject mock vào đây
+    public ItemService(ItemDAO itemDAO, AuctionDAO auctionDAO) {
+        this.itemDAO = itemDAO;
+        this.auctionDAO = auctionDAO;
+    }
     // 1. Seller thêm sản phẩm mới
     public boolean addItem(Item item) {
         if (item.getName() == null || item.getName().isBlank()) {
@@ -81,7 +91,7 @@ public class ItemService {
 
     // 3. Seller xóa sản phẩm
     // Trong ItemService.java
-    public boolean deleteItem(String itemId, User currentUser) {
+    public boolean deleteItem(String itemId, User currentUser) throws SQLException {
         // ADMIN XÓA TUỐT
         if ("ADMIN".equals(currentUser.getRole())) {
             return itemDAO.deleteItem(itemId);
