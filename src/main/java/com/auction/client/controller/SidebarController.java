@@ -35,73 +35,47 @@ public class SidebarController {
      */
     @FXML
     private void toggleSidebar() {
-        if (sidebar == null) return;
+        if (sidebar == null || toggleTimeline.getStatus() == Timeline.Status.RUNNING) return;
 
-        // Nếu hiệu ứng cũ đang chạy, dừng lại ngay để tránh xung đột luồng hiệu ứng
-        if (toggleTimeline.getStatus() == Timeline.Status.RUNNING) {
-            toggleTimeline.stop();
-        }
+        // Đảo trạng thái ngay lập tức để đồng bộ
+        isCollapsed = !isCollapsed;
+        double targetWidth = isCollapsed ? 60.0 : 220.0;
 
         toggleTimeline.getKeyFrames().clear();
+        toggleTimeline.getKeyFrames().add(new KeyFrame(Duration.millis(200),
+                new KeyValue(sidebar.prefWidthProperty(), targetWidth)));
 
-        double targetWidth = isCollapsed ? 220.0 : 60.0;
+        // Nếu thu nhỏ: Ẩn chữ ngay để animation mượt, không bị dính text
+        if (isCollapsed) updateSidebarTextVisibility(false);
 
-        // 1. Tạo hiệu ứng mượt mà chuyển đổi kích thước trong 200 mili-giây
-        KeyValue widthValue = new KeyValue(sidebar.prefWidthProperty(), targetWidth);
-        KeyFrame keyFrame = new KeyFrame(Duration.millis(200), widthValue);
-        toggleTimeline.getKeyFrames().add(keyFrame);
-
-        // 2. Xử lý đồng bộ Ẩn/Hiện chữ ngay khi bắt đầu hoặc kết thúc hiệu ứng để tránh vỡ chữ
-        if (!isCollapsed) {
-            // Đang chuẩn bị THU NHỎ -> Ẩn chữ ngay để không bị vỡ giao diện khi co lại
-            updateSidebarTextVisibility(false);
-        }
-
-        // Kích hoạt chạy hiệu ứng
         toggleTimeline.setOnFinished(e -> {
-            if (isCollapsed) {
-                // Đã MỞ RỘNG xong -> Hiện lại chữ đầy đủ
-                updateSidebarTextVisibility(true);
-            }
-            // Đảo trạng thái đóng mở
-            isCollapsed = !isCollapsed;
+            // Nếu mở rộng: Hiện chữ sau khi animation hoàn tất
+            if (!isCollapsed) updateSidebarTextVisibility(true);
         });
 
         toggleTimeline.play();
     }
-
     /**
      * Hàm tiện ích quản lý ẩn hiện phần chữ của toàn bộ Menu Sidebar an toàn
      */
     private void updateSidebarTextVisibility(boolean visible) {
-        Platform.runLater(() -> {
-            // Gom các nút hiện có vào danh sách kiểm tra an toàn
-            List<Button> menuButtons = List.of(
-                    btnHome, btnWallet, btnAuction, btnSelling, btnHistory, btnSettings
-            );
+        // Không cần Platform.runLater vì đã chạy trên UI thread
+        List<Button> menuButtons = List.of(btnHome, btnWallet, btnAuction, btnSelling, btnHistory, btnSettings);
 
-            for (Button btn : menuButtons) {
-                if (btn != null) {
-                    if (visible) {
-                        // Trạng thái mở rộng: Hiện chữ, căn lùi trái (Left)
-                        btn.setText(btn.getUserData() != null ? btn.getUserData().toString() : btn.getText());
-                        btn.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
-                    } else {
-                        // Trạng thái thu nhỏ: Sao lưu chữ vào UserData, xóa text, chỉ giữ lại Icon căn giữa (Graphic)
-                        if (btn.getText() != null && !btn.getText().isEmpty()) {
-                            btn.setUserData(btn.getText()); // Lưu tạm chữ lại
-                        }
-                        btn.setText("");
-                        btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
-                    }
-                }
+        for (Button btn : menuButtons) {
+            if (btn == null) continue;
+            if (visible) {
+                btn.setText(btn.getUserData() != null ? btn.getUserData().toString() : "");
+                btn.setContentDisplay(javafx.scene.control.ContentDisplay.LEFT);
+            } else {
+                btn.setUserData(btn.getText());
+                btn.setText("");
+                btn.setContentDisplay(javafx.scene.control.ContentDisplay.GRAPHIC_ONLY);
             }
-
-            // Ẩn nhãn tiêu đề vai trò (Role Label)
-            if (lblRoleSidebar != null) {
-                lblRoleSidebar.setVisible(visible);
-                lblRoleSidebar.setManaged(visible);
-            }
-        });
+        }
+        if (lblRoleSidebar != null) {
+            lblRoleSidebar.setVisible(visible);
+            lblRoleSidebar.setManaged(visible);
+        }
     }
 }

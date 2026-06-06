@@ -5,6 +5,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.TextField;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.MessageType;
+import javafx.scene.control.Alert;
+import javafx.application.Platform;
 
 public class ForgotPasswordController {
     @FXML
@@ -14,32 +16,36 @@ public class ForgotPasswordController {
 
     @FXML
     public void handleSendOTP() {
-        System.out.println("DEBUG: Hàm handleSendOTP đã được gọi!");
-
         String username = txtUsername.getText().trim();
         String email = txtEmail.getText().trim();
 
         if (username.isEmpty() || email.isEmpty()) {
-            System.out.println("DEBUG: Username hoặc Email bị trống!");
+            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ Username và Email!");
             return;
         }
 
-        // Đóng gói request quên mật khẩu
-        Request req = new Request(MessageType.FORGOT_PASSWORD, new String[]{username, email});
+        // Hiển thị trạng thái đang gửi
+        txtUsername.setDisable(true);
+        txtEmail.setDisable(true);
 
-        System.out.println("DEBUG: Đang chuẩn bị tạo Thread ngầm để gửi request FORGOT_PASSWORD...");
-
-        // 🌟 TỐI ƯU: Tạo Thread độc lập để xử lý tác vụ mạng, giữ cho UI luôn mượt mà
         Thread networkWorker = new Thread(() -> {
-            System.out.println("DEBUG: [Thread Ngầm] Đang gửi request qua ClientSocket...");
+            // Gửi request và nhận response
+            Request req = new Request(MessageType.FORGOT_PASSWORD, new String[]{username, email});
+            var response = ClientSocket.getInstance().sendRequest(req); // Giả sử hàm này trả về Response
 
-            // Hàm sendRequest chạy ở đây có block bao lâu thì màn hình bên ngoài vẫn bấm click bình thường
-            ClientSocket.getInstance().sendRequest(req);
+            // Cập nhật kết quả lên UI
+            Platform.runLater(() -> {
+                txtUsername.setDisable(false);
+                txtEmail.setDisable(false);
 
-            System.out.println("DEBUG: [Thread Ngầm] Đã xử lý xong request FORGOT_PASSWORD!");
-        }, "ForgotPassword-Network-Worker");
-
-        // Đặt làm Daemon Thread để tự động tắt khi đóng ứng dụng
+                if (response != null && response.isSuccess()) {
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công", "OTP đã được gửi tới email của bạn!");
+                } else {
+                    String msg = (response != null) ? response.getMessage() : "Lỗi kết nối Server!";
+                    showAlert(Alert.AlertType.ERROR, "Thất bại", msg);
+                }
+            });
+        });
         networkWorker.setDaemon(true);
         networkWorker.start();
     }
@@ -48,5 +54,17 @@ public class ForgotPasswordController {
     public void handleBackToLogin() {
         System.out.println("DEBUG: Đang quay lại màn hình Login...");
         com.auction.client.MainApp.changeScene("/view/LoginView.fxml");
+    }
+
+    private void showAlert(Alert.AlertType type, String title, String content) {
+        // Nếu đang ở trong luồng mạng (Thread), dùng Platform.runLater
+        // Nếu ở trong luồng UI chính, gọi trực tiếp cũng được
+        javafx.application.Platform.runLater(() -> {
+            Alert alert = new Alert(type);
+            alert.setTitle(title);
+            alert.setHeaderText(null);
+            alert.setContentText(content);
+            alert.showAndWait();
+        });
     }
 }
