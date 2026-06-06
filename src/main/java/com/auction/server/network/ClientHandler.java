@@ -457,8 +457,13 @@ public class ClientHandler implements Runnable {
                     }
                     return new Response(false, "OTP_INVALID", null);
                 }
-
-
+                case SWITCH_ROLE: {
+                    Object[] data = (Object[]) request.getPayload();
+                    int accountId = (int) data[0];
+                    String newRole = (String) data[1];
+                    boolean ok = accountDAO.switchRole(accountId, newRole);
+                    return new Response(ok, ok ? "Đổi role thành công!" : "Đổi role thất bại!", null);
+                }
                 default:
                     return new Response(false, "Lệnh không được hỗ trợ!", null);
             }
