@@ -91,7 +91,6 @@ public class CreateProductController {
     private boolean isCreating = false;
     @FXML
     private void handleCreateAuction() {
-        System.out.println("DEBUG editingItem=" + (editingItem == null ? "null" : editingItem.getItemId()));
         if (isCreating) return;
         if (editingItem != null) {
             handleUpdateItem();
@@ -144,6 +143,8 @@ public class CreateProductController {
 
         String itemId = "ITEM-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         int ownerId = Integer.parseInt(CurrentAccount.getAccount().getId());
+
+        isCreating = true;
 
         // Gọi Service gửi gói tin lên mạng bất đồng bộ
         productService.createAuctionPipelineAsync(itemId, name, description, startPrice, ownerId,
