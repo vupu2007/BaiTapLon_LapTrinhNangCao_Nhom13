@@ -91,7 +91,11 @@ public class AuctionDetailController implements Observer {
 
         Platform.runLater(() -> {
             // LUỒNG XỬ LÝ KẾT THÚC PHIÊN
-            if ("[HỆ THỐNG] - KẾT THÚC!".equals(targetUser)) {
+            if (targetUser != null && targetUser.startsWith("[HỆ THỐNG] - KẾT THÚC!")) {
+                if (targetUser.contains("Người thắng: ")) {
+                    String winnerName = targetUser.split("Người thắng: ")[1];
+                    if (lblTopBidder != null) lblTopBidder.setText(winnerName);
+                }
                 if (countdownTimeline != null) countdownTimeline.stop();
                 if (lblTimeRemaining != null) {
                     lblTimeRemaining.setText("00h 00m 00s");
@@ -358,7 +362,6 @@ public class AuctionDetailController implements Observer {
                 if (lblTopBidder != null) lblTopBidder.setText("Chưa có");
                 ImageLoader.tryLoadImageToView(imgProduct, imagePath);
                 checkBiddingPermissions(auction.getSellerId());
-                if (isEnded) showWinnerSection();
             });
 
             // ✅ Lấy seller qua service
@@ -372,8 +375,13 @@ public class AuctionDetailController implements Observer {
             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
                 detailService.fetchAccountByIdAsync(auction.getWinnerId(), winner -> {
                     String winnerName = (winner != null) ? winner.getUsername() : "Chưa có";
-                    if (lblTopBidder != null) lblTopBidder.setText(winnerName);
+                    Platform.runLater(() -> {
+                        if (lblTopBidder != null) lblTopBidder.setText(winnerName);
+                        if (isEnded) showWinnerSection();
+                    });
                 });
+            } else if (isEnded) {
+                Platform.runLater(() -> showWinnerSection());
             }
         });
 

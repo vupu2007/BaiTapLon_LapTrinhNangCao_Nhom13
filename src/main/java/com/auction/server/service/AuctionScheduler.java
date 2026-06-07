@@ -110,6 +110,13 @@ public class AuctionScheduler {
     private void closeAuction(Auction auction, Connection conn) {
         int auctionId = auction.getId();
 
+        // 1. Đọc dữ liệu mới nhất từ DB lên để đồng bộ đối tượng
+        Auction freshAuction = auctionDAO.getAuctionById(auctionId);
+        if (freshAuction != null) {
+            auction.setWinnerId(freshAuction.getWinnerId());
+            auction.setCurrentPrice(freshAuction.getCurrentPrice()); // Lấy luôn giá cuối cùng
+        }
+
         try {
             if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
                 boolean paymentSuccess = settlePayment(auction);
@@ -132,8 +139,16 @@ public class AuctionScheduler {
             System.err.println("Lỗi đóng phiên #" + auctionId + ": " + e.getMessage());
         }
 
+        // 2. SỬA DÒNG NÀY: Đọc trạng thái FINISHED mới nhất từ DB hoặc ép trạng thái kết thúc để gửi xuống Client
         try {
-            ClientHandler.pushBidUpdate(auctionId, auction.getCurrentPrice(), "[HỆ THỐNG] - KẾT THÚC!", auction.getEndTime());        } catch (Exception e) {
+            double finalPrice = freshAuction != null ? freshAuction.getCurrentPrice() : auction.getCurrentPrice();
+            String winnerName = "[HỆ THỐNG] - KẾT THÚC!";
+            if (auction.getWinnerId() != null && auction.getWinnerId() > 0) {
+                Account winner = accountDAO.getAccountById(auction.getWinnerId());
+                if (winner != null) winnerName = "[HỆ THỐNG] - KẾT THÚC! Người thắng: " + winner.getUsername();
+            }
+            ClientHandler.pushBidUpdate(auctionId, finalPrice, winnerName, auction.getEndTime());
+        } catch (Exception e) {
             System.err.println("Không thể notify client: " + e.getMessage());
         }
     }
