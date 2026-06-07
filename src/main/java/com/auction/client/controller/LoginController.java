@@ -1,8 +1,8 @@
 package com.auction.client.controller;
 
-import com.auction.shared.network.Response;
-import com.auction.shared.model.Account;
+import com.auction.client.service.AccountService;
 import com.auction.client.util.CurrentAccount;
+import com.auction.shared.model.Account;
 
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
@@ -12,6 +12,7 @@ import javafx.scene.Node;
 import javafx.scene.Parent;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
+
 import java.io.IOException;
 import java.net.URL;
 
@@ -22,7 +23,7 @@ public class LoginController {
     @FXML private TextField visiblePasswordField;
     @FXML private ToggleButton togglePasswordBtn;
 
-    private final AccountController accountController = new AccountController();
+    private final AccountService accountService = new AccountService();
     private boolean isPasswordVisible = false;
 
     @FXML
@@ -32,7 +33,6 @@ public class LoginController {
         visiblePasswordField.setManaged(false);
     }
 
-    // --- 🌟 ĐÃ SỬA: Chuyển sang file FXML Quên mật khẩu tràn màn hình ---
     @FXML
     private void handleForgotPassword(ActionEvent event) {
         switchScene(event, "/view/ForgotPasswordView.fxml", "Khôi phục mật khẩu - Đấu giá UET", false);
@@ -44,34 +44,28 @@ public class LoginController {
         String password = (passwordField.getText() != null) ? passwordField.getText() : "";
 
         if (username.isEmpty() || password.isEmpty()) {
-            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu", "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
+            showAlert(Alert.AlertType.WARNING, "Lỗi nhập liệu",
+                    "Vui lòng nhập đầy đủ tài khoản và mật khẩu!");
             return;
         }
 
-        Thread loginWorker = new Thread(() -> {
-            try {
-                Response response = accountController.loginUser(username, password);
-                Platform.runLater(() -> {
-                    if (response != null && response.isSuccess()) {
-                        Account loggedIn = (Account) response.getData();
-                        CurrentAccount.setAccount(loggedIn);
-                        if ("ADMIN".equals(loggedIn.getRole())) {
-                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá (Quyền: Admin)", true);
-                        } else {
-                            switchScene(event, "/view/MainLayout.fxml", "Hệ thống đấu giá", false);
-                        }
-                    } else {
-                        String errorMsg = (response != null) ? response.getMessage() : "Đăng nhập thất bại!";
-                        showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
-                    }
-                });
-            } catch (Exception e) {
-                Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "Lỗi hệ thống", "Sự cố: " + e.getMessage()));
-                e.printStackTrace();
+        // ✅ Controller không biết gì về Request/MessageType
+        accountService.loginUserAsync(username, password, response -> {
+            if (response != null && response.isSuccess()) {
+                Account loggedIn = (Account) response.getData();
+                CurrentAccount.setAccount(loggedIn);
+                if ("ADMIN".equals(loggedIn.getRole())) {
+                    switchScene(event, "/view/MainLayout.fxml",
+                            "Hệ thống đấu giá (Quyền: Admin)", true);
+                } else {
+                    switchScene(event, "/view/MainLayout.fxml",
+                            "Hệ thống đấu giá", false);
+                }
+            } else {
+                String errorMsg = response != null ? response.getMessage() : "Đăng nhập thất bại!";
+                showAlert(Alert.AlertType.ERROR, "Đăng nhập thất bại", errorMsg);
             }
-        }, "LoginNetworkWorkerThread");
-        loginWorker.setDaemon(true);
-        loginWorker.start();
+        });
     }
 
     @FXML
@@ -92,8 +86,7 @@ public class LoginController {
         try {
             URL fxmlUrl = getClass().getResource(fxmlPath);
             if (fxmlUrl == null) {
-                System.err.println("Không tìm thấy file FXML: " + fxmlPath);
-                return;
+                System.err.println("Không tìm thấy file FXML: " + fxmlPath); return;
             }
             FXMLLoader loader = new FXMLLoader(fxmlUrl);
             Parent root = loader.load();

@@ -1,13 +1,9 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
+import com.auction.client.service.HistoryService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
 
-import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -28,6 +24,8 @@ public class HistoryController {
     @FXML private TableColumn<Auction, Double> colPrice;
     @FXML private TableColumn<Auction, String> colStatus;
 
+    private final HistoryService historyService = new HistoryService();
+
     @FXML
     public void initialize() {
         setupTableColumns();
@@ -41,7 +39,6 @@ public class HistoryController {
         colPrice.setCellValueFactory(new PropertyValueFactory<>("currentPrice"));
         colStatus.setCellValueFactory(new PropertyValueFactory<>("status"));
 
-        // Format ngày
         colDate.setCellValueFactory(data -> {
             Auction a = data.getValue();
             String date = a.getEndTime() != null
@@ -50,7 +47,6 @@ public class HistoryController {
             return new javafx.beans.property.SimpleStringProperty(date);
         });
 
-        // Format giá
         colPrice.setCellFactory(col -> new TableCell<>() {
             @Override
             protected void updateItem(Double price, boolean empty) {
@@ -62,50 +58,30 @@ public class HistoryController {
 
     private void loadHistoryStats() {
         if (CurrentAccount.getAccount() == null) {
-            setDefaultLabels();
-            return;
+            setDefaultLabels(); return;
         }
         int userId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        new Thread(() -> {
-            try {
-                Response response = ClientSocket.getInstance().sendRequest(
-                        new Request(MessageType.GET_BID_HISTORY_STATS, userId));
-                Platform.runLater(() -> {
-                    if (response != null && response.isSuccess()) {
-                        Map<?, ?> stats = (Map<?, ?>) response.getData();
-                        totalSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("total"))));
-                        wonSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("won"))));
-                        lostSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("lost"))));
-                    } else {
-                        setDefaultLabels();
-                    }
-                });
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi load stats: " + e.getMessage());
-                Platform.runLater(this::setDefaultLabels);
+        // ✅ Controller không biết gì về Request/MessageType
+        historyService.fetchHistoryStatsAsync(userId, stats -> {
+            if (stats != null) {
+                totalSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("total"))));
+                wonSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("won"))));
+                lostSessionsLabel.setText(String.valueOf(getSafeInt(stats.get("lost"))));
+            } else {
+                setDefaultLabels();
             }
-        }, "HistoryStatsLoader").start();
+        });
     }
 
     private void loadHistoryTable() {
         if (CurrentAccount.getAccount() == null) return;
         int userId = Integer.parseInt(CurrentAccount.getAccount().getId());
 
-        new Thread(() -> {
-            try {
-                Response response = ClientSocket.getInstance().sendRequest(
-                        new Request(MessageType.GET_AUCTIONS_BY_BIDDER, userId));
-                if (response != null && response.isSuccess()) {
-                    List<Auction> auctions = (List<Auction>) response.getData();
-                    Platform.runLater(() -> {
-                        if (auctions != null) historyTable.getItems().setAll(auctions);
-                    });
-                }
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi load bảng lịch sử: " + e.getMessage());
-            }
-        }, "HistoryTableLoader").start();
+        // ✅ Controller không biết gì về Request/MessageType
+        historyService.fetchHistoryTableAsync(userId, auctions -> {
+            if (auctions != null) historyTable.getItems().setAll(auctions);
+        });
     }
 
     @FXML
