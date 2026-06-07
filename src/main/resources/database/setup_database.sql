@@ -11,7 +11,7 @@ USE online_auction_db;
                           balance        DECIMAL(15, 2) DEFAULT 0.0,
                           total_deposit  DECIMAL(15, 2) DEFAULT 0.0,
                           total_withdraw DECIMAL(15, 2) DEFAULT 0.0,
-                          is_locked      BOOLEAN        DEFAULT FALSE,
+                          is_locked      INT DEFAULT 0 ,
                           created_at     DATETIME       DEFAULT CURRENT_TIMESTAMP,
                           reset_code VARCHAR(10) DEFAULT NULL
 );
