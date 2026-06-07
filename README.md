@@ -24,7 +24,7 @@ Ba vai trò **Admin**, **Seller** và **Bidder**; luồng nghiệp vụ đầy �
 
 ---
 
-## ⚙Công Nghệ, Môi Trường & Yêu Cầu Cài Đặt
+## Công Nghệ, Môi Trường & Yêu Cầu Cài Đặt
 
 ### Thành phần kỹ thuật
 
