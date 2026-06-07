@@ -59,7 +59,6 @@ public class AccountController {
     public Response forgotPassword(String username, String email) {
         System.out.println("[AccountController] Gửi yêu cầu forgot password cho: " + username);
         String[] data = {username, email};
-        // Lưu ý: Bạn cần thêm MessageType.FORGOT_PASSWORD vào file MessageType.java của bạn
         Request request = new Request(MessageType.FORGOT_PASSWORD, data);
 
         try {
