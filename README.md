@@ -190,19 +190,6 @@ mvn javafx:run
 
 ---
 
-### Chạy Unit Test
-
-**Windows (Command Prompt):**
-```cmd
-:: Chạy toàn bộ test suite
-mvn test -DskipTests=false
-
-**macOS / Linux (Terminal):**
-```bash
-# Chạy toàn bộ test suite
-mvn test -DskipTests=false
-
-```
 
 ---
 
