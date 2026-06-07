@@ -1,18 +1,13 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
+import com.auction.client.service.AdminAuctionService;
 import com.auction.shared.model.Auction; // 🛠️ ĐÃ THÊM: Import đúng Model từ Server
 
-import javafx.application.Platform;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.collections.transformation.FilteredList;
-import javafx.concurrent.Task;
 import javafx.fxml.FXML;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -21,8 +16,6 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-
-import java.util.List;
 
 public class AdminAuctionMgmtController {
     @FXML private TableView<AdminAuctionRow> auctionTable;
@@ -35,6 +28,8 @@ public class AdminAuctionMgmtController {
     @FXML private TableColumn<AdminAuctionRow, Void> colActions;
     @FXML private TextField txtSearch;
     @FXML private Label lblTotalAuctions;
+
+    private final AdminAuctionService auctionService = new AdminAuctionService();
 
     private final ObservableList<AdminAuctionRow> masterData = FXCollections.observableArrayList();
 
@@ -212,56 +207,26 @@ public class AdminAuctionMgmtController {
      */
     private void loadAuctionDatabase() {
         masterData.clear();
-
-        Task<List<Auction>> loadAuctionsTask = new Task<>() {
-            @Override
-            @SuppressWarnings("unchecked")
-            protected List<Auction> call() throws Exception {
-                // Gửi yêu cầu lấy toàn bộ danh sách đấu giá
-                Request request = new Request(MessageType.GET_ALL_AUCTIONS, null);
-                Response response = ClientSocket.getInstance().sendRequest(request);
-
-                if (response != null && response.isSuccess()) {
-                    return (List<Auction>) response.getData();
-                }
-                return null;
+        auctionService.fetchAllAuctionsAsync(auctions -> {
+            if (auctions == null) return;
+            for (Auction auc : auctions) {
+                masterData.add(new AdminAuctionRow(
+                        String.valueOf(auc.getId()),
+                        auc.getProductName() != null ? auc.getProductName() : "Sản phẩm không tên",
+                        auc.getDescription() != null ? auc.getDescription() : "Không có mô tả",
+                        auc.getImagePath() != null ? auc.getImagePath() : "",
+                        auc.getSellerName() != null ? auc.getSellerName() : "Ẩn danh",
+                        String.format("%,1.0f", auc.getStartPrice()),
+                        String.format("%,1.0f", auc.getCurrentPrice()),
+                        String.valueOf(auc.getBidCount()),
+                        auc.getStatus() != null ? auc.getStatus().name() : "OPEN",
+                        auc.getEndTime() != null ? auc.getEndTime().toString() : "Không xác định"
+                ));
             }
-        };
-
-        loadAuctionsTask.setOnSucceeded(event -> {
-            List<Auction> auctions = loadAuctionsTask.getValue();
-            if (auctions != null) {
-                for (Auction auc : auctions) {
-                    // Ánh xạ chính xác các thuộc tính từ Model Auction sang định dạng hiển thị của Bảng
-                    masterData.add(new AdminAuctionRow(
-                            String.valueOf(auc.getId()),
-                            auc.getProductName() != null ? auc.getProductName() : "Sản phẩm không tên",
-                            auc.getDescription() != null ? auc.getDescription() : "Không có mô tả",
-                            auc.getImagePath() != null ? auc.getImagePath() : "", // Khớp chuẩn getImagePath()
-                            auc.getSellerName() != null ? auc.getSellerName() : (auc.getAccount() != null ? auc.getAccount().getUsername() : "Ẩn danh"),
-                            String.format("%,1.0f", auc.getStartPrice()),
-                            String.format("%,1.0f", auc.getCurrentPrice()),
-                            String.valueOf(auc.getBidCount()), // Số lượt đấu
-                            auc.getStatus() != null ? auc.getStatus().name() : "OPEN", // Trích xuất tên của Enum AuctionStatus
-                            auc.getEndTime() != null ? auc.getEndTime().toString() : "Không xác định"
-                    ));
-                }
-
-                // Cập nhật nhãn tổng số phiên ở góc dưới giao diện
-                if (lblTotalAuctions != null) {
-                    lblTotalAuctions.setText(String.valueOf(masterData.size()));
-                }
+            if (lblTotalAuctions != null) {
+                lblTotalAuctions.setText(String.valueOf(masterData.size()));
             }
         });
-
-        loadAuctionsTask.setOnFailed(event -> {
-            Throwable ex = loadAuctionsTask.getException();
-            System.err.println("❌ Lỗi tải dữ liệu đấu giá: " + (ex != null ? ex.getMessage() : "Unknown Error"));
-        });
-
-        Thread thread = new Thread(loadAuctionsTask);
-        thread.setDaemon(true);
-        thread.start();
     }
     private void setupSearchFilter() {
         FilteredList<AdminAuctionRow> filteredData = new FilteredList<>(masterData, p -> true);
@@ -287,32 +252,26 @@ public class AdminAuctionMgmtController {
     }
 
     private void handleCancelAuction(AdminAuctionRow auction) {
-        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION, "Bạn có chắc chắn muốn hủy phiên đấu giá sản phẩm [" + auction.getProductName() + "] không?", ButtonType.YES, ButtonType.NO);
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                "Bạn có chắc chắn muốn hủy phiên đấu giá [" + auction.getProductName() + "] không?",
+                ButtonType.YES, ButtonType.NO);
         confirm.setTitle("Xác nhận dừng khẩn cấp");
         confirm.setHeaderText(null);
-        confirm.showAndWait().ifPresent(responseType -> {
-            if (responseType == ButtonType.YES) {
-                Thread cancelWorker = new Thread(() -> {
-                    try {
-                        String[] cancelParams = { auction.getId(), "CANCELED" };                        Request request = new Request(MessageType.UPDATE_AUCTION_STATUS, cancelParams);
-                        Response response = ClientSocket.getInstance().sendRequest(request);
+        confirm.showAndWait().ifPresent(type -> {
+            if (type != ButtonType.YES) return;
 
-                        Platform.runLater(() -> {
-                            if (response != null && response.isSuccess()) {
-                                auction.setStatus("CANCELED");                                auctionTable.refresh();
-                                showAlert(Alert.AlertType.INFORMATION, "Thành công", "Đã dừng cuộc đấu giá vi phạm thành công!");
-                            } else {
-                                String msg = response != null ? response.getMessage() : "Server từ chối thực thi.";
-                                showAlert(Alert.AlertType.ERROR, "Lỗi dừng phiên", msg);
-                            }
-                        });
-                    } catch (Exception e) {
-                        Platform.runLater(() -> showAlert(Alert.AlertType.ERROR, "Lỗi kết nối", e.getMessage()));
-                    }
-                });
-                cancelWorker.setDaemon(true);
-                cancelWorker.start();
-            }
+            // ✅ SAU — Controller không biết gì về Request/MessageType
+            auctionService.cancelAuctionAsync(auction.getId(), resp -> {
+                if (resp != null && resp.isSuccess()) {
+                    auction.setStatus("CANCELED");
+                    auctionTable.refresh();
+                    showAlert(Alert.AlertType.INFORMATION, "Thành công",
+                            "Đã dừng cuộc đấu giá thành công!");
+                } else {
+                    String msg = resp != null ? resp.getMessage() : "Server từ chối thực thi.";
+                    showAlert(Alert.AlertType.ERROR, "Lỗi dừng phiên", msg);
+                }
+            });
         });
     }
 
