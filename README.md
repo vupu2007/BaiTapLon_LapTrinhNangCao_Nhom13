@@ -44,7 +44,7 @@ Ba vai trò **Admin**, **Seller** và **Bidder**; luồng nghiệp vụ đầy �
 
 - **JDK 21+**
 - **Apache Maven 3.9+**
-- **MySQL 8.0+** đang chạy cục bộ
+- **MySQL 8.0+** 
 - **Git**
 
 ---
