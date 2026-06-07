@@ -18,46 +18,25 @@ public class AccountService {
      * Xử lý logic Đăng nhập
      */
     public Response loginUser(String username, String password) {
-        LOGGER.info(() -> "[AccountService] Đang gửi yêu cầu đăng nhập cho: " + username);
-        String[] data = {username, password};
-        Request request = new Request(MessageType.LOGIN, data);
-
+        Request request = new Request(MessageType.LOGIN, new String[]{username, password});
         return executeNetworkRequest(request, "login");
     }
 
-    /**
-     * Xử lý logic Đăng ký tài khoản
-     */
     public Response registerUser(String username, String password, String email) {
-        LOGGER.info(() -> "[AccountService] Đang gửi yêu cầu đăng ký tài khoản cho: " + username);
-        String[] data = {username, password, email};
-        Request request = new Request(MessageType.REGISTER, data);
-
+        Request request = new Request(MessageType.REGISTER, new String[]{username, password, email});
         return executeNetworkRequest(request, "register");
     }
 
-    /**
-     * Xử lý logic Yêu cầu quên mật khẩu
-     */
     public Response forgotPassword(String username, String email) {
-        LOGGER.info(() -> "[AccountService] Đang gửi yêu cầu khôi phục mật khẩu cho: " + username);
-        String[] data = {username, email};
-        Request request = new Request(MessageType.FORGOT_PASSWORD, data);
-
+        Request request = new Request(MessageType.FORGOT_PASSWORD, new String[]{username, email});
         return executeNetworkRequest(request, "forgotPassword");
     }
 
-    /**
-     * Hàm helper dùng chung
-     * Giúp gom toàn bộ các khối try-catch Socket lặp đi lặp lại vào một nơi.
-     */
     private Response executeNetworkRequest(Request request, String context) {
+        // Đây là nơi tập trung logic xử lý mạng
         try {
             Response response = ClientSocket.getInstance().sendRequest(request);
-            if (response != null) {
-                return response;
-            }
-            return new Response(false, SERVER_NO_RESPONSE, null);
+            return (response != null) ? response : new Response(false, SERVER_NO_RESPONSE, null);
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, String.format("❌ Lỗi mạng trong tiến trình (%s): %s", context, e.getMessage()), e);
             return new Response(false, SERVER_CONNECTION_ERROR, null);
