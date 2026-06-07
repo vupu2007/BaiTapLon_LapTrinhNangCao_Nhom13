@@ -4,7 +4,9 @@ import com.auction.client.network.ClientSocket;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
+import javafx.application.Platform;
 
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -20,6 +22,14 @@ public class AccountService {
     public Response loginUser(String username, String password) {
         Request request = new Request(MessageType.LOGIN, new String[]{username, password});
         return executeNetworkRequest(request, "login");
+    }
+    public void loginUserAsync(String username, String password, Consumer<Response> callback) {
+        Thread worker = new Thread(() -> {
+            Response resp = loginUser(username, password); // gọi lại method sync sẵn có
+            Platform.runLater(() -> callback.accept(resp));
+        }, "LoginNetworkWorkerThread");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     public Response registerUser(String username, String password, String email) {
@@ -41,5 +51,13 @@ public class AccountService {
             LOGGER.log(Level.SEVERE, String.format("❌ Lỗi mạng trong tiến trình (%s): %s", context, e.getMessage()), e);
             return new Response(false, SERVER_CONNECTION_ERROR, null);
         }
+    }
+    public void forgotPasswordAsync(String username, String email, Consumer<Response> callback) {
+        Thread worker = new Thread(() -> {
+            Response resp = forgotPassword(username, email); // gọi lại method sync sẵn có
+            Platform.runLater(() -> callback.accept(resp));
+        }, "ForgotPasswordWorker");
+        worker.setDaemon(true);
+        worker.start();
     }
 }

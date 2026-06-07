@@ -1,16 +1,13 @@
 package com.auction.client.controller;
 
-import com.auction.client.network.ClientSocket;
 import com.auction.client.service.MainDashboardService;
 import com.auction.client.util.CurrentAccount;
 import com.auction.shared.model.Auction;
 import com.auction.shared.model.Account;
 import com.auction.shared.model.User;
 import com.auction.shared.model.Item;
+import com.auction.client.network.ClientSocket;
 
-import com.auction.shared.network.MessageType;
-import com.auction.shared.network.Request;
-import com.auction.shared.network.Response;
 import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -22,6 +19,7 @@ import javafx.scene.control.Label;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+
 import java.io.IOException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -34,26 +32,22 @@ import java.util.concurrent.TimeUnit;
 public class MainController {
 
     @FXML private Label balanceLabel, ongoingLabel, wonLabel, welcomeLabel;
-    // Thêm btnFilterEnded vào danh sách khai báo FXML
     @FXML private Button btnFilterAll, btnFilterActive, btnFilterUpcoming, btnFilterEnded;
     @FXML private FlowPane flowPane;
+
     private String currentFilter = "ALL";
     private final MainDashboardService dashboardService = new MainDashboardService();
     private static final String SERVER_IMAGE_BASE_URL = "http://localhost:8080/uploads/";
 
-
-
-    // 🚀 THREAD POOL: Quản lý tập trung luồng, tránh tràn bộ nhớ (OOM) trong dự án lớn
     private final ExecutorService executorService = Executors.newFixedThreadPool(
             Runtime.getRuntime().availableProcessors(),
             r -> {
                 Thread t = new Thread(r);
-                t.setDaemon(true); // Tự động tắt luồng khi đóng ứng dụng
+                t.setDaemon(true);
                 return t;
             }
     );
 
-    // Cache vị trí FXML mẫu để tránh quét bộ nhớ nhiều lần
     private static java.net.URL cachedFxmlLocation;
 
     public MainController() {}
@@ -67,6 +61,8 @@ public class MainController {
             if (welcomeLabel != null) welcomeLabel.setText("Chào mừng, " + current.getUsername() + "!");
             refreshDashboard();
         }
+
+        // Giữ nguyên — đây là Observer local, không phải network call
         ClientSocket.getInstance().setOnAuctionUpdate(() -> refreshDashboard());
 
         ScheduledExecutorService poller = Executors.newSingleThreadScheduledExecutor();
@@ -76,7 +72,8 @@ public class MainController {
     private void initFxmlCache() {
         if (cachedFxmlLocation == null) {
             cachedFxmlLocation = getClass().getResource("/view/ProductCard.fxml");
-            if (cachedFxmlLocation == null) cachedFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
+            if (cachedFxmlLocation == null)
+                cachedFxmlLocation = getClass().getResource("/com/auction/client/view/ProductCard.fxml");
         }
     }
 
@@ -105,26 +102,28 @@ public class MainController {
                                 String finalImageUrl = getFinalImageUrl(item.getImagePath());
                                 String statusText = "OPEN".equals(item.getAuctionStatus()) ? "Sắp diễn ra"
                                         : "FINISHED".equals(item.getAuctionStatus()) ? "Đã kết thúc"
-                                        : "Đang diễn ra";
-                                String priceStr = String.format("%,.0f đ", item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
-                                String timeStr = "Sắp diễn ra".equals(statusText) ? item.getStartTimeStr() : item.getEndTimeStr();
-                                String startTimeStr = item.getStartTimeStr() != null ? item.getStartTimeStr() : null;
-                                cardController.setProductModelData(null, item.getName(), priceStr, statusText, finalImageUrl, item.getDescription(), startTimeStr, timeStr);                            }
+                                          : "Đang diễn ra";
+                                String priceStr = String.format("%,.0f đ",
+                                        item.getCurrentPrice() > 0 ? item.getCurrentPrice() : item.getStartingPrice());
+                                String timeStr = "Sắp diễn ra".equals(statusText)
+                                        ? item.getStartTimeStr() : item.getEndTimeStr();
+                                String startTimeStr = item.getStartTimeStr();
+                                cardController.setProductModelData(null, item.getName(), priceStr,
+                                        statusText, finalImageUrl, item.getDescription(), startTimeStr, timeStr);
+                            }
+
+                            // ✅ Dùng service thay vì ClientSocket trực tiếp
                             cardLayout.setOnMouseClicked(e -> {
-                                executorService.submit(() -> {
-                                    try {
-                                        Response response = ClientSocket.getInstance().sendRequest(
-                                                new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
-                                        if (response != null && response.isSuccess()) {
-                                            Auction full = (Auction) response.getData();
-                                            if (full != null) { showAuctionDetail(full); return; }
-                                        }
-                                    } catch (Exception ex) {
-                                        System.err.println("Lỗi load auction: " + ex.getMessage());
-                                    }
+                                if (item.getAuctionId() > 0) {
+                                    dashboardService.fetchAuctionByIdAsync(item.getAuctionId(), auction -> {
+                                        if (auction != null) showAuctionDetail(auction);
+                                        else showAuctionDetail(item);
+                                    });
+                                } else {
                                     showAuctionDetail(item);
-                                });
+                                }
                             });
+
                             bindCardButtons(cardLayout, item);
                             renderedCards.add(cardLayout);
                         } catch (IOException e) {
@@ -132,6 +131,7 @@ public class MainController {
                         }
                     }
                 }
+
                 Platform.runLater(() -> {
                     if (flowPane == null) return;
                     if (stats != null) {
@@ -146,25 +146,25 @@ public class MainController {
             });
         });
     }
+
     public void addAuctionToRealtimeUI(Auction newAuction) {
         if (newAuction == null || cachedFxmlLocation == null) return;
 
-        // Tận dụng Thread Pool thay vì tạo "new Thread()" bừa bãi
         executorService.submit(() -> {
             try {
                 FXMLLoader loader = new FXMLLoader(cachedFxmlLocation);
                 VBox cardLayout = loader.load();
-
                 ProductCardController cardController = loader.getController();
                 if (cardController != null) {
                     String finalImageUrl = getFinalImageUrl(newAuction.getImagePath());
                     String priceStr = String.format("%,.0f đ", newAuction.getStartPrice());
-
-                    // 🎯 Đổ trực tiếp Model gốc (newAuction) vào Card
-                    cardController.setProductModelData(newAuction, newAuction.getProductName(), priceStr, "Đang diễn ra", finalImageUrl,
+                    cardController.setProductModelData(newAuction, newAuction.getProductName(),
+                            priceStr, "Đang diễn ra", finalImageUrl,
                             newAuction.getDescription() != null ? newAuction.getDescription() : "",
-                            newAuction.getStartTime() != null ? newAuction.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null,
-                            newAuction.getEndTime() != null ? newAuction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);
+                            newAuction.getStartTime() != null
+                                    ? newAuction.getStartTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null,
+                            newAuction.getEndTime() != null
+                                    ? newAuction.getEndTime().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")) : null);
                 }
 
                 cardLayout.setOnMouseClicked(e -> showAuctionDetail(newAuction));
@@ -183,10 +183,12 @@ public class MainController {
 
     private String getFinalImageUrl(String rawImagePath) {
         if (rawImagePath == null || rawImagePath.trim().isEmpty()) return "default.png";
-        if (rawImagePath.startsWith("http://") || rawImagePath.startsWith("https://") || rawImagePath.startsWith("base64:")) return rawImagePath;
+        if (rawImagePath.startsWith("http://") || rawImagePath.startsWith("https://")
+                || rawImagePath.startsWith("base64:")) return rawImagePath;
         return SERVER_IMAGE_BASE_URL + rawImagePath;
     }
 
+    // ✅ Dùng service thay vì ClientSocket trực tiếp
     private void bindCardButtons(VBox cardLayout, Object originData) {
         try {
             Node actionBtn = cardLayout.lookup("#actionButton");
@@ -194,18 +196,9 @@ public class MainController {
                 button.setOnAction(e -> {
                     e.consume();
                     if (originData instanceof Item item && item.getAuctionId() > 0) {
-                        executorService.submit(() -> {
-                            try {
-                                Response response = ClientSocket.getInstance().sendRequest(
-                                        new Request(MessageType.GET_AUCTION_BY_ID, item.getAuctionId()));
-                                if (response != null && response.isSuccess()) {
-                                    Auction auction = (Auction) response.getData();
-                                    if (auction != null) { showAuctionDetail(auction); return; }
-                                }
-                            } catch (Exception ex) {
-                                System.err.println("Lỗi load auction: " + ex.getMessage());
-                            }
-                            showAuctionDetail(originData);
+                        dashboardService.fetchAuctionByIdAsync(item.getAuctionId(), auction -> {
+                            if (auction != null) showAuctionDetail(auction);
+                            else showAuctionDetail(originData);
                         });
                     } else {
                         showAuctionDetail(originData);
@@ -222,7 +215,6 @@ public class MainController {
         if (btnFilterAll != null) btnFilterAll.setStyle(normal);
         if (btnFilterActive != null) btnFilterActive.setStyle(normal);
         if (btnFilterUpcoming != null) btnFilterUpcoming.setStyle(normal);
-        // Reset style nút mới về trạng thái bình thường
         if (btnFilterEnded != null) btnFilterEnded.setStyle(normal);
 
         Button activeBtn = switch (currentFilter) {
@@ -238,20 +230,17 @@ public class MainController {
     @FXML private void handleFilterAll() { currentFilter = "ALL"; refreshDashboard(); }
     @FXML private void handleFilterActive() { currentFilter = "ACTIVE"; refreshDashboard(); }
     @FXML private void handleFilterUpcoming() { currentFilter = "UPCOMING"; refreshDashboard(); }
-
-    // Thêm hàm xử lý sự kiện khi ấn nút "Đã kết thúc"
     @FXML private void handleFilterEnded() { currentFilter = "FINISHED"; refreshDashboard(); }
 
     @FXML
     private void handleLogout(ActionEvent event) {
         CurrentAccount.logOut();
-        shutdownExecutor(); // Dọn dẹp luồng khi thoát màn hình chính
+        shutdownExecutor();
 
         executorService.submit(() -> {
             try {
                 URL loginLocation = getClass().getResource("/view/LoginView.fxml");
                 if (loginLocation == null) return;
-
                 Parent root = FXMLLoader.load(loginLocation);
                 Platform.runLater(() -> {
                     Stage stage = (Stage) ((Node) event.getSource()).getScene().getWindow();
@@ -263,13 +252,8 @@ public class MainController {
         });
     }
 
-    /**
-     * 🚀 ĐÃ SỬA LỖI TRIỆT ĐỂ: Tìm kiếm tầng cha (MainLayoutController) một cách linh hoạt qua Scene Graph
-     * Giải quyết hoàn toàn lỗi biên dịch dòng 237-238 mà không cần gọi Singleton.
-     */
     public void showAuctionDetail(Object productData) {
-        System.out.println("DEBUG showAuctionDetail type: " + productData.getClass().getSimpleName()); // ← thêm dòng này
-
+        System.out.println("DEBUG showAuctionDetail type: " + productData.getClass().getSimpleName());
         if (flowPane == null || flowPane.getScene() == null) return;
 
         executorService.submit(() -> {
@@ -288,25 +272,21 @@ public class MainController {
 
                 Platform.runLater(() -> {
                     if (flowPane.getScene() != null) {
-                        // Tìm kiếm động vùng chứa trung tâm từ Scene chính
                         Parent root = flowPane.getScene().getRoot();
                         Node layoutCenter = root.lookup("#contentArea");
-
                         if (layoutCenter instanceof javafx.scene.layout.StackPane contentArea) {
                             contentArea.getChildren().setAll(detailView);
-                            System.out.println("🎯 [UI Switch] Điều hướng trang chi tiết sản phẩm thành công từ MainController.");
                         } else {
-                            System.err.println("❌ Không tìm thấy vùng chứa #contentArea để hiển thị giao diện chi tiết.");
+                            System.err.println("❌ Không tìm thấy #contentArea.");
                         }
                     }
                 });
             } catch (IOException e) {
-                System.err.println("❌ Lỗi load trang chi tiết ở luồng nền: " + e.getMessage());
+                System.err.println("❌ Lỗi load trang chi tiết: " + e.getMessage());
             }
         });
     }
 
-    // Đóng dọn dẹp Executor Service để tránh thất thoát tài nguyên hệ thống
     public void shutdownExecutor() {
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();

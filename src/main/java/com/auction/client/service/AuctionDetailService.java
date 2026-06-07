@@ -146,4 +146,22 @@ public class AuctionDetailService {
             }
         });
     }
+    public void fetchAccountByIdAsync(int accountId, Consumer<com.auction.shared.model.Account> callback) {
+        Thread worker = new Thread(() -> {
+            com.auction.shared.model.Account result = null;
+            try {
+                Response resp = ClientSocket.getInstance()
+                        .sendRequest(new Request(MessageType.GET_ACCOUNT_BY_ID, accountId));
+                if (resp != null && resp.isSuccess()) {
+                    result = (com.auction.shared.model.Account) resp.getData();
+                }
+            } catch (Exception e) {
+                System.err.println("❌ [AuctionDetailService] fetchAccountById: " + e.getMessage());
+            }
+            final com.auction.shared.model.Account finalResult = result;
+            Platform.runLater(() -> callback.accept(finalResult));
+        }, "AccountByIdLoader");
+        worker.setDaemon(true);
+        worker.start();
+    }
 }

@@ -241,7 +241,7 @@ OPEN → RUNNING → FINISHED → PAID / CANCELED
 ## Video Demo
 
 * Google Drive Video:
-  `[Chèn link demo tại đây]`
+https://drive.google.com/file/d/1x2K1Iz7SnXxsYM1HTzwS0nc_QHCF8xjp/view?usp=sharing
 
 ## Source Code
 

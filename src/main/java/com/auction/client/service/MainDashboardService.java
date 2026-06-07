@@ -1,10 +1,12 @@
 package com.auction.client.service;
 
 import com.auction.client.network.ClientSocket;
+import com.auction.shared.model.Auction;
+import com.auction.shared.model.Item;
 import com.auction.shared.network.MessageType;
 import com.auction.shared.network.Request;
 import com.auction.shared.network.Response;
-import com.auction.shared.model.Item;
+import javafx.application.Platform;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,6 +16,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 
 public class MainDashboardService {
 
@@ -25,9 +28,9 @@ public class MainDashboardService {
     });
     private static final AtomicBoolean isFetching = new AtomicBoolean(false);
 
-
     @SuppressWarnings("unchecked")
-    public void fetchDashboardDataAsync(String accountId, String filter, BiConsumer<Map<String, Integer>, List<Item>> callback) {
+    public void fetchDashboardDataAsync(String accountId, String filter,
+                                        BiConsumer<Map<String, Integer>, List<Item>> callback) {
         if (!isFetching.compareAndSet(false, true)) return;
 
         CompletableFuture.runAsync(() -> {
@@ -61,6 +64,27 @@ public class MainDashboardService {
             }
         }, networkExecutor);
     }
+
+    // ✅ METHOD MỚI THÊM
+    public void fetchAuctionByIdAsync(int auctionId, Consumer<Auction> callback) {
+        Thread worker = new Thread(() -> {
+            Auction result = null;
+            try {
+                Response resp = ClientSocket.getInstance()
+                        .sendRequest(new Request(MessageType.GET_AUCTION_BY_ID, auctionId));
+                if (resp != null && resp.isSuccess()) {
+                    result = (Auction) resp.getData();
+                }
+            } catch (Exception e) {
+                System.err.println("❌ [MainDashboardService] fetchAuctionById: " + e.getMessage());
+            }
+            final Auction finalResult = result;
+            Platform.runLater(() -> callback.accept(finalResult));
+        }, "AuctionByIdLoader");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
     public void resetFetching() {
         isFetching.set(false);
     }
