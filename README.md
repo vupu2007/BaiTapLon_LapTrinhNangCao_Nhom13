@@ -42,7 +42,7 @@ Ba vai trò **Admin**, **Seller** và **Bidder**; luồng nghiệp vụ đầy �
 
 **Yêu cầu cài đặt trên máy:**
 
-- **JDK 21+** — khuyến nghị [Eclipse Temurin 21](https://adoptium.net/)
+- **JDK 21+**
 - **Apache Maven 3.9+**
 - **MySQL 8.0+** đang chạy cục bộ
 - **Git**
