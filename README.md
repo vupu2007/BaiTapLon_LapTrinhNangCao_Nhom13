@@ -241,16 +241,18 @@ mvn test -DskipTests=false
 - Xóa sản phẩm (chỉ khi chưa có phiên đang RUNNING hoặc đã FINISHED)
 - Xem danh sách sản phẩm của mình
 
-### Chức Năng Đấu Giá (Core)
+### Chức Năng Đấu Giá 
 
 -   Tạo phiên đấu giá với giá khởi điểm, bước giá, thời gian bắt đầu/kết thúc
 -   Xem danh sách tất cả phiên đang chạy (real-time)
 -   Đặt giá thầu thủ công theo thời gian thực qua Socket TCP
--   Auto-Bidding: lọc autoBids từ DB, tìm người có , tự tạo BidTransaction và broadcast giá mới
 -   Realtime Update: broadcast giá mới tức thì đến tất cả Client đang theo dõi phiên (Observer qua Socket)
--   Bid History Visualization: Xem lịch sử toàn bộ lượt đặt giá trong phiên
--   Anti-sniping: bid trong 60 giây cuối → `endTime += 60s`, cập nhật DB, broadcast Client; tối đa 5 lần (300 giây)
 -   Concurrent Bidding: Kiểm soát đồng thời an toàn kết hợp lock ngăn lost update
+
+### Chức Năng Nâng Cao
+-  Auto-Bidding: lọc autoBids từ DB, tìm người có giá thầu phù hợp, tự tạo BidTransaction và broadcast giá mới
+-  Anti-sniping: bid trong 60 giây cuối → endTime += 60s, cập nhật DB, broadcast Client; tối đa 5 lần (300 giây)
+-  Bid History Visualization: Xem lịch sử toàn bộ lượt đặt giá trong phiên qua biểu đồ trực quan (JavaFX LineChart)
 
 ### Kết Thúc Phiên & Thanh Toán Tự Động (AuctionScheduler)
 
